@@ -1,5 +1,5 @@
 {
-  "name": "clawmail-website",
+  "name": "lobstermail-website",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,8 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "geist": "^1.7.0",
     "next": "16.1.6",
     "react": "19.2.3",
+    "react-aria-components": "^1.15.1",
     "react-dom": "19.2.3"
   },
   "devDependencies": {
