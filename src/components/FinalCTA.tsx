@@ -16,13 +16,25 @@ export function FinalCTA() {
       <div className="relative z-10 mx-auto flex max-w-6xl flex-col items-center gap-8 text-center">
         <FadeIn>
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
-            Tell your lobster to pinch its own email. It will.
+            Tell your lobster to pinch its own email.{" "}<br className="sm:hidden" />It will.
           </h2>
         </FadeIn>
 
         <FadeIn delay={0.08}>
           <div className="flex flex-col items-center gap-4">
-            <CopyCommand />
+            <div className="relative flex flex-col items-center">
+              <div
+                className="pointer-events-none absolute -inset-6 -z-10 opacity-60"
+                style={{
+                  background:
+                    "radial-gradient(ellipse at center, rgba(234,67,53,0.15), transparent 70%)",
+                }}
+              />
+              <p className="mb-3 text-sm font-medium text-accent">
+                Copy this command to your agent
+              </p>
+              <CopyCommand />
+            </div>
             <a
               href="#"
               className="link-underline text-sm text-secondary transition-colors hover:text-foreground"

@@ -2,8 +2,42 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { List, X } from "@phosphor-icons/react";
+import {
+  DialogTrigger,
+  ModalOverlay,
+  Modal,
+  Dialog,
+  Heading,
+  Button,
+} from "react-aria-components";
 import { ThemeToggle } from "./ThemeToggle";
 import { GetStartedPopup } from "./GetStartedPopup";
+
+const navLinks = [
+  { href: "#top", label: "Top" },
+  { href: "#", label: "Docs" },
+  { href: "#", label: "GitHub" },
+];
+
+function NavLinks({ onLinkClick }: { onLinkClick?: () => void }) {
+  return (
+    <>
+      {navLinks.map((link) => (
+        <a
+          key={link.href}
+          href={link.href}
+          className="text-sm text-secondary transition-colors hover:text-foreground"
+          onClick={onLinkClick}
+        >
+          {link.label}
+        </a>
+      ))}
+      <ThemeToggle />
+      <GetStartedPopup />
+    </>
+  );
+}
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -37,27 +71,65 @@ export function Navbar() {
           LobsterMail
         </a>
 
-        {/* Links */}
-        <div className="flex items-center gap-6">
-          <a
-            href="#top"
-            className="text-sm text-secondary transition-colors hover:text-foreground"
+        {/* Desktop links */}
+        <div className="hidden items-center gap-6 md:flex">
+          <NavLinks />
+        </div>
+
+        {/* Mobile: burger + Get Started */}
+        <div className="flex items-center gap-2 md:hidden">
+          <DialogTrigger>
+            <Button
+              className="flex size-10 items-center justify-center rounded-lg text-foreground transition-colors hover:bg-surface-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 cursor-pointer"
+              aria-label="Open menu"
+            >
+              <List size={24} weight="regular" />
+            </Button>
+          <ModalOverlay
+            isDismissable
+            className="fixed inset-0 z-[100] flex flex-col bg-background/95 backdrop-blur-xl data-[entering]:animate-modal-overlay-in data-[exiting]:animate-modal-overlay-out md:hidden"
           >
-            Top
-          </a>
-          <a
-            href="#"
-            className="text-sm text-secondary transition-colors hover:text-foreground"
-          >
-            Docs
-          </a>
-          <a
-            href="#"
-            className="text-sm text-secondary transition-colors hover:text-foreground"
-          >
-            GitHub
-          </a>
-          <ThemeToggle />
+            <Modal className="flex h-full w-full flex-col outline-none data-[entering]:animate-modal-in data-[exiting]:animate-modal-out">
+              <Dialog className="flex h-full flex-col">
+                {({ close }) => (
+                  <>
+                    <div className="flex items-center justify-between border-b border-edge px-6 py-3.5">
+                      <Heading slot="title" className="sr-only">
+                        Navigation menu
+                      </Heading>
+                      <span className="text-base font-semibold text-foreground">
+                        Menu
+                      </span>
+                      <Button
+                        onPress={close}
+                        className="flex size-10 items-center justify-center rounded-lg text-foreground transition-colors hover:bg-surface-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 cursor-pointer"
+                        aria-label="Close menu"
+                      >
+                        <X size={24} weight="regular" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-1 flex-col gap-1 px-6 py-6">
+                      {navLinks.map((link) => (
+                        <a
+                          key={link.href}
+                          href={link.href}
+                          onClick={() => close()}
+                          className="rounded-lg px-4 py-3 text-base text-secondary transition-colors hover:bg-surface-2 hover:text-foreground"
+                        >
+                          {link.label}
+                        </a>
+                      ))}
+                      <div className="mt-4 flex items-center gap-4 border-t border-edge pt-6">
+                        <ThemeToggle />
+                        <GetStartedPopup />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </Dialog>
+            </Modal>
+          </ModalOverlay>
+          </DialogTrigger>
           <GetStartedPopup />
         </div>
       </div>

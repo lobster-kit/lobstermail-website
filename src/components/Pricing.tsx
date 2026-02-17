@@ -1,16 +1,17 @@
+import Image from "next/image";
 import { Check } from "@phosphor-icons/react/dist/ssr";
 import { FadeIn } from "./FadeIn";
 
 const freePlanFeatures = [
   "Unlimited inboxes",
-  "Receive emails",
+  "Send & receive emails",
   "Agent provisioning",
   "No credit card required",
 ];
 
 const proPlanFeatures = [
   "Everything in Free",
-  "Send emails",
+  "No sending limits",
   "Custom domains",
   "Dedicated IP",
   "Priority support",
@@ -21,11 +22,21 @@ export function Pricing() {
     <section className="border-t border-edge px-6 py-28 sm:py-36">
       <div className="mx-auto max-w-6xl text-center">
         <FadeIn>
+          <div className="mb-3 flex justify-center">
+            <Image
+              src="/lobster-in-cage.png"
+              alt=""
+              width={96}
+              height={96}
+              className="size-24 object-contain"
+              aria-hidden
+            />
+          </div>
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
             Simple pricing. No traps.
           </h2>
           <p className="mx-auto mt-4 max-w-md text-base text-secondary sm:text-lg">
-            We charge when your agent talks back.
+            Don&#39;t get trapped in the lobster cage of emails.
           </p>
         </FadeIn>
 
