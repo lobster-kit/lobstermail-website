@@ -22,7 +22,7 @@ export function Hero() {
         {/* Left: headline */}
         <div className="flex flex-1 flex-col items-center gap-5 lg:items-start lg:gap-6 lg:text-left">
           <FadeIn>
-            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-accent/20 bg-accent/[0.08] px-3.5 py-1.5 text-xs font-medium text-accent">
+            <span className="inline-flex w-fit animate-float items-center gap-2 rounded-full border border-accent/20 bg-accent/[0.08] px-3.5 py-1.5 text-xs font-medium text-accent">
               <span aria-hidden="true">🦞</span>
               Built for the Moltiverse
             </span>

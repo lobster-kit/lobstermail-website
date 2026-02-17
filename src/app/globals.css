@@ -123,6 +123,7 @@
   --animate-modal-overlay-out: modal-overlay-out 0.15s ease-in both;
   --animate-modal-in: modal-in 0.28s ease-out both;
   --animate-modal-out: modal-out 0.2s ease-in both;
+  --animate-float: float 3s ease-in-out infinite;
 }
 
 /* ─── Keyframes ─── */
@@ -201,6 +202,15 @@
   to {
     opacity: 0;
     transform: scale(0.95);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
   }
 }
 

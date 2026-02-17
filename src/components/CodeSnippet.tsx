@@ -33,7 +33,7 @@ export function CodeSnippet() {
         <div className="flex items-start justify-end gap-3">
           <div className="flex flex-col items-end gap-2.5">
             <div className="rounded-2xl rounded-tr-md bg-surface-4 px-4 py-2.5 font-mono text-sm text-foreground">
-              Here, use LobsterMail:
+              Here, use 🦞 LobsterMail:
             </div>
             {/* Nested terminal block */}
             <div
