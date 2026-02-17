@@ -41,8 +41,8 @@ export function ProblemSolution() {
           <div className="mx-auto mt-12 max-w-2xl">
             <div className="glass overflow-hidden rounded-2xl">
               {/* Header */}
-              <div className="grid grid-cols-[1fr_80px_80px] items-end border-b border-edge px-6 py-4 sm:grid-cols-[1fr_100px_100px]">
-                <span className="text-xs font-medium uppercase tracking-wider text-secondary">
+              <div className="grid grid-cols-[1fr_80px_80px] items-end justify-items-center border-b border-edge px-6 py-4 sm:grid-cols-[1fr_100px_100px] sm:justify-items-stretch">
+                <span className="text-center text-xs font-medium uppercase tracking-wider text-secondary sm:text-left">
                   Feature
                 </span>
                 <span className="flex flex-col items-center gap-1.5 text-center text-xs font-medium uppercase tracking-wider text-secondary">
@@ -57,22 +57,23 @@ export function ProblemSolution() {
 
               {/* Rows */}
               {features.map((feature, i) => (
-                <div
-                  key={feature}
-                  className={`grid grid-cols-[1fr_80px_80px] items-center px-6 py-3.5 sm:grid-cols-[1fr_100px_100px] ${
-                    i < features.length - 1 ? "border-b border-edge-subtle" : ""
-                  }`}
-                >
-                  <span className="text-sm text-secondary sm:text-base">
-                    {feature}
-                  </span>
-                  <span className="flex justify-center">
-                    <X size={20} weight="bold" className="text-foreground" />
-                  </span>
-                  <span className="flex justify-center">
-                    <Check size={20} weight="bold" className="text-foreground" />
-                  </span>
-                </div>
+                <FadeIn key={feature} delay={0.08 + i * 0.06} distance={8}>
+                  <div
+                    className={`grid grid-cols-[1fr_80px_80px] items-center justify-items-center px-6 py-3.5 sm:grid-cols-[1fr_100px_100px] sm:justify-items-stretch ${
+                      i < features.length - 1 ? "border-b border-edge-subtle" : ""
+                    }`}
+                  >
+                    <span className="text-center text-sm text-secondary sm:text-left sm:text-base">
+                      {feature}
+                    </span>
+                    <span className="flex justify-center">
+                      <X size={20} weight="bold" className="text-foreground" />
+                    </span>
+                    <span className="flex justify-center">
+                      <Check size={20} weight="bold" className="text-foreground" />
+                    </span>
+                  </div>
+                </FadeIn>
               ))}
             </div>
           </div>

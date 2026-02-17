@@ -18,9 +18,9 @@ export function Hero() {
         />
       </div>
 
-      <div className="relative z-10 mx-auto flex max-w-6xl flex-col gap-12 lg:flex-row lg:items-center lg:gap-16">
+      <div className="relative z-10 mx-auto flex max-w-6xl flex-col items-center gap-12 text-center lg:flex-row lg:items-center lg:gap-16 lg:text-left">
         {/* Left: headline */}
-        <div className="flex flex-1 flex-col gap-5 lg:gap-6">
+        <div className="flex flex-1 flex-col items-center gap-5 lg:items-start lg:gap-6 lg:text-left">
           <FadeIn>
             <span className="inline-flex w-fit items-center gap-2 rounded-full border border-accent/20 bg-accent/[0.08] px-3.5 py-1.5 text-xs font-medium text-accent">
               <span aria-hidden="true">🦞</span>

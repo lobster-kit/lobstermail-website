@@ -16,7 +16,7 @@ export function FinalCTA() {
       <div className="relative z-10 mx-auto flex max-w-6xl flex-col items-center gap-8 text-center">
         <FadeIn>
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
-            Tell your agent to get its own email. It will.
+            Tell your lobster to pinch its own email. It will.
           </h2>
         </FadeIn>
 
@@ -25,7 +25,7 @@ export function FinalCTA() {
             <CopyCommand />
             <a
               href="#"
-              className="text-sm text-secondary transition-colors hover:text-foreground"
+              className="link-underline text-sm text-secondary transition-colors hover:text-foreground"
             >
               View docs <span aria-hidden="true">&rarr;</span>
             </a>

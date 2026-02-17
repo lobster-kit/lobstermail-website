@@ -30,6 +30,7 @@ export function CopyCommand({ command = "npm install lobstermail" }) {
       >
         {copied ? (
           <svg
+            className="animate-icon-pop"
             width="16"
             height="16"
             viewBox="0 0 24 24"

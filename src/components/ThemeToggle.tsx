@@ -4,14 +4,13 @@ import {
   ToggleButtonGroup,
   ToggleButton,
 } from "react-aria-components";
-import { Sun, Moon, Monitor } from "@phosphor-icons/react";
+import { Sun, Moon } from "@phosphor-icons/react";
 import { useTheme, type Theme } from "./ThemeProvider";
 import type { Key } from "react-aria-components";
 
 const modes: { id: Theme; label: string; icon: React.ReactNode }[] = [
   { id: "light", label: "Light", icon: <Sun size={16} weight="bold" /> },
   { id: "dark", label: "Dark", icon: <Moon size={16} weight="bold" /> },
-  { id: "system", label: "System", icon: <Monitor size={16} weight="bold" /> },
 ];
 
 export function ThemeToggle() {
@@ -36,8 +35,7 @@ export function ThemeToggle() {
           aria-label={label}
           className="flex h-7 cursor-pointer items-center gap-1.5 rounded-full px-2 text-xs text-secondary outline-none transition-all duration-150 hover:text-foreground data-[selected]:bg-foreground/[0.12] data-[selected]:text-foreground data-[selected]:shadow-sm"
         >
-          {icon}
-          <span className="hidden sm:inline">{label}</span>
+          <span className="theme-toggle-icon">{icon}</span>
         </ToggleButton>
       ))}
     </ToggleButtonGroup>

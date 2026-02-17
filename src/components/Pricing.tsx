@@ -32,12 +32,12 @@ export function Pricing() {
         <div className="mx-auto mt-12 grid max-w-3xl gap-6 sm:grid-cols-2">
           {/* Free card */}
           <FadeIn delay={0.08}>
-            <div className="glass flex h-full flex-col rounded-2xl p-6 text-left sm:p-8">
+            <div className="glass flex h-full flex-col items-center rounded-2xl p-6 text-center transition-transform duration-300 hover:-translate-y-1 sm:items-stretch sm:p-8 sm:text-left">
               <div className="mb-6">
                 <p className="text-sm font-medium uppercase tracking-wider text-secondary">
                   Free
                 </p>
-                <div className="mt-3 flex items-baseline gap-1">
+                <div className="mt-3 flex items-baseline justify-center gap-1 sm:justify-start">
                   <span className="text-4xl font-bold tracking-tight">$0</span>
                   <span className="text-secondary">/mo</span>
                 </div>
@@ -48,9 +48,9 @@ export function Pricing() {
 
               <div className="mb-8 h-px bg-edge" />
 
-              <ul className="flex flex-col gap-3">
+              <ul className="flex flex-col items-center gap-3 sm:items-stretch">
                 {freePlanFeatures.map((feature) => (
-                  <li key={feature} className="flex items-center gap-2.5 text-sm text-secondary">
+                  <li key={feature} className="flex items-center justify-center gap-2.5 text-sm text-secondary sm:justify-start">
                     <Check size={16} weight="bold" className="shrink-0 text-foreground" />
                     {feature}
                   </li>
@@ -70,7 +70,7 @@ export function Pricing() {
 
           {/* Pro card */}
           <FadeIn delay={0.16}>
-            <div className="glass-strong relative flex h-full flex-col rounded-2xl p-6 text-left sm:p-8">
+            <div className="glass-strong relative flex h-full flex-col items-center rounded-2xl p-6 text-center transition-transform duration-300 hover:-translate-y-1 sm:items-stretch sm:p-8 sm:text-left">
               <div className="absolute -top-3 right-6 rounded-full bg-accent px-3 py-1 text-xs font-medium text-white">
                 Coming soon
               </div>
@@ -79,7 +79,7 @@ export function Pricing() {
                 <p className="text-sm font-medium uppercase tracking-wider text-accent">
                   Pro
                 </p>
-                <div className="mt-3 flex items-baseline gap-1">
+                <div className="mt-3 flex items-baseline justify-center gap-1 sm:justify-start">
                   <span className="text-4xl font-bold tracking-tight">TBD</span>
                 </div>
                 <p className="mt-2 text-sm text-secondary">
@@ -89,9 +89,9 @@ export function Pricing() {
 
               <div className="mb-8 h-px bg-edge" />
 
-              <ul className="flex flex-col gap-3">
+              <ul className="flex flex-col items-center gap-3 sm:items-stretch">
                 {proPlanFeatures.map((feature) => (
-                  <li key={feature} className="flex items-center gap-2.5 text-sm text-secondary">
+                  <li key={feature} className="flex items-center justify-center gap-2.5 text-sm text-secondary sm:justify-start">
                     <Check size={16} weight="bold" className="shrink-0 text-foreground" />
                     {feature}
                   </li>

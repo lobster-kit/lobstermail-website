@@ -11,16 +11,16 @@ export function Footer() {
               href="https://palisade.email"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-foreground transition-colors hover:text-accent"
+              className="link-underline text-foreground transition-colors hover:text-accent"
             >
               Palisade
             </a>
             .
           </p>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center justify-center gap-4">
             <a
               href="#"
-              className="transition-colors hover:text-foreground"
+              className="link-underline transition-colors hover:text-foreground"
             >
               Docs
             </a>
@@ -29,7 +29,7 @@ export function Footer() {
             </span>
             <a
               href="#"
-              className="transition-colors hover:text-foreground"
+              className="link-underline transition-colors hover:text-foreground"
             >
               GitHub
             </a>
@@ -38,7 +38,7 @@ export function Footer() {
             </span>
             <a
               href="#"
-              className="transition-colors hover:text-foreground"
+              className="link-underline transition-colors hover:text-foreground"
             >
               Discord
             </a>

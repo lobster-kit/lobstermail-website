@@ -54,6 +54,7 @@ export function CodeSnippet() {
                   {copied ? (
                     <>
                       <svg
+                        className="animate-icon-pop"
                         width="13"
                         height="13"
                         viewBox="0 0 24 24"
