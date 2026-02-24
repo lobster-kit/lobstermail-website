@@ -1,0 +1,83 @@
+---
+title: Receiving Emails
+order: 4
+description: Read incoming messages from your LobsterMail inbox — poll, filter, and parse email content.
+lastUpdated: "2026-02-23"
+---
+
+## List messages
+
+Fetch all messages in an inbox:
+
+```typescript
+const messages = await lobster.inbox.messages(inbox.id);
+```
+
+Each message object contains:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Unique message identifier |
+| `from` | `string` | Sender email address |
+| `to` | `string` | Recipient address |
+| `subject` | `string` | Email subject line |
+| `text` | `string` | Plain text body |
+| `html` | `string \| null` | HTML body (if present) |
+| `receivedAt` | `string` | ISO 8601 timestamp |
+| `read` | `boolean` | Whether the message has been read |
+| `attachments` | `Attachment[]` | File attachments |
+
+## Filter by read status
+
+Fetch only unread messages:
+
+```typescript
+const unread = await lobster.inbox.messages(inbox.id, {
+  unread: true,
+});
+```
+
+## Read a single message
+
+```typescript
+const message = await lobster.inbox.message(inbox.id, messageId);
+
+console.log(message.from);    // "alice@example.com"
+console.log(message.subject); // "Re: Meeting tomorrow"
+console.log(message.text);    // "Sounds good, see you at 3pm."
+```
+
+## Handle attachments
+
+```typescript
+for (const attachment of message.attachments) {
+  console.log(attachment.filename);  // "report.pdf"
+  console.log(attachment.mimeType);  // "application/pdf"
+  console.log(attachment.size);      // 142857 (bytes)
+
+  // Download the attachment content
+  const data = await lobster.inbox.downloadAttachment(
+    inbox.id,
+    message.id,
+    attachment.id
+  );
+}
+```
+
+## Mark messages as read
+
+```typescript
+await lobster.inbox.markRead(inbox.id, message.id);
+```
+
+## Delete a message
+
+```typescript
+await lobster.inbox.delete(inbox.id, message.id);
+```
+
+## What's next
+
+- **[Sending Emails](/docs/sending-emails)** — Send replies and new messages
+- **[Webhooks](/docs/webhooks)** — Get notified in real-time when messages arrive
+- **[Security and Prompt Injection](/docs/security-and-injection)** — Safely process untrusted email content

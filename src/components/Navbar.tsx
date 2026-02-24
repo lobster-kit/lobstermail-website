@@ -15,9 +15,8 @@ import { ThemeToggle } from "./ThemeToggle";
 import { GetStartedPopup } from "./GetStartedPopup";
 
 const navLinks = [
-  { href: "#top", label: "Top" },
-  { href: "#", label: "Docs" },
-  { href: "#", label: "GitHub" },
+  { href: "/docs", label: "Docs" },
+  { href: "/blog", label: "Blog" },
 ];
 
 function NavLinks({ onLinkClick }: { onLinkClick?: () => void }) {
@@ -51,7 +50,7 @@ export function Navbar() {
 
   return (
     <nav
-      className={`fixed top-0 z-50 w-full border-b backdrop-blur-xl transition-[background-color,border-color] duration-300 ${
+      className={`fixed top-0 z-50 w-full border-b-2 backdrop-blur-xl transition-[background-color,border-color] duration-300 ${
         scrolled
           ? "border-edge-strong bg-background/95"
           : "border-edge bg-background/80"
@@ -59,7 +58,7 @@ export function Navbar() {
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
         {/* Logo */}
-        <a href="/" className="flex items-center gap-2 text-base font-semibold text-foreground">
+        <a href="/" className="flex items-center gap-2 text-base font-extrabold text-foreground">
           <Image
             src="/lobster-mail-logo-2x.png"
             alt=""
@@ -136,3 +135,4 @@ export function Navbar() {
     </nav>
   );
 }
+

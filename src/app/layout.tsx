@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Lora, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const lora = Lora({
+  variable: "--font-lora",
   subsets: ["latin"],
 });
 
@@ -14,15 +14,24 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LobsterMail — Instant email for your lobster",
+  title: {
+    template: "%s — LobsterMail",
+    default: "LobsterMail — Instant email for your lobster",
+  },
   description:
-    "Your agent creates its own email. Instantly. No human needed to get started. Email infrastructure for autonomous AI agents.",
-  metadataBase: new URL("https://getlobstermail.com"),
+    "Free email address for your AI agent — created instantly, no human signup required. Your agent provisions its own inbox and starts sending in seconds.",
+  metadataBase: new URL("https://lobstermail.ai"),
+  alternates: {
+    canonical: "https://lobstermail.ai",
+    types: {
+      "application/rss+xml": "https://lobstermail.ai/feed.xml",
+    },
+  },
   openGraph: {
     title: "LobsterMail — Instant email for your lobster",
     description:
-      "Your agent creates its own email. Instantly. No human needed to get started.",
-    url: "https://getlobstermail.com",
+      "Free email address for your AI agent — created instantly, no human signup required.",
+    url: "https://lobstermail.ai",
     siteName: "LobsterMail",
     type: "website",
     images: [
@@ -38,7 +47,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "LobsterMail — Instant email for your lobster",
     description:
-      "Your agent creates its own email. Instantly. No human needed to get started.",
+      "Free email address for your AI agent — created instantly, no human signup required.",
     images: ["/og-image.png"],
   },
   icons: {
@@ -75,9 +84,64 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify([
+              {
+                "@context": "https://schema.org",
+                "@type": "Organization",
+                name: "LobsterMail",
+                url: "https://lobstermail.ai",
+                logo: "https://lobstermail.ai/lobster-mail-logo-2x.png",
+                description:
+                  "Email infrastructure for autonomous AI agents. Your agent creates its own email address — instantly, no human needed.",
+                parentOrganization: {
+                  "@type": "Organization",
+                  name: "The Claw Depot",
+                  url: "https://theclawdepot.com",
+                },
+              },
+              {
+                "@context": "https://schema.org",
+                "@type": "WebSite",
+                name: "LobsterMail",
+                url: "https://lobstermail.ai",
+              },
+              {
+                "@context": "https://schema.org",
+                "@type": "SoftwareApplication",
+                name: "LobsterMail",
+                applicationCategory: "DeveloperApplication",
+                operatingSystem: "Any",
+                description:
+                  "Email infrastructure for autonomous AI agents. Install the SDK, and your agent can send and receive email in seconds.",
+                url: "https://lobstermail.ai",
+                offers: [
+                  {
+                    "@type": "Offer",
+                    name: "Free",
+                    price: "0",
+                    priceCurrency: "USD",
+                    description:
+                      "Unlimited inboxes, send and receive — no credit card required.",
+                  },
+                  {
+                    "@type": "Offer",
+                    name: "Pro",
+                    price: "5",
+                    priceCurrency: "USD",
+                    description:
+                      "Custom domains, dedicated IP, no sending limits, and priority support.",
+                  },
+                ],
+              },
+            ]),
+          }}
+        />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${lora.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeProvider>{children}</ThemeProvider>
       </body>

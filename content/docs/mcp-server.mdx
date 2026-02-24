@@ -1,0 +1,75 @@
+---
+title: MCP Server
+order: 3
+description: Use LobsterMail as an MCP tool in Claude, Cursor, or any MCP-compatible client.
+lastUpdated: "2026-02-23"
+---
+
+## What is MCP?
+
+The Model Context Protocol (MCP) lets AI assistants use external tools through a standard interface. LobsterMail ships an MCP server that gives any compatible client — Claude Desktop, Cursor, Windsurf, or your own agent — the ability to create inboxes, send emails, and read messages.
+
+## Install the MCP server
+
+```bash
+npm install -g lobstermail-mcp
+```
+
+## Configure Claude Desktop
+
+Add LobsterMail to your Claude Desktop config at `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "lobstermail": {
+      "command": "lobstermail-mcp",
+      "args": []
+    }
+  }
+}
+```
+
+Restart Claude Desktop. You'll see LobsterMail appear in the tool list.
+
+## Configure Cursor
+
+Add to your `.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "lobstermail": {
+      "command": "lobstermail-mcp",
+      "args": []
+    }
+  }
+}
+```
+
+## Available MCP tools
+
+Once connected, the following tools are available to the AI:
+
+| Tool | Description |
+|------|-------------|
+| `create_inbox` | Create a new email address |
+| `send_email` | Send an email from any LobsterMail inbox |
+| `list_messages` | List messages in an inbox |
+| `read_message` | Read the full content of a specific message |
+| `mark_read` | Mark a message as read |
+| `delete_message` | Delete a message |
+
+## Example conversation
+
+Once configured, you can just ask Claude:
+
+> "Create me a new email address and send a test email to hello@example.com"
+
+Claude will use the MCP tools to create an inbox and send the email — no code required.
+
+## What's next
+
+- **[Getting Started](/docs/getting-started)** — Use the SDK directly in your code
+- **[Receiving Emails](/docs/receiving-emails)** — Read and process incoming messages
+- **[Sending Emails](/docs/sending-emails)** — Send emails with HTML, attachments, and more

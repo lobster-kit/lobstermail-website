@@ -68,7 +68,7 @@ export function FadeIn({
         opacity: isVisible ? 1 : 0,
         transform: isVisible ? "translate(0)" : initialTransform,
         transition: `opacity ${duration}s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s, transform ${duration}s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
-        willChange: "opacity, transform",
+        willChange: isVisible ? "auto" : "opacity, transform",
         ...style,
       }}
     >

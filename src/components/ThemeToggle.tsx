@@ -26,7 +26,7 @@ export function ThemeToggle() {
         const next = [...keys][0] as Theme;
         if (next) setTheme(next);
       }}
-      className="flex items-center gap-0.5 rounded-full border border-edge-strong bg-surface-3 p-1"
+      className="flex items-center gap-0.5 rounded-full border-2 border-edge-strong bg-surface-3 p-1"
     >
       {modes.map(({ id, label, icon }) => (
         <ToggleButton
@@ -41,3 +41,4 @@ export function ThemeToggle() {
     </ToggleButtonGroup>
   );
 }
+

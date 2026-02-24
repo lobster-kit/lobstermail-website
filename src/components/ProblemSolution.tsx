@@ -29,17 +29,20 @@ function GmailIcon() {
 
 export function ProblemSolution() {
   return (
-    <section className="border-t border-edge px-6 py-28 sm:py-36">
+    <section className="px-6 py-28 sm:py-36">
       <div className="mx-auto max-w-6xl">
         <FadeIn>
           <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
             An inbox made for your lobster.
           </h2>
+          <p className="mx-auto mt-5 max-w-lg text-center text-base text-secondary sm:text-lg">
+            Give your agent its own address in one line of code — no credentials, no API keys, no risk to your personal mail.
+          </p>
         </FadeIn>
 
         <FadeIn delay={0.1}>
           <div className="mx-auto mt-12 max-w-2xl">
-            <div className="glass overflow-hidden rounded-2xl">
+            <div className="glass overflow-hidden p-[15px]">
               {/* Header */}
               <div className="grid grid-cols-[1fr_80px_80px] items-end border-b border-edge px-6 py-4 sm:grid-cols-[1fr_100px_100px]">
                 <span className="text-left text-xs font-medium uppercase tracking-wider text-secondary">
@@ -67,10 +70,14 @@ export function ProblemSolution() {
                       {feature}
                     </span>
                     <span className="flex justify-center">
-                      <X size={20} weight="bold" className="text-foreground" />
+                      <span className="flex h-7 w-7 items-center justify-center rounded-full border border-edge bg-foreground/10">
+                        <X size={14} weight="bold" className="text-secondary" />
+                      </span>
                     </span>
                     <span className="flex justify-center">
-                      <Check size={20} weight="bold" className="text-foreground" />
+                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent/15 border border-accent/20">
+                        <Check size={14} weight="bold" className="text-accent" />
+                      </span>
                     </span>
                   </div>
                 </FadeIn>

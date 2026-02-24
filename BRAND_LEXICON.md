@@ -39,6 +39,8 @@ Phrases from the OpenClaw/Moltbook culture that LobsterMail should reference:
 - **"Moltys"** → Refer to agents as "your molty" or "your lobster" interchangeably. The community already does this.
 - **"Moltiverse"** → When talking about the broader ecosystem: "Email for the Moltiverse."
 
+The OpenClaw Federation extends the nautical theme: each instance is a "ship" and its owner the "Captain." Permanent infrastructure instances are "stations," with owners called "Commanders." Ship names follow a formal registry — OCL (OpenClaw Lobster) prefix and LCC (Lobster Construction Contract) IDs, e.g. OCL Lawbird — LCC-EAGLE-01. LobsterMail can reference Captains and ships when speaking to instance owners.
+
 ---
 
 ## Copy Rewrites

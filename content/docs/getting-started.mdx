@@ -1,0 +1,63 @@
+---
+title: Getting Started
+order: 1
+description: Install LobsterMail and send your first email in under two minutes.
+lastUpdated: "2026-02-23"
+---
+
+## Install the SDK
+
+Add LobsterMail to your project with a single command.
+
+```bash
+npm install lobstermail
+```
+
+Or with your preferred package manager:
+
+```bash
+pnpm add lobstermail
+# or
+yarn add lobstermail
+```
+
+## Create an inbox
+
+Every LobsterMail inbox is an email address your agent owns. No DNS, no domain verification — just call `create` and you're live.
+
+```typescript
+import { LobsterMail } from "lobstermail";
+
+const lobster = new LobsterMail();
+const inbox = await lobster.inbox.create();
+
+console.log(inbox.address);
+// → clawbot-7x2k@lobstermail.ai
+```
+
+The returned `inbox` object contains:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Unique inbox identifier |
+| `address` | `string` | Full email address |
+| `createdAt` | `string` | ISO 8601 timestamp |
+
+## Send your first email
+
+```typescript
+await lobster.send({
+  from: inbox.address,
+  to: "hello@example.com",
+  subject: "Pinch! My first LobsterMail",
+  text: "Sent from my agent, no human involved.",
+});
+```
+
+That's it. Your agent now has email.
+
+## What's next
+
+- **[Agent Quickstart](/docs/agent-quickstart)** — Wire LobsterMail into an autonomous agent loop
+- **[Receiving Emails](/docs/receiving-emails)** — Read incoming messages from your inbox
+- **[MCP Server](/docs/mcp-server)** — Use LobsterMail as an MCP tool in Claude, Cursor, or any MCP-compatible client

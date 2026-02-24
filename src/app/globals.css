@@ -5,88 +5,70 @@
 [data-theme="dark"] {
   --background: #0C0A09;
   --foreground: #FAFAF9;
-  --text-secondary: #A8A29E;
-  --accent: #EA4335;
-  --accent-hover: #d63627;
-  --accent-glow: rgba(234, 67, 53, 0.06);
+  --text-secondary: #9A938E;
+  --accent: #FB5705;
+  --accent-hover: #E04D04;
+  --accent-glow: rgba(251, 87, 5, 0.06);
 
   /* Surfaces (increasing opacity) */
-  --surface-1: rgba(255, 255, 255, 0.02);
-  --surface-2: rgba(255, 255, 255, 0.03);
-  --surface-3: rgba(255, 255, 255, 0.04);
-  --surface-4: rgba(255, 255, 255, 0.06);
-  --surface-5: rgba(255, 255, 255, 0.08);
+  --surface-1: rgba(255, 255, 255, 0.04);
+  --surface-2: rgba(255, 255, 255, 0.06);
+  --surface-3: rgba(255, 255, 255, 0.08);
+  --surface-4: rgba(255, 255, 255, 0.10);
+  --surface-5: rgba(255, 255, 255, 0.14);
 
-  /* Edges / borders */
-  --edge: rgba(255, 255, 255, 0.06);
-  --edge-subtle: rgba(255, 255, 255, 0.04);
-  --edge-strong: rgba(255, 255, 255, 0.1);
-  --edge-input: rgba(255, 255, 255, 0.08);
-  --edge-hover: rgba(255, 255, 255, 0.16);
+  /* Edges / borders — blue, dimmed for dark */
+  --edge: rgba(128, 187, 255, 0.15);
+  --edge-subtle: rgba(128, 187, 255, 0.08);
+  --edge-strong: rgba(128, 187, 255, 0.25);
+  --edge-input: rgba(168, 162, 158, 0.25);
+  --edge-hover: rgba(128, 187, 255, 0.35);
 
   /* Misc */
   --muted: rgba(255, 255, 255, 0.1);
   --terminal-bg: #000000;
-  --terminal-dot: rgba(255, 255, 255, 0.15);
-  --dot-pattern: rgba(255, 255, 255, 0.075);
+  --dot-pattern: rgba(128, 187, 255, 0.15);
+  --glass-strong-bg: #0C0A09;
 
-  /* Glass */
-  --glass-bg: rgba(255, 255, 255, 0.05);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-shadow: rgba(0, 0, 0, 0.3);
-  --glass-inset: rgba(255, 255, 255, 0.05);
-
-  --glass-strong-bg: rgba(255, 255, 255, 0.06);
-  --glass-strong-border: rgba(255, 255, 255, 0.12);
-  --glass-strong-shadow: rgba(0, 0, 0, 0.5);
-  --glass-strong-inset: rgba(255, 255, 255, 0.06);
-
-  --glass-subtle-bg: rgba(255, 255, 255, 0.03);
-  --glass-subtle-border: rgba(255, 255, 255, 0.06);
+  /* Install snippet highlight (dark only) */
+  --snippet-border: var(--accent);
+  --snippet-shadow: 0 0 20px -4px rgba(251, 87, 5, 0.3);
+  --snippet-link: #FFFFFF;
 }
 
-/* ─── Light theme ─── */
-[data-theme="light"] {
-  --background: #FAFAF9;
+/* ─── Light theme (higher specificity to override :root) ─── */
+:root[data-theme="light"] {
+  --background: #FFFFFF;
   --foreground: #1C1917;
-  --text-secondary: #78716C;
-  --accent: #DC2626;
-  --accent-hover: #B91C1C;
-  --accent-glow: rgba(220, 38, 38, 0.04);
+  --text-secondary: #57534E;
+  --accent: #FB5705;
+  --accent-hover: #E04D04;
+  --accent-glow: rgba(251, 87, 5, 0.06);
 
-  /* Surfaces */
-  --surface-1: rgba(0, 0, 0, 0.01);
-  --surface-2: rgba(0, 0, 0, 0.02);
-  --surface-3: rgba(0, 0, 0, 0.03);
-  --surface-4: rgba(0, 0, 0, 0.05);
-  --surface-5: rgba(0, 0, 0, 0.07);
+  /* Surfaces (dark tint for visibility on white background) */
+  --surface-1: rgba(0, 0, 0, 0.02);
+  --surface-2: rgba(0, 0, 0, 0.03);
+  --surface-3: rgba(0, 0, 0, 0.05);
+  --surface-4: rgba(0, 0, 0, 0.07);
+  --surface-5: rgba(0, 0, 0, 0.10);
 
-  /* Edges / borders */
-  --edge: rgba(0, 0, 0, 0.08);
-  --edge-subtle: rgba(0, 0, 0, 0.05);
-  --edge-strong: rgba(0, 0, 0, 0.12);
-  --edge-input: rgba(0, 0, 0, 0.1);
-  --edge-hover: rgba(0, 0, 0, 0.16);
+  /* Edges / borders — #80BBFF blue */
+  --edge: rgba(128, 187, 255, 0.30);
+  --edge-subtle: rgba(128, 187, 255, 0.18);
+  --edge-strong: rgba(128, 187, 255, 0.45);
+  --edge-input: rgba(168, 162, 158, 0.40);
+  --edge-hover: rgba(128, 187, 255, 0.55);
 
   /* Misc */
-  --muted: rgba(0, 0, 0, 0.1);
-  --terminal-bg: #1C1917;
-  --terminal-dot: rgba(255, 255, 255, 0.25);
-  --dot-pattern: rgba(0, 0, 0, 0.04);
+  --muted: rgba(0, 0, 0, 0.12);
+  --terminal-bg: #000000;
+  --dot-pattern: rgba(128, 187, 255, 0.28);
+  --glass-strong-bg: #F6FAFD;
 
-  /* Glass */
-  --glass-bg: rgba(255, 255, 255, 0.6);
-  --glass-border: rgba(0, 0, 0, 0.08);
-  --glass-shadow: rgba(0, 0, 0, 0.06);
-  --glass-inset: rgba(255, 255, 255, 0.3);
-
-  --glass-strong-bg: rgba(255, 255, 255, 0.75);
-  --glass-strong-border: rgba(0, 0, 0, 0.1);
-  --glass-strong-shadow: rgba(0, 0, 0, 0.08);
-  --glass-strong-inset: rgba(255, 255, 255, 0.4);
-
-  --glass-subtle-bg: rgba(255, 255, 255, 0.5);
-  --glass-subtle-border: rgba(0, 0, 0, 0.06);
+  /* Install snippet highlight (dimmed orange in light) */
+  --snippet-border: rgba(251, 87, 5, 0.35);
+  --snippet-shadow: 0 0 16px -4px rgba(251, 87, 5, 0.1);
+  --snippet-link: var(--accent);
 }
 
 /* ─── Tailwind theme tokens ─── */
@@ -96,6 +78,8 @@
   --color-secondary: var(--text-secondary);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
+  --color-accent-glow: var(--accent-glow);
+  --color-snippet-link: var(--snippet-link);
 
   --color-surface-1: var(--surface-1);
   --color-surface-2: var(--surface-2);
@@ -111,9 +95,9 @@
 
   --color-muted: var(--muted);
   --color-terminal: var(--terminal-bg);
-  --color-terminal-dot: var(--terminal-dot);
+  --color-glass-strong-bg: var(--glass-strong-bg);
 
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-lora);
   --font-mono: var(--font-geist-mono);
 
   --animate-message-in: message-in 0.55s ease-out both;
@@ -223,7 +207,7 @@
   body {
     background: var(--background);
     color: var(--foreground);
-    font-family: var(--font-geist-sans), system-ui, sans-serif;
+    font-family: var(--font-lora), 'Lora', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -234,13 +218,12 @@
     inset: 0;
     z-index: 0;
     pointer-events: none;
-    background-image: radial-gradient(
-      var(--dot-pattern) 1px,
-      transparent 1px
-    );
-    background-size: 24px 24px;
-    mask-image: radial-gradient(ellipse at 50% 0%, black 0%, transparent 70%);
-    -webkit-mask-image: radial-gradient(ellipse at 50% 0%, black 0%, transparent 70%);
+    background-image:
+      linear-gradient(var(--dot-pattern) 1px, transparent 1px),
+      linear-gradient(90deg, var(--dot-pattern) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: linear-gradient(90deg, rgba(0,0,0,0.375) 0%, rgba(0,0,0,0.75) 15%, rgba(0,0,0,0.75) 85%, rgba(0,0,0,0.375) 100%);
+    -webkit-mask-image: linear-gradient(90deg, rgba(0,0,0,0.375) 0%, rgba(0,0,0,0.75) 15%, rgba(0,0,0,0.75) 85%, rgba(0,0,0,0.375) 100%);
   }
 
   ::selection {
@@ -251,26 +234,51 @@
 
 /* ─── Utilities ─── */
 @layer utilities {
+  .btn-primary {
+    border-radius: 10px;
+    border: 2px solid var(--accent);
+    background: var(--accent);
+    box-shadow: 0 4px 8px 3px rgba(251, 87, 5, 0.15), 0 1px 3px 0 rgba(0, 0, 0, 0.30);
+    color: #ffffff;
+    text-align: center;
+    font-family: var(--font-lora), 'Lora', serif;
+    font-size: 16px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+    cursor: pointer;
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-hover);
+    box-shadow: 0 6px 12px 3px rgba(251, 87, 5, 0.20), 0 2px 4px 0 rgba(0, 0, 0, 0.30);
+  }
+
+  .btn-primary:focus-visible {
+    outline: none;
+    box-shadow: 0 4px 8px 3px rgba(251, 87, 5, 0.15), 0 1px 3px 0 rgba(0, 0, 0, 0.30), 0 0 0 3px rgba(251, 87, 5, 0.3);
+  }
+
   .glass {
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px) saturate(1.4);
-    -webkit-backdrop-filter: blur(20px) saturate(1.4);
-    border: 1px solid var(--glass-border);
-    box-shadow:
-      0 0 0 0.5px var(--glass-inset) inset,
-      0 8px 32px var(--glass-shadow),
-      0 0 120px 20px var(--accent-glow);
+    border-radius: 50px;
+    border: 3px solid var(--edge-strong);
+    background: var(--background);
+    box-shadow: 0 17px 35px 0 rgba(0, 80, 171, 0.15);
   }
 
   .glass-strong {
-    background: var(--glass-strong-bg);
-    backdrop-filter: blur(40px) saturate(1.8);
-    -webkit-backdrop-filter: blur(40px) saturate(1.8);
-    border: 1px solid var(--glass-strong-border);
-    box-shadow:
-      0 0 0 0.5px var(--glass-strong-inset) inset,
-      0 16px 48px var(--glass-strong-shadow),
-      0 0 120px 20px var(--accent-glow);
+    border-radius: 50px;
+    border: 3px solid var(--edge-strong);
+    background: var(--glass-strong-bg, #F7F7F6);
+    box-shadow: 0 20px 40px 0 rgba(0, 80, 171, 0.22);
+  }
+
+  .glass-subtle {
+    border-radius: 50px;
+    border: 2px solid var(--edge-strong);
+    background: var(--background);
+    box-shadow: 0 10px 25px 0 rgba(0, 80, 171, 0.08);
   }
 
   .link-underline {
@@ -301,11 +309,92 @@
     transform: rotate(360deg);
   }
 
-  .glass-subtle {
-    background: var(--glass-subtle-bg);
-    backdrop-filter: blur(12px) saturate(1.2);
-    -webkit-backdrop-filter: blur(12px) saturate(1.2);
-    border: 1px solid var(--glass-subtle-border);
-    box-shadow: 0 0 120px 20px var(--accent-glow);
+  /* ─── Typography ─── */
+
+  .h1 {
+    color: var(--foreground);
+    font-family: var(--font-lora), 'Lora', serif;
+    font-style: normal;
+    font-weight: 900;
+    line-height: normal;
+    font-size: 28px;
+  }
+
+  .h2 {
+    color: var(--foreground);
+    font-family: var(--font-lora), 'Lora', serif;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+    font-size: 28px;
+  }
+
+  .h3 {
+    color: var(--foreground);
+    font-family: var(--font-lora), 'Lora', serif;
+    font-style: normal;
+    font-weight: 600;
+    line-height: normal;
+    font-size: 22px;
+  }
+
+  .h4 {
+    color: var(--foreground);
+    font-family: var(--font-lora), 'Lora', serif;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+    font-size: 18px;
+  }
+
+  .p-text {
+    color: var(--text-secondary);
+    font-family: var(--font-lora), 'Lora', serif;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 1.5;
+    font-size: 16px;
+  }
+
+  @media (min-width: 640px) {
+    .h1 { font-size: 36px; }
+    .h2 { font-size: 32px; }
+    .h3 { font-size: 24px; }
+    .h4 { font-size: 20px; }
+    .p-text { font-size: 18px; }
+  }
+
+  @media (min-width: 768px) {
+    .h1 { font-size: 48px; }
+    .h2 { font-size: 36px; }
+    .h3 { font-size: 28px; }
+    .h4 { font-size: 22px; }
+  }
+
+  @media (min-width: 1024px) {
+    .h1 { font-size: 56px; }
+    .h2 { font-size: 42px; }
+    .h3 { font-size: 32px; }
+    .h4 { font-size: 24px; }
+  }
+
+  /* ─── Docs content typography ─── */
+
+  .docs-content {
+    line-height: 1.75;
+  }
+
+  .docs-content > *:first-child {
+    margin-top: 0;
+  }
+
+  .docs-content > *:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Smooth scroll offset for heading anchors */
+  .docs-content [id] {
+    scroll-margin-top: 6rem;
   }
 }
+

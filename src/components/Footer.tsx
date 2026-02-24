@@ -1,8 +1,9 @@
+import Link from "next/link";
 import { FadeIn } from "./FadeIn";
 
 export function Footer() {
   return (
-    <footer className="border-t border-edge px-6 py-12">
+    <footer className="px-6 py-12">
       <FadeIn distance={8}>
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 text-center text-sm text-secondary">
           <p>
@@ -18,17 +19,28 @@ export function Footer() {
             .
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
-            <a
-              href="#"
+            <Link
+              href="/docs"
               className="link-underline transition-colors hover:text-foreground"
             >
               Docs
-            </a>
+            </Link>
+            <span className="text-muted" aria-hidden="true">
+              |
+            </span>
+            <Link
+              href="/blog"
+              className="link-underline transition-colors hover:text-foreground"
+            >
+              Blog
+            </Link>
             <span className="text-muted" aria-hidden="true">
               |
             </span>
             <a
-              href="#"
+              href="https://github.com/openclaw/openclaw"
+              target="_blank"
+              rel="noopener noreferrer"
               className="link-underline transition-colors hover:text-foreground"
             >
               GitHub
@@ -37,11 +49,22 @@ export function Footer() {
               |
             </span>
             <a
-              href="#"
+              href="https://discord.gg/clawd"
+              target="_blank"
+              rel="noopener noreferrer"
               className="link-underline transition-colors hover:text-foreground"
             >
               Discord
             </a>
+            <span className="text-muted" aria-hidden="true">
+              |
+            </span>
+            <Link
+              href="/terms"
+              className="link-underline transition-colors hover:text-foreground"
+            >
+              Terms
+            </Link>
           </div>
         </div>
       </FadeIn>
