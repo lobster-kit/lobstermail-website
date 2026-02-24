@@ -387,7 +387,7 @@
   /* ─── Dark-mode overrides ─── */
   :root[data-theme="dark"] .glass-strong,
   :root:not([data-theme]) .glass-strong {
-    background: #191D2A;
+    background: rgba(18, 19, 23, 1);
   }
 
   /* ─── Light-mode overrides ─── */
