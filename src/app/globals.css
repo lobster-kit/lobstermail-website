@@ -28,7 +28,7 @@
   --muted: rgba(255, 255, 255, 0.1);
   --terminal-bg: #000000;
   --dot-pattern: rgba(128, 187, 255, 0.15);
-  --glass-strong-bg: #0C0A09;
+  --glass-strong-bg: #000000;
 
   /* Install snippet highlight (dark only) */
   --snippet-border: var(--accent);
@@ -376,6 +376,27 @@
     .h2 { font-size: 42px; }
     .h3 { font-size: 32px; }
     .h4 { font-size: 24px; }
+  }
+
+  /* ─── Dark-mode overrides ─── */
+  :root[data-theme="dark"] .bg-glass-strong-bg,
+  :root:not([data-theme]) .bg-glass-strong-bg {
+    border-radius: 25px;
+  }
+
+  /* ─── Dark-mode overrides ─── */
+  :root[data-theme="dark"] .glass-strong,
+  :root:not([data-theme]) .glass-strong {
+    background: #191D2A;
+  }
+
+  /* ─── Light-mode overrides ─── */
+  :root[data-theme="light"] .glass-strong {
+    background: #FFFFFF;
+  }
+
+  :root[data-theme="light"] .bg-glass-strong-bg {
+    border-radius: 20px;
   }
 
   /* ─── Docs content typography ─── */
