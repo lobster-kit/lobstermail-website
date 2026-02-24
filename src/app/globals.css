@@ -392,7 +392,7 @@
 
   /* ─── Light-mode overrides ─── */
   :root[data-theme="light"] .glass-strong {
-    background: #FFFFFF;
+    background: #F6FAFD;
   }
 
   :root[data-theme="light"] .bg-glass-strong-bg {
