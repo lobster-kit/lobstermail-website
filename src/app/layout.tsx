@@ -141,7 +141,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${lora.variable} ${geistMono.variable} antialiased`}
+        className={`${lora.variable} ${geistMono.variable} flex min-h-screen flex-col antialiased`}
       >
         <ThemeProvider>{children}</ThemeProvider>
       </body>

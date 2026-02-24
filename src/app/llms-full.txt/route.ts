@@ -5,7 +5,7 @@ export async function GET() {
 
   const guideSections = await Promise.all(
     guides.map(async (meta) => {
-      const guide = getGuide(meta.slug);
+      const guide = await getGuide(meta.slug);
       if (!guide) return "";
       return `## ${guide.title}\n\n${guide.content}`;
     }),

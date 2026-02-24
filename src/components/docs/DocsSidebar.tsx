@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { List, X } from "@phosphor-icons/react";
+import { List, X, BookOpen } from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
 import type { GuideMeta } from "@/lib/docs";
 
@@ -55,6 +55,24 @@ export function DocsSidebar({ guides }: { guides: GuideMeta[] }) {
           );
         })}
       </ul>
+
+      <div className="border-t border-edge-subtle my-4" />
+
+      <Link
+        href="/docs/api-reference"
+        className={`
+          flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors duration-150
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50
+          ${
+            pathname === "/docs/api-reference"
+              ? "bg-accent/10 text-accent font-medium border-l-2 border-accent -ml-px"
+              : "text-secondary hover:text-foreground hover:bg-surface-3"
+          }
+        `}
+      >
+        <BookOpen size={16} />
+        API Reference
+      </Link>
     </>
   );
 

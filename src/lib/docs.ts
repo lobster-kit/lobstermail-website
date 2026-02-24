@@ -1,9 +1,4 @@
-import fs from "fs";
-import path from "path";
-import matter from "gray-matter";
-import { cache } from "react";
-
-const DOCS_DIR = path.join(process.cwd(), "content/docs");
+const API = "https://api.lobstermail.ai";
 
 export interface GuideMeta {
   title: string;
@@ -17,50 +12,25 @@ export interface Guide extends GuideMeta {
   content: string; // raw MDX
 }
 
-export const getGuides = cache(function getGuides(): GuideMeta[] {
-  if (!fs.existsSync(DOCS_DIR)) return [];
-
-  const files = fs.readdirSync(DOCS_DIR).filter((f) => f.endsWith(".mdx"));
-
-  const guides = files.map((filename) => {
-    const slug = filename.replace(/\.mdx$/, "");
-    const filePath = path.join(DOCS_DIR, filename);
-    const fileContent = fs.readFileSync(filePath, "utf-8");
-    const { data } = matter(fileContent);
-
-    return {
-      slug,
-      title: data.title ?? slug,
-      order: data.order ?? 99,
-      description: data.description ?? "",
-      lastUpdated: data.lastUpdated ?? "",
-    };
+export async function getGuides(): Promise<GuideMeta[]> {
+  const res = await fetch(`${API}/v1/docs/guides`, {
+    next: { revalidate: 120 },
   });
-
-  return guides.sort((a, b) => a.order - b.order);
-});
-
-export function getGuide(slug: string): Guide | null {
-  const filePath = path.join(DOCS_DIR, `${slug}.mdx`);
-  if (!fs.existsSync(filePath)) return null;
-
-  const fileContent = fs.readFileSync(filePath, "utf-8");
-  const { data, content } = matter(fileContent);
-
-  return {
-    slug,
-    title: data.title ?? slug,
-    order: data.order ?? 99,
-    description: data.description ?? "",
-    lastUpdated: data.lastUpdated ?? "",
-    content,
-  };
+  const { guides } = await res.json();
+  return guides; // already sorted by `order`
 }
 
-export function getAllSlugs(): string[] {
-  if (!fs.existsSync(DOCS_DIR)) return [];
-  return fs
-    .readdirSync(DOCS_DIR)
-    .filter((f) => f.endsWith(".mdx"))
-    .map((f) => f.replace(/\.mdx$/, ""));
+export async function getGuide(slug: string): Promise<Guide | null> {
+  const res = await fetch(`${API}/v1/docs/guides/${slug}`, {
+    next: { revalidate: 120 },
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function getOpenApiSpec(): Promise<string> {
+  const res = await fetch(`${API}/v1/docs/openapi`, {
+    next: { revalidate: 120 },
+  });
+  return res.text();
 }

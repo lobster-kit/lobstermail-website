@@ -13,7 +13,7 @@ export default async function DocsLayout({
   const guides = await getGuides();
 
   return (
-    <div className="min-h-screen bg-background font-sans text-foreground">
+    <div className="flex min-h-screen flex-col bg-background font-sans text-foreground">
       <Navbar />
       <div className="mx-auto max-w-7xl px-6 pt-24 pb-16">
         <div className="lg:grid lg:grid-cols-[240px_1fr_200px] lg:gap-10">

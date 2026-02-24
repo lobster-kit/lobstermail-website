@@ -51,7 +51,7 @@ export default async function TagPage({
   } = getPaginatedPostsByTag(decoded, currentPage);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
       <Navbar />
       <main className="pt-32">
         {/* Header */}

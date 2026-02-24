@@ -3,7 +3,7 @@ import { FadeIn } from "./FadeIn";
 
 export function Footer() {
   return (
-    <footer className="px-6 py-12">
+    <footer className="mt-auto px-6 py-12">
       <FadeIn distance={8}>
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 text-center text-sm text-secondary">
           <p>
