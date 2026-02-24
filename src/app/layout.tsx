@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "LobsterMail — Instant email for your lobster",
+    title: "Instant email for your agent",
     description:
       "Free email address for your AI agent — created instantly, no human signup required.",
     url: "https://lobstermail.ai",
@@ -39,13 +39,13 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "LobsterMail — Instant email for your lobster",
+        alt: "Instant email for your agent",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "LobsterMail — Instant email for your lobster",
+    title: "Instant email for your agent",
     description:
       "Free email address for your AI agent — created instantly, no human signup required.",
     images: ["/og-image.png"],
