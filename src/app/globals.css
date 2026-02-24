@@ -63,7 +63,7 @@
   --muted: rgba(0, 0, 0, 0.12);
   --terminal-bg: #000000;
   --dot-pattern: rgba(128, 187, 255, 0.28);
-  --glass-strong-bg: #F6FAFD;
+  --glass-strong-bg: #FFFFFF;
 
   /* Install snippet highlight (dimmed orange in light) */
   --snippet-border: rgba(251, 87, 5, 0.35);
@@ -379,15 +379,15 @@
   }
 
   /* ─── Dark-mode overrides ─── */
-  :root[data-theme="dark"] .bg-glass-strong-bg,
-  :root:not([data-theme]) .bg-glass-strong-bg {
-    border-radius: 25px;
-  }
-
-  /* ─── Dark-mode overrides ─── */
   :root[data-theme="dark"] .glass-strong,
   :root:not([data-theme]) .glass-strong {
     background: rgba(18, 19, 23, 1);
+  }
+
+  :root[data-theme="dark"] .bg-glass-strong-bg,
+  :root:not([data-theme]) .bg-glass-strong-bg {
+    background-color: #000000;
+    border-radius: 25px;
   }
 
   /* ─── Light-mode overrides ─── */
@@ -396,6 +396,7 @@
   }
 
   :root[data-theme="light"] .bg-glass-strong-bg {
+    background-color: #FFFFFF;
     border-radius: 20px;
   }
 
