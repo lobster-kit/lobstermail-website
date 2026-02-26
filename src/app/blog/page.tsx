@@ -117,7 +117,7 @@ export default async function BlogPage({
                 {resolvedPage > 1 && (
                   <Link
                     href={`/blog?page=${resolvedPage - 1}`}
-                    className="rounded-lg border-2 border-edge px-4 py-2 text-sm font-medium text-secondary transition-colors hover:border-edge-hover hover:text-foreground"
+                    className="rounded-lg border-2 border-edge bg-surface-2 px-4 py-2 text-sm font-medium text-secondary transition-colors hover:border-edge-hover hover:bg-surface-3 hover:text-foreground"
                   >
                     Previous
                   </Link>
@@ -141,7 +141,7 @@ export default async function BlogPage({
                           className={`flex h-10 w-10 items-center justify-center rounded-lg border-2 text-sm font-medium transition-colors ${
                             p === resolvedPage
                               ? "border-accent bg-accent/[0.08] text-accent"
-                              : "border-edge text-secondary hover:border-edge-hover hover:text-foreground"
+                              : "border-edge bg-surface-2 text-secondary hover:border-edge-hover hover:bg-surface-3 hover:text-foreground"
                           }`}
                         >
                           {p}
@@ -152,7 +152,7 @@ export default async function BlogPage({
                 {resolvedPage < totalPages && (
                   <Link
                     href={`/blog?page=${resolvedPage + 1}`}
-                    className="rounded-lg border-2 border-edge px-4 py-2 text-sm font-medium text-secondary transition-colors hover:border-edge-hover hover:text-foreground"
+                    className="rounded-lg border-2 border-edge bg-surface-2 px-4 py-2 text-sm font-medium text-secondary transition-colors hover:border-edge-hover hover:bg-surface-3 hover:text-foreground"
                   >
                     Next
                   </Link>

@@ -20,7 +20,7 @@ export function DocsPrevNext({ guides, currentSlug }: DocsPrevNextProps) {
         {prev ? (
           <Link
             href={`/docs/${prev.slug}`}
-            className="group flex items-center gap-3 rounded-xl border-2 border-edge-subtle px-5 py-4 transition-all duration-200 hover:border-edge-hover hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-4px_rgba(0,80,171,0.1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+            className="group flex items-center gap-3 rounded-xl border-2 border-edge-subtle bg-surface-2 px-5 py-4 transition-all duration-200 hover:border-edge-hover hover:bg-surface-3 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-4px_rgba(0,80,171,0.1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
           >
             <ArrowLeft
               size={18}
@@ -42,7 +42,7 @@ export function DocsPrevNext({ guides, currentSlug }: DocsPrevNextProps) {
         {next ? (
           <Link
             href={`/docs/${next.slug}`}
-            className="group flex items-center justify-end gap-3 rounded-xl border-2 border-edge-subtle px-5 py-4 transition-all duration-200 hover:border-edge-hover hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-4px_rgba(0,80,171,0.1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 text-right"
+            className="group flex items-center justify-end gap-3 rounded-xl border-2 border-edge-subtle bg-surface-2 px-5 py-4 transition-all duration-200 hover:border-edge-hover hover:bg-surface-3 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-4px_rgba(0,80,171,0.1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 text-right"
           >
             <div className="min-w-0">
               <p className="text-xs text-secondary font-mono uppercase tracking-wider">

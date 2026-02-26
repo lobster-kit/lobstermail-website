@@ -64,7 +64,7 @@ export const metadata: Metadata = {
 const themeScript = `
 (function(){
   try {
-    var t = localStorage.getItem('theme') || 'system';
+    var t = localStorage.getItem('theme') || 'dark';
     var r = t === 'system'
       ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
       : t;

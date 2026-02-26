@@ -42,7 +42,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [resolvedTheme, setResolved] = useState<ResolvedTheme>("dark");
 
   useEffect(() => {
-    const stored = (localStorage.getItem("theme") as Theme) || "system";
+    const stored = (localStorage.getItem("theme") as Theme) || "dark";
     setThemeRaw(stored);
     const r = resolve(stored);
     setResolved(r);
