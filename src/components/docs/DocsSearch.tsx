@@ -69,7 +69,7 @@ export function DocsSearch({ guides }: { guides: GuideMeta[] }) {
       {/* Search trigger button */}
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 w-full px-3 py-2 rounded-lg border-2 border-edge-subtle text-sm text-secondary hover:border-edge-hover hover:text-foreground transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+        className="flex items-center gap-2 w-full px-3 py-2 rounded-lg border-2 border-edge-subtle bg-background text-sm text-secondary hover:border-edge-hover hover:text-foreground transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
       >
         <MagnifyingGlass size={16} />
         <span className="flex-1 text-left">Search docs...</span>
@@ -82,10 +82,10 @@ export function DocsSearch({ guides }: { guides: GuideMeta[] }) {
       {open && (
         <>
           <div
-            className="fixed inset-0 z-50 bg-background/60 backdrop-blur-sm animate-modal-overlay-in"
+            className="fixed inset-0 z-[60] bg-background/60 backdrop-blur-sm animate-modal-overlay-in"
             onClick={() => setOpen(false)}
           />
-          <div className="fixed inset-x-4 top-[15vh] sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-lg z-50 animate-modal-in">
+          <div className="fixed inset-x-4 top-[15vh] sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-lg z-[60] animate-modal-in">
             <div className="rounded-2xl border-2 border-edge bg-background shadow-[0_20px_40px_-8px_rgba(0,80,171,0.25)] overflow-hidden">
               {/* Search input */}
               <div className="flex items-center gap-3 px-4 py-3 border-b-2 border-edge-subtle">

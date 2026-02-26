@@ -1,0 +1,293 @@
+---
+title: "let your agent schedule meetings over email"
+description: "How to build an AI agent that reads meeting requests, checks your calendar, proposes times, and handles the back-and-forth. All from its own email address."
+date: "2026-02-17"
+author: "Samuel Chenard"
+tags: ["use-cases", "email", "automation"]
+image: "/blog/agent-schedule-meetings-email.png"
+---
+
+Meeting scheduling is one of those tasks that feels like it should take thirty seconds but somehow eats fifteen minutes. Someone emails asking to meet. You check your calendar. You check their time zone. You propose three slots. They can't do any of them. You propose three more. They pick one but ask to shift it by thirty minutes. You update the invite. Total elapsed time from first email to confirmed meeting: two days and eight messages.
+
+Your AI agent can handle the entire thing. Give it its own email address, connect it to your calendar, and let it run the negotiation. The person on the other end just replies to a normal email. No scheduling links, no apps to install, no "find a time that works" tools.
+
+## Why email works better than a scheduling link
+
+Scheduling tools like Calendly solve a real problem, but they add friction in certain contexts. Sending a scheduling link to a senior executive, a potential investor, or a new client can feel transactional. Some people just don't click them. Others find it presumptuous.
+
+Email is different. Everyone knows how to reply to an email. There's no power dynamic in replying to a message. And when your agent handles the scheduling from its own address, it looks like a human assistant coordinating on your behalf. The other person's experience is seamless.
+
+This is especially useful for cross-organization scheduling, where you can't share a calendar or expect someone to use your preferred tool. Email is the universal protocol. Your agent speaks it natively.
+
+## What we're building
+
+A scheduling agent that:
+
+1. Catches meeting request emails at its own address (e.g., `scheduler@yourcompany.com`)
+2. Parses what the sender is asking for (meeting type, duration, participants, preferences)
+3. Checks your calendar API for availability
+4. Proposes times adjusted for time zones
+5. Handles the back-and-forth until a slot is confirmed
+6. Creates the calendar event and sends confirmation to everyone
+
+We'll use the LobsterMail SDK for the email layer and a calendar API (Google Calendar in this example, but the pattern works with any provider) for availability.
+
+## Step 1: give your agent a scheduling inbox
+
+Your agent needs its own shell. Not your personal inbox, not a shared alias. A dedicated address that exists purely for scheduling.
+
+```bash
+npm install @lobstermail/sdk
+```
+
+```javascript
+import { LobsterMail } from "@lobstermail/sdk";
+
+const client = new LobsterMail();
+
+const inbox = await client.provision({
+  name: "scheduler",
+  webhookUrl: "https://your-server.com/webhook/scheduler",
+});
+
+console.log(inbox.address);
+// → scheduler@lobstermail.ai
+```
+
+On the Builder tier, you can use your own reef with a [custom domain](/blog/custom-domains-agent-email), so people email `scheduler@yourcompany.com` and your agent catches it directly.
+
+<Callout type="tip">
+  Tell your contacts to CC or email your scheduling address when they want to book time. You can also set up an auto-forward rule from your primary inbox for any email containing phrases like "schedule a call" or "find a time."
+</Callout>
+
+## Step 2: parse the meeting request
+
+When someone emails your scheduling address, LobsterMail fires a webhook. The agent's first job is to understand what's being asked:
+
+```javascript
+async function parseMeetingRequest(email) {
+  const safeBody = email.safeBodyForLLM();
+
+  const response = await llm.chat({
+    messages: [
+      {
+        role: "system",
+        content: `You are a scheduling assistant. Extract meeting details from the email.
+Return JSON: {
+  "wantsMeeting": true/false,
+  "meetingType": "call" | "video" | "in-person" | "unspecified",
+  "duration": 30,
+  "participants": ["email@example.com"],
+  "preferredTimes": ["morning", "afternoon", "specific time if mentioned"],
+  "timezone": "America/New_York or null if unknown",
+  "notes": "any other context"
+}`,
+      },
+      { role: "user", content: safeBody },
+    ],
+  });
+
+  return JSON.parse(response.content);
+}
+```
+
+Notice we're using `email.safeBodyForLLM()` here. That wraps the email content in boundary markers and strips anything that looks like a prompt injection attempt. When your agent is reading emails from external senders, this matters. See our post on [prompt injection risks in email agents](/blog/prompt-injection-email-agents) for why.
+
+## Step 3: check your calendar
+
+With the meeting details parsed, the agent queries your calendar for open slots:
+
+```javascript
+import { google } from "googleapis";
+
+async function getAvailableSlots(duration, dayRange = 5) {
+  const calendar = google.calendar({ version: "v3", auth: oauthClient });
+
+  const now = new Date();
+  const end = new Date(now.getTime() + dayRange * 24 * 60 * 60 * 1000);
+
+  const busy = await calendar.freebusy.query({
+    requestBody: {
+      timeMin: now.toISOString(),
+      timeMax: end.toISOString(),
+      items: [{ id: "primary" }],
+    },
+  });
+
+  const busySlots = busy.data.calendars.primary.busy;
+
+  // Find gaps that fit the requested duration
+  return findOpenSlots(busySlots, now, end, duration);
+}
+```
+
+The `findOpenSlots` function walks through your busy periods and identifies gaps that fit the requested meeting duration. Filter for your working hours (say 9 a.m. to 5 p.m. in your time zone) and exclude weekends. The agent picks the best three options and converts them to the sender's time zone if known.
+
+## Step 4: propose times and handle replies
+
+This is where the agent earns its keep. It formats a natural reply with proposed times:
+
+```javascript
+async function proposeSlots(email, slots, senderTimezone) {
+  const formatted = slots.map((slot) => {
+    const time = senderTimezone
+      ? formatInTimezone(slot, senderTimezone)
+      : formatInTimezone(slot, "UTC");
+    return `- ${time}`;
+  });
+
+  const body = await llm.chat({
+    messages: [
+      {
+        role: "system",
+        content: `You are a scheduling assistant replying on behalf of the user.
+Write a brief, friendly email proposing these times for a meeting.
+Keep it under 5 sentences. Be direct. Don't be overly formal.
+Times to propose:\n${formatted.join("\n")}`,
+      },
+    ],
+  });
+
+  await client.send({
+    from: inbox.address,
+    to: email.from,
+    subject: `Re: ${email.subject}`,
+    body: body.content,
+  });
+}
+```
+
+The agent's reply looks something like:
+
+> Hi Sarah,
+>
+> Here are a few times that work for a 30-minute call this week:
+>
+> - Wednesday, Feb 26 at 10:00 AM EST
+> - Thursday, Feb 27 at 2:00 PM EST
+> - Friday, Feb 28 at 11:30 AM EST
+>
+> Let me know which works best, or suggest another time if none of these fit.
+
+When Sarah replies, the webhook fires again. The agent parses her response, checks whether she picked a slot or requested alternatives, and either confirms or proposes new times. The loop continues until someone confirms.
+
+## Step 5: confirm and create the event
+
+Once a time is confirmed, the agent books it:
+
+```javascript
+async function confirmMeeting(slot, participants, details) {
+  const calendar = google.calendar({ version: "v3", auth: oauthClient });
+
+  await calendar.events.insert({
+    calendarId: "primary",
+    requestBody: {
+      summary: details.meetingType === "video" ? "Video call" : "Meeting",
+      start: { dateTime: slot.start, timeZone: "UTC" },
+      end: { dateTime: slot.end, timeZone: "UTC" },
+      attendees: participants.map((email) => ({ email })),
+      description: details.notes || "",
+    },
+  });
+
+  // Send confirmation to all participants
+  for (const participant of participants) {
+    await client.send({
+      from: inbox.address,
+      to: participant,
+      subject: `Confirmed: ${details.meetingType} on ${formatDate(slot.start)}`,
+      body: `This is confirmed. You'll receive a calendar invite shortly.\n\n${details.notes || ""}`,
+    });
+  }
+}
+```
+
+Calendar invite sent. Confirmation email sent. Both sides have the details. Total human effort: zero.
+
+## Handling edge cases
+
+Real scheduling conversations aren't always three emails. Here's what to account for:
+
+**Rescheduling.** Someone replies to the confirmation asking to move the meeting. The agent detects the reschedule intent, cancels the existing event, and starts a new proposal round.
+
+**Multi-person scheduling.** The agent emails each participant separately, collects availability, finds the overlap, and proposes times that work for everyone. This is where agents genuinely outperform humans, since juggling three or four people's calendars manually is painful.
+
+**Ambiguous requests.** "Let's catch up sometime next week" doesn't specify a duration or format. The agent asks a clarifying question: "Happy to set something up. Would a 30-minute video call work, or did you have something else in mind?"
+
+**Time zone confusion.** When the sender's timezone isn't obvious, the agent asks. Better to confirm than to book a meeting at 3 a.m. their time.
+
+## Tracking conversation state
+
+The agent needs to know where each scheduling conversation stands. A simple state machine works:
+
+```javascript
+const STATES = {
+  NEW: "new",              // Just received, not yet parsed
+  PROPOSED: "proposed",    // Slots sent, waiting for reply
+  CONFIRMED: "confirmed",  // Meeting booked
+  RESCHEDULING: "rescheduling",
+};
+```
+
+Store the state per thread (using the email subject or message ID headers). When a new email arrives, the agent checks the thread state and picks up where it left off. This prevents it from proposing slots to someone who already confirmed.
+
+<Callout type="tip">
+  Store conversation state in a database, not in memory. If your server restarts, you don't want the agent to forget that Sarah already picked Thursday at 2 PM.
+</Callout>
+
+## What this replaces
+
+A human assistant doing this work costs real money and still needs sleep. A scheduling tool like Calendly or Cal.com works, but only when the other person clicks the link. An email-based scheduling agent handles the cases those tools don't: the informal "let's find time" emails, the multi-party coordination, the people who just reply instead of clicking.
+
+The agent lives in its own shell, separate from your personal email. It handles the back-and-forth so you don't see it until the meeting appears on your calendar. If you're already using an agent for [support triage](/blog/build-support-agent-email) or [newsletter digests](/blog/automate-newsletter-inbox), adding a scheduling agent is the same pattern with different logic.
+
+For more on what agents can do once they have their own inbox, check out [7 things your agent can do with its own email](/blog/what-agents-do-with-email).
+
+<FAQ>
+  <FAQItem question="Does the person I'm scheduling with need to install anything?">
+    No. They just reply to a normal email. The agent handles the rest. No links to click, no apps to download, no accounts to create.
+  </FAQItem>
+  <FAQItem question="Can the agent handle scheduling across different time zones?">
+    Yes. The agent detects or asks for the sender's time zone and converts proposed slots accordingly. All calendar events are stored in UTC to avoid confusion.
+  </FAQItem>
+  <FAQItem question="What calendar providers does this work with?">
+    The examples use Google Calendar, but the pattern works with any calendar API: Microsoft Outlook, Apple Calendar via CalDAV, or any service that exposes a free/busy endpoint. The LobsterMail SDK handles the email layer regardless of which calendar you use.
+  </FAQItem>
+  <FAQItem question="How does the agent know which emails are meeting requests?">
+    The agent uses an LLM to classify incoming emails. It checks whether the sender is asking to schedule, reschedule, or cancel a meeting. Non-scheduling emails can be ignored or forwarded to your primary inbox.
+  </FAQItem>
+  <FAQItem question="Can the agent schedule meetings with multiple people at once?">
+    Yes. The agent emails each participant, collects their availability, finds overlapping slots, and proposes times that work for everyone. It handles the coordination across all participants in parallel.
+  </FAQItem>
+  <FAQItem question="What happens if someone wants to reschedule?">
+    The agent detects reschedule requests in replies, cancels the existing calendar event, checks your updated availability, and starts a new proposal round. The other person just replies like they would to a human assistant.
+  </FAQItem>
+  <FAQItem question="Is my calendar data safe?">
+    The agent only queries free/busy information from your calendar. It doesn't read meeting titles, attendee lists, or notes from existing events. Your calendar details stay private.
+  </FAQItem>
+  <FAQItem question="Can I set rules like no meetings before 10 AM or no Fridays?">
+    Absolutely. Define your working hours, blocked days, and buffer time between meetings in the agent's configuration. The agent will only propose slots within your rules.
+  </FAQItem>
+  <FAQItem question="How does this compare to Calendly or Cal.com?">
+    Scheduling tools require the other person to click a link and pick a slot from a web page. An email-based agent handles everything inside the email thread. It works better for people who prefer to just reply, for multi-party scheduling, and for situations where sending a booking link feels impersonal.
+  </FAQItem>
+  <FAQItem question="What if the agent proposes times and all of them get rejected?">
+    The agent checks your calendar again for new availability, proposes a fresh set of slots, and continues the conversation. It keeps going until a time is confirmed or the thread goes quiet.
+  </FAQItem>
+  <FAQItem question="Can I review what the agent sends before it goes out?">
+    Yes. You can add an approval step where the agent drafts its reply and waits for your confirmation before sending. Start with approval mode, then switch to fully autonomous once you trust the agent's judgment.
+  </FAQItem>
+  <FAQItem question="Does this work with OpenClaw?">
+    Yes. If you're running OpenClaw, install the LobsterMail skill and your agent handles inbox provisioning itself. The scheduling logic runs inside your OpenClaw instance. See [give your OpenClaw agent email in 60 seconds](/blog/openclaw-agent-email-60-seconds).
+  </FAQItem>
+  <FAQItem question="How much does running a scheduling agent cost?">
+    Receiving emails is free on LobsterMail's free tier. Sending replies requires the Builder plan at $9/month. LLM costs for parsing and generating replies are minimal since scheduling emails are short.
+  </FAQItem>
+  <FAQItem question="Can the agent add a video call link to the confirmation?">
+    Yes. When the agent creates the calendar event, it can generate a Google Meet, Zoom, or other video link via their respective APIs and include it in the confirmation email.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*

@@ -1,0 +1,177 @@
+---
+title: "running 50 agent inboxes without losing your mind (or your budget)"
+description: "Scaling from a few agent inboxes to fifty hits a pricing dead zone and an ops nightmare. Here's the cost math and how to stay sane."
+date: "2026-02-21"
+author: "Samuel Chenard"
+tags: ["cost", "email", "infrastructure"]
+image: "/blog/running-50-agent-inboxes.png"
+---
+
+You started with three agents. A support bot, a lead qualifier, and a scheduling assistant. Each one has its own inbox. Everything is manageable. You can see what each agent is doing, the costs are reasonable, and life is good.
+
+Then the team asks for more. A billing agent. A compliance reviewer. Five regional sales agents. An onboarding agent for each product line. Before long, you're staring at a spreadsheet with 50 rows and wondering how you got here.
+
+Running 50 agent inboxes isn't a hypothetical. It's where multi-agent systems end up once they start producing real value. And it's exactly where the operational complexity and the bills start to compound.
+
+## the cost math nobody wants to do
+
+Let's start with money, because that's where most people hit the wall first.
+
+**AgentMail:** Their Developer plan gives you 10 inboxes for $20/month. Need 11? You jump to the Startup plan at $200/month for 150 inboxes. There is no $40 plan, no $80 plan, no middle ground. If you need 50 inboxes, you're paying $200/month regardless.
+
+That $20 to $200 jump is a 10x price increase to go from 10 inboxes to 11. The per-inbox cost drops from $2.00 to $1.33 once you're on the Startup plan, but you're paying for 150 inboxes when you only need 50. You're subsidizing 100 empty inboxes every month.
+
+**Google Workspace:** 50 agents means 50 user accounts. At $6-18 per user, you're looking at $300-900/month. Plus the OAuth token management, the account provisioning for each agent, and the constant fear that Google will flag your accounts for automated use. People have [tried this approach](/blog/why-agent-shouldnt-use-gmail) and lived to tell cautionary tales.
+
+**LobsterMail:** $9/month. Unlimited inboxes. 50 agents, 500 agents, it doesn't matter. You pay for sending volume (1,000 emails/day, 10,000/month on the Builder plan), not for the number of addresses. We covered [why inboxes are free](/blog/lobstermail-pricing-explained) in detail, but the short version: AWS SES doesn't charge per inbox, so neither do we.
+
+Here's the annual comparison:
+
+| Platform | 50 inboxes, annual cost |
+|---|---|
+| AgentMail Startup | $2,400/year |
+| Google Workspace (Business Starter) | $3,600/year |
+| Google Workspace (Business Standard) | $8,400/year |
+| LobsterMail Builder | $108/year |
+
+That's not a typo. The difference between LobsterMail and AgentMail for 50 agent inboxes is $2,292 per year. For most teams, that's a meaningful number.
+
+## the naming problem at scale
+
+Three agents, three sensible names. `support@`, `billing@`, `scheduler@`. Easy.
+
+Fifty agents? You run out of obvious names fast. Worse, you start running into collisions. Two teams both want `assistant@`. Three product lines each want `onboarding@`. Your naming conventions break down around inbox 20, and by inbox 40 you're generating UUIDs that nobody can read in a log file.
+
+LobsterMail handles this with `createSmartInbox()`, which uses 8+ fallback strategies when your preferred handle is taken. Request `support` and get `support@`. If that's taken, it tries `support-bot@`, `support-ai@`, `support-agent@`, and other readable variations before falling back to appending short identifiers. Every agent gets a human-readable address, even when you're provisioning dozens at once.
+
+```javascript
+import { LobsterMail } from "@lobstermail/sdk";
+
+const client = new LobsterMail();
+
+// provision 50 inboxes with readable names
+const regions = ["east", "west", "central", "south", "north"];
+const roles = ["sales", "support", "billing", "onboarding"];
+
+const inboxes = await Promise.all(
+  regions.flatMap((region) =>
+    roles.map((role) =>
+      client.createSmartInbox({
+        preferredHandle: `${role}-${region}`,
+        webhookUrl: `https://agents.internal/webhook/${role}-${region}`,
+      })
+    )
+  )
+);
+
+// sales-east@lobstermail.ai, support-east@lobstermail.ai, ...
+inboxes.forEach((inbox) => console.log(inbox.address));
+```
+
+Twenty inboxes provisioned in a single script. Add more regions and roles, and the same pattern scales without manual intervention.
+
+## keeping track of what's happening across 50 inboxes
+
+This is the problem that sneaks up on you. Three inboxes, you can spot-check manually. Fifty inboxes, you need systems.
+
+Questions that come up at scale:
+
+- Which agent is receiving the most email and why?
+- Are any agents failing to respond to messages?
+- Is one agent's sending pattern dragging down deliverability for the others?
+- Did someone misconfigure an agent and it's been silently bouncing emails for three days?
+
+With shared infrastructure like Google Workspace, a single agent sending poorly formatted email can damage the domain reputation for all 50 agents. Everything shares the same sending identity, so one bad actor poisons the well.
+
+LobsterMail isolates this with per-account SES configuration sets. Each agent's sending reputation is tracked independently. If your billing agent in the central region starts getting high bounce rates, that doesn't affect your support agents in other regions. You can identify the problem, fix it, and keep the other 49 agents running cleanly.
+
+## the provisioning workflow that actually works
+
+At 50 inboxes, manual provisioning is off the table. You need to create, configure, and manage inboxes programmatically. That means your provisioning workflow has to handle:
+
+1. **Bulk creation** without rate limits choking the process
+2. **Webhook configuration** so each agent receives email through its own endpoint
+3. **Naming conventions** that stay readable as you add more agents
+4. **Deprovisioning** when agents are retired, so dead inboxes don't accumulate
+
+The agents themselves can handle most of this. An orchestration agent can provision a new inbox whenever a new agent spins up, configure its webhook, and register the address in your service registry. When an agent is retired, the orchestration agent cleans up the inbox. No human in the loop for routine operations.
+
+For custom domains, a single verified domain can serve all 50 agents. `support-east@yourcompany.com`, `billing-west@yourcompany.com`, `sales-central@yourcompany.com`. One DNS setup, unlimited addresses on that domain. SES verifies the domain once and any address can send from it.
+
+## deliverability at scale is a different game
+
+Sending email from 50 agents means 50 different sending patterns, 50 different content profiles, and 50 different recipient populations. The deliverability challenges multiply.
+
+A few things that matter at this scale:
+
+**Warm-up sequencing.** You can't spin up 50 inboxes and have all of them start sending at full volume on day one. ISPs will flag that immediately. Stagger the rollout. Start each agent at low volume and ramp up over 2-4 weeks. This is tedious but non-negotiable.
+
+**Bounce monitoring per agent.** A 5% bounce rate on one agent is a problem for that agent. A 5% bounce rate averaged across 50 agents might hide the fact that three agents each have a 30% bounce rate. Per-agent monitoring catches issues that aggregate metrics miss.
+
+**Content variation.** Fifty agents sending near-identical template emails is a spam filter magnet. Each agent should have a purpose-specific communication style. Your support agent writes differently than your sales agent, and that natural variation actually helps with deliverability. For more on authentication setup, we have a [full deliverability guide](/blog/email-deliverability-ai-agents).
+
+## what 50 inboxes actually looks like in practice
+
+Teams running 50+ agent inboxes typically fall into a few patterns:
+
+**Regional or market segmentation.** Five regions, each with a set of functional agents. The central support agent handles different SLAs than the east coast support agent, and customers get responses from an address that matches their region.
+
+**Client isolation.** Agencies and platforms that spin up dedicated agents per client. Each client gets their own support agent, their own onboarding agent, and their own reporting agent. The client sees `support@theircustomdomain.com` and has no idea an AI is on the other end.
+
+**Pipeline stages.** Large workflows where each stage has its own agent with its own inbox. Research, drafting, review, approval, publishing. We covered this coordination pattern in [multi-agent email coordination](/blog/multi-agent-email-coordination), but the cost and operations angle is different when you're running it at scale.
+
+None of these patterns require 150 inboxes. Most need somewhere between 20 and 80. That's the dead zone where per-inbox pricing hurts the most, and where flat-rate unlimited inboxes make the biggest difference.
+
+## the bottom line
+
+Running 50 agent inboxes is a real operational challenge. The naming gets complicated, the monitoring requires per-agent granularity, the deliverability demands careful warm-up, and the costs can spiral if your platform charges per inbox.
+
+The infrastructure choice you make early determines whether scaling from 10 to 50 agents is a budget conversation or a non-event. Per-inbox pricing turns every new agent into a cost decision. Unlimited inboxes turn it into a deployment decision.
+
+If you're approaching this scale, start with the [pricing breakdown](/blog/lobstermail-pricing-explained) to understand the cost structure, and the [deliverability guide](/blog/email-deliverability-ai-agents) to set up authentication before you start scaling. And if you're migrating from a platform that charges per inbox, the math speaks for itself.
+
+<FAQ>
+  <FAQItem question="How much does it cost to run 50 agent inboxes on LobsterMail?">
+    $9/month on the Builder plan. Inboxes are unlimited on every paid tier, so 50 inboxes costs the same as 5 or 500. You pay for sending volume (1,000 emails/day, 10,000/month), not inbox count.
+  </FAQItem>
+  <FAQItem question="How much would 50 agent inboxes cost on AgentMail?">
+    $200/month. AgentMail's Developer plan caps at 10 inboxes for $20/month. There's no middle tier, so needing even 11 inboxes requires their Startup plan at $200/month for 150 inboxes.
+  </FAQItem>
+  <FAQItem question="Can I use Google Workspace for 50 agent inboxes?">
+    Technically yes, but it means 50 user accounts at $6-18 each ($300-900/month). You'd also need to manage OAuth tokens per agent, handle account provisioning, and risk Google flagging automated accounts for policy violations.
+  </FAQItem>
+  <FAQItem question="How does LobsterMail handle inbox naming at scale?">
+    The `createSmartInbox()` method uses 8+ fallback strategies when your preferred handle is taken. It tries readable variations like `support-bot@`, `support-ai@`, and `support-agent@` before falling back to short identifiers. Every agent gets a human-readable address.
+  </FAQItem>
+  <FAQItem question="Can one agent's bad reputation affect my other agents?">
+    On shared infrastructure like Google Workspace, yes. On LobsterMail, each account uses per-account SES configuration sets for reputation isolation. One agent's high bounce rate won't drag down deliverability for the other 49.
+  </FAQItem>
+  <FAQItem question="How do I provision 50 inboxes without doing it manually?">
+    Use the LobsterMail SDK to provision inboxes programmatically. You can create all 50 in a single script using `Promise.all()` with `createSmartInbox()`. Each call accepts a preferred handle and webhook URL.
+  </FAQItem>
+  <FAQItem question="Do I need a custom domain for 50 agent inboxes?">
+    No, but it's recommended for branding and deliverability. A single verified custom domain can serve all 50 agents. You verify the domain once, and any address on that domain can send. The Builder plan includes 3 custom domains.
+  </FAQItem>
+  <FAQItem question="How do I monitor deliverability across 50 agents?">
+    LobsterMail tracks sending reputation per agent using isolated SES configuration sets. You can monitor bounce rates, complaint rates, and delivery rates for each agent individually rather than relying on aggregate metrics that hide per-agent problems.
+  </FAQItem>
+  <FAQItem question="Should I spin up all 50 inboxes at once?">
+    You can provision all 50 immediately, but stagger the sending. ISPs flag sudden volume spikes from new addresses. Start each agent at low sending volume and ramp up over 2-4 weeks. Receiving email has no warm-up requirement.
+  </FAQItem>
+  <FAQItem question="What happens if I need to retire an agent's inbox?">
+    Deprovisioning is handled through the SDK. When an agent is retired, you remove its inbox programmatically. An orchestration agent can automate this as part of your agent lifecycle management.
+  </FAQItem>
+  <FAQItem question="Can multiple agents share a single custom domain?">
+    Yes. One verified domain supports unlimited addresses. You can run `sales-east@yourcompany.com`, `support-west@yourcompany.com`, and `billing-central@yourcompany.com` all from the same domain with a single DNS setup.
+  </FAQItem>
+  <FAQItem question="What's the maximum number of agent inboxes LobsterMail supports?">
+    There's no hard cap on paid plans. We have a fair use policy to prevent abuse, but teams running hundreds of agent inboxes operate well within normal use. The constraint is sending volume, not inbox count.
+  </FAQItem>
+  <FAQItem question="How does per-inbox pricing create a dead zone?">
+    Platforms that charge per inbox force you to buy in tiers. If the tiers are 10 inboxes and 150 inboxes with nothing between, anyone needing 11-149 inboxes pays the same $200/month. You're subsidizing capacity you don't use, and every new agent becomes a budget discussion.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*

@@ -1,0 +1,139 @@
+---
+title: "lobstermail vs the 4 most popular agent email alternatives"
+description: "Gmail, SendGrid, Resend, and AgentMail all promise email for your agent. Here's what each one actually delivers and what it costs."
+date: "2026-02-25"
+tags: ["email", "cost", "infrastructure"]
+image: "/blog/lobstermail-vs-popular-alternatives.png"
+---
+
+Every AI agent builder hits the same wall: the agent needs email. And every time, the same handful of options come up. Gmail. SendGrid. Resend. AgentMail. LobsterMail.
+
+They sound interchangeable. They're not. Each was built for a different problem, and most of them weren't built for yours.
+
+I've spent enough time comparing these that I can save you the afternoon. Here's what each one does, what it costs, and where it falls apart for agent use cases.
+
+## The quick comparison
+
+| Capability | LobsterMail | Gmail (OAuth) | SendGrid | Resend | AgentMail |
+|---|---|---|---|---|---|
+| Persistent inbox | Yes | Yes | No | No | Yes |
+| Agent self-signup | Yes | No | No | No | No |
+| Inbound receiving | Yes (free) | Yes | Webhook only | No | Yes |
+| Outbound sending | Yes ($9/mo) | Yes | Yes (free tier) | Yes (free tier) | Yes (free tier) |
+| Inbox querying API | Yes | Yes (Gmail API) | No | No | Yes |
+| Prompt injection scanning | Yes | No | No | No | No |
+| Custom domains | Yes ($9/mo) | N/A | Yes | Yes | Yes ($20/mo) |
+| Free tier | Receive-only | Free w/ quotas | 100/day send | 100/day send | 3 inboxes, 3K/mo |
+| Paid starting price | $9/mo | $12/user/mo | $15/mo | $20/mo | $20/mo |
+| Human setup required | No | Yes | Yes | Yes | Yes |
+
+## Gmail: everyone's first instinct
+
+Your agent can read and send through Gmail's API. It's free, or $12/user/month with Google Workspace. You already have an account. What could go wrong?
+
+OAuth tokens expire and need human intervention to refresh. Rate limits cap free accounts at 500 sends per day. The API burns quota units per call — `messages.send` costs 100 units, and you're capped at 15,000 per user per minute. Sounds generous until your agent polls every few seconds.
+
+The real problem is structural. Your agent lives inside your personal inbox. A Meta alignment researcher [gave an OpenClaw agent inbox access for triage](https://techcrunch.com/2026/02/23/a-meta-ai-security-researcher-said-an-openclaw-agent-ran-amok-on-her-inbox/), and it started bulk-deleting hundreds of emails, ignoring stop commands. That happened.
+
+Gmail also can't create new inboxes programmatically. Twenty agents with separate addresses means 20 Workspace accounts at $12 each — $240/month, all set up manually. We wrote a [full breakdown of why Gmail falls short](/blog/why-agent-shouldnt-use-gmail) for agents.
+
+## SendGrid and Resend: great at what they do
+
+Both are excellent outbound email APIs. SendGrid has processed billions of emails since 2009 with mature deliverability analytics. Resend is the modern alternative with a cleaner developer experience and React Email templates.
+
+The problem: neither gives your agent an inbox.
+
+SendGrid has Inbound Parse, which forwards incoming email to a webhook as an HTTP POST. If your webhook is down when the email arrives, the message is gone. There's no stored mailbox, no querying API, no way to scroll through past messages. Resend has zero inbound capability.
+
+Both require a human to create an account, verify a domain, and generate API keys. Fine for application email. Not viable if you want your agent to provision its own inbox.
+
+SendGrid's Essentials plan starts at $15/month. Resend's Pro runs $20/month. Both are for sending only — you'd still need to build your own inbox infrastructure on top. We compared these in detail in [agent email APIs compared](/blog/agent-email-api-comparison).
+
+## AgentMail: agent email, enterprise-first
+
+AgentMail is the closest direct competitor. Real inboxes with send, receive, threading, and labeling. YC-backed, solid infra, and growing.
+
+The difference is philosophy. AgentMail requires a human to create an account, generate an API key, and configure environment variables before the agent can touch email. It's built for teams that want oversight.
+
+Pricing jumps quickly: 3 free inboxes, then $20/month for 10, then $200/month for 150. If you're running 20 agents, you've already outgrown the Developer tier and you're looking at $200. AgentMail shines for enterprise needs like SOC 2, SAML SSO, white-label, and BYO cloud. If you need those, it's a real option.
+
+But agents can't create their own inboxes without a human first. We wrote the [full LobsterMail vs AgentMail comparison](/blog/lobstermail-vs-agentmail) with every feature side by side.
+
+## Where LobsterMail fits
+
+LobsterMail was built for one scenario: the agent is the primary user of the email address.
+
+Your agent calls `LobsterMail.create()` and gets a working inbox. No human account creation, no API keys to manage, no domain to verify. The agent provisions what it needs and starts receiving email right away.
+
+The free tier is receive-only with a 100 email monthly cap. Verify via an X post or credit card to unlock 10 sends per day. The Builder plan at $9/month gives you unlimited inboxes, 1,000 sends per day, 10,000 emails per month, and custom domains. Scale at $99/month bumps sending to 10,000/day with dedicated IPs.
+
+The SDK includes `safeBodyForLLM()`, which strips potential [prompt injection](/blog/prompt-injection-email-agents) attempts before email content reaches your agent's context window. Six categories of injection scanning run on every incoming message. No other provider on this list does that.
+
+## The cost math
+
+Here's what 20 agent inboxes with sending capability costs on each platform:
+
+| Provider | Monthly cost for 20 inboxes |
+|---|---|
+| LobsterMail | $9 (Builder, unlimited inboxes) |
+| AgentMail | $200 (Startup tier, up to 150 inboxes) |
+| Gmail / Workspace | $240 (20 × $12/user, manual setup) |
+| SendGrid | N/A (no inboxes — outbound only) |
+| Resend | N/A (no inboxes — outbound only) |
+
+SendGrid and Resend aren't options here — they don't provide inboxes. Gmail works but costs 26x more and requires manual setup for every account. AgentMail works but costs 22x more.
+
+## Pick the right tool
+
+**Gmail** makes sense if your agent only needs light access to a single existing inbox and a human is around for OAuth maintenance.
+
+**SendGrid or Resend** make sense if your application sends transactional email to humans. Receipts, notifications, marketing. They're not agent inbox solutions.
+
+**AgentMail** makes sense if you need enterprise compliance, white-label support, or pre-built integrations with LangChain and CrewAI.
+
+**LobsterMail** makes sense if you want your agent to provision its own email, you're running multiple agents, you need unlimited inboxes without pricing cliffs, and you'd rather skip the human-in-the-loop setup entirely.
+
+Different tools, different jobs. But if you're building autonomous agents that need their own email, only one of these was built for exactly that.
+
+<FAQ>
+  <FAQItem question="Can my agent sign up for LobsterMail without any human involvement?">
+    Yes. The agent calls `LobsterMail.create()` and gets a working inbox immediately. No human creates an account, no API keys are manually generated, no domain verification required for the default domain. Read more about [agent self-signup](/blog/agent-self-signup-explained).
+  </FAQItem>
+  <FAQItem question="Which provider is cheapest for a single agent inbox?">
+    LobsterMail's free tier gives your agent a receive-only inbox at no cost. AgentMail's free tier includes 3 inboxes with sending. Gmail is free but requires OAuth setup and puts the agent inside your personal inbox. For sending capability, LobsterMail's Builder plan at $9/month is the cheapest option with unlimited inboxes.
+  </FAQItem>
+  <FAQItem question="Can SendGrid or Resend receive email for my agent?">
+    SendGrid can forward inbound email to a webhook via Inbound Parse, but there's no persistent inbox or querying API. If your webhook endpoint is down, the message is lost. Resend has no inbound capability at all. Neither is suitable as an agent inbox. See our [detailed API comparison](/blog/agent-email-api-comparison).
+  </FAQItem>
+  <FAQItem question="Why shouldn't I just use Gmail for my agent?">
+    Three reasons: OAuth tokens break and need human intervention, your agent lives inside your personal inbox (with access to your entire email history), and Gmail can't create new inboxes programmatically. At scale, it's $12/user/month with manual setup per account. We wrote a [full article on this](/blog/why-agent-shouldnt-use-gmail).
+  </FAQItem>
+  <FAQItem question="Does AgentMail support agent self-signup?">
+    No. AgentMail requires a human to create an account at their console, generate an API key, and configure it in the agent's environment before the agent can use email. The agent can create inboxes programmatically after that, but initial setup is manual.
+  </FAQItem>
+  <FAQItem question="What does LobsterMail's prompt injection scanning do?">
+    Every incoming email is scanned across six categories: boundary manipulation, system prompt override, data exfiltration, role hijacking, tool invocation, and encoding obfuscation. The SDK's `safeBodyForLLM()` method wraps content in boundary markers and strips injected payloads before the message reaches your agent's context window.
+  </FAQItem>
+  <FAQItem question="Can I switch from AgentMail to LobsterMail?">
+    Yes. Both use standard email protocols, so any email address on either platform can communicate with any other address. You can migrate agents incrementally — spin up new inboxes on LobsterMail while existing ones still work on AgentMail.
+  </FAQItem>
+  <FAQItem question="What if I need SOC 2 compliance?">
+    AgentMail offers SOC 2 reports on their $200/month Startup tier and above. LobsterMail doesn't currently have SOC 2 certification. If your organization requires it today, AgentMail is the better fit for that specific need.
+  </FAQItem>
+  <FAQItem question="Can I use LobsterMail alongside SendGrid or Resend?">
+    Yes. A common pattern is using SendGrid or Resend for your application's outbound transactional email (receipts, notifications, marketing campaigns) and LobsterMail for your agents' inboxes. Different tools for different jobs in the same system.
+  </FAQItem>
+  <FAQItem question="How do custom domains work across these providers?">
+    LobsterMail supports custom domains on the $9/month Builder plan with up to 3 domains. AgentMail includes them starting at $20/month. SendGrid and Resend both support custom sending domains on paid plans. Gmail uses whatever Google Workspace domain you already own. See our [custom domains guide](/blog/custom-domains-agent-email) for LobsterMail specifics.
+  </FAQItem>
+  <FAQItem question="Which provider has the best free tier for agents?">
+    It depends on what you need. LobsterMail's free tier gives your agent a persistent inbox it can query, with receive-only access and no human setup required. AgentMail's free tier gives you 3 inboxes with send and receive but requires human account creation. Gmail is free but has all the OAuth and security risks. SendGrid and Resend free tiers are outbound-only.
+  </FAQItem>
+  <FAQItem question="How many inboxes can I run on LobsterMail's $9 plan?">
+    Unlimited. The Builder plan at $9/month has no inbox cap. You can spin up as many agent inboxes as you need. On AgentMail, 10 inboxes cost $20/month and 150 cost $200/month. On Gmail, each additional inbox is another $12/month Workspace account.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*

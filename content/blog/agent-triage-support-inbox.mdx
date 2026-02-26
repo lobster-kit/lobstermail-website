@@ -1,0 +1,290 @@
+---
+title: "how to build an agent that triages your support inbox"
+description: "Build an AI agent that classifies urgency, routes to the right person, and drafts replies for the easy stuff. Practical tutorial with code."
+date: "2026-02-16"
+author: "Samuel Chenard"
+tags: ["use-cases", "email", "automation"]
+image: "/blog/agent-triage-support-inbox.png"
+---
+
+You built a support agent. It reads incoming emails and can draft basic replies. That was the easy part.
+
+Now you've got 100+ emails hitting that inbox every day. Some are password resets. Some are customers threatening to churn. Some are enterprise prospects asking about SOC 2 compliance. And your agent treats all of them the same, because the only logic you gave it was "categorize and respond."
+
+Triage is the missing piece. Not just "is this billing or technical?" but "how urgent is this, who specifically should handle it, and can the agent resolve it without involving anyone?" That's what we're building here.
+
+If you haven't set up a basic support agent yet, start with our guide on [building a support agent that handles email](/blog/build-support-agent-email). This tutorial picks up where that one left off and focuses entirely on the triage and routing layer.
+
+## The routing table
+
+Before writing any code, define your routing rules. This is the part most people skip, and it's the part that determines whether your triage agent actually reduces workload or just adds noise.
+
+Here's a routing table for a typical B2B SaaS team:
+
+```javascript
+const ROUTING_TABLE = {
+  billing: {
+    critical: { assignee: "finance-lead@yourcompany.com", sla: "1h" },
+    normal:   { assignee: "billing-queue@yourcompany.com", sla: "4h" },
+    low:      { assignee: null, autoReply: true },
+  },
+  technical: {
+    critical: { assignee: "oncall@yourcompany.com", sla: "30m" },
+    normal:   { assignee: "engineering-queue@yourcompany.com", sla: "8h" },
+    low:      { assignee: "engineering-queue@yourcompany.com", sla: "24h" },
+  },
+  account: {
+    critical: { assignee: "cs-lead@yourcompany.com", sla: "2h" },
+    normal:   { assignee: "cs-queue@yourcompany.com", sla: "8h" },
+    low:      { assignee: null, autoReply: true },
+  },
+  general: {
+    critical: { assignee: "cs-lead@yourcompany.com", sla: "4h" },
+    normal:   { assignee: null, autoReply: true },
+    low:      { assignee: null, autoReply: true },
+  },
+};
+```
+
+The `null` assignee with `autoReply: true` means the agent handles it alone. Everything else gets routed to a specific person or queue. The SLA field is for tracking, not enforcement -- we'll use it later to flag breaches.
+
+## Classifying urgency
+
+The existing support agent post uses a simple low/medium/high urgency scale. For triage, you need more precision. Critical means something is broken or money is involved right now. Normal means the customer needs a response but nothing is on fire. Low means it can wait.
+
+The trick is giving the LLM enough signal to distinguish between these. A customer saying "this is urgent" isn't necessarily critical. A customer saying "our production API has been returning 500s for 20 minutes" is.
+
+```javascript
+async function classifyEmail(email) {
+  const safeBody = email.safeBodyForLLM();
+
+  const response = await llm.chat.completions.create({
+    model: "gpt-4o",
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "system",
+        content: `You are a support email triage system. Classify this email on two axes.
+
+Category (pick one): billing, technical, account, general
+Urgency (pick one):
+- critical: production outage, security incident, payment failure, data loss, legal threat
+- normal: feature request, how-to question, non-blocking bug, billing inquiry
+- low: feedback, general question, newsletter reply, thank-you note
+
+Also assess:
+- confidence: 0-1 float, how certain you are about category + urgency
+- canAutoReply: boolean, true only if this is a routine question with a clear answer
+- summary: one sentence describing the issue
+- customerTier: "enterprise", "paid", or "free" if determinable from context, otherwise "unknown"
+
+Respond as JSON.`,
+      },
+      {
+        role: "user",
+        content: safeBody,
+      },
+    ],
+  });
+
+  return JSON.parse(response.choices[0].message.content);
+}
+```
+
+Notice `email.safeBodyForLLM()` instead of passing raw body text. This wraps the email content in boundary markers and strips any injected delimiters, so a malicious support email can't hijack your agent's classification prompt. When your triage agent processes hundreds of emails from unknown senders, this matters.
+
+<Callout type="tip">
+  The `customerTier` field is optional but valuable. If your agent can identify enterprise customers from their domain or email signature, you can bump their urgency automatically. A "normal" issue from your biggest customer might deserve "critical" routing.
+</Callout>
+
+## The routing function
+
+Now connect classification to your routing table:
+
+```javascript
+async function triageEmail(email) {
+  const classification = await classifyEmail(email);
+
+  // Override: low-confidence classifications always go to a human
+  if (classification.confidence < 0.75) {
+    return routeToHuman(email, classification, "cs-lead@yourcompany.com",
+      "Low confidence classification — needs human review");
+  }
+
+  const route = ROUTING_TABLE[classification.category]?.[classification.urgency];
+
+  if (!route) {
+    return routeToHuman(email, classification, "cs-lead@yourcompany.com",
+      "No matching route");
+  }
+
+  // Auto-reply path
+  if (route.autoReply && classification.canAutoReply) {
+    const draft = await generateReply(email, classification);
+    await sendReply(email, draft);
+    await logTriage(email, classification, "auto-replied");
+    return;
+  }
+
+  // Route to assigned human
+  await routeToHuman(email, classification, route.assignee,
+    `SLA: ${route.sla}`);
+}
+```
+
+The confidence threshold is your safety valve. Anything below 0.75 goes straight to a human regardless of what the classifier thinks. Start with this threshold high and lower it as you review the agent's decisions over the first few weeks.
+
+## Routing to humans with context
+
+When the agent hands off to a person, the handoff quality determines whether you actually saved time. A forwarded email with no context is barely better than no triage at all. Here's what a good handoff looks like:
+
+```javascript
+async function routeToHuman(email, classification, assignee, note) {
+  const handoff = `**Triaged by support agent**
+Category: ${classification.category}
+Urgency: ${classification.urgency}
+Confidence: ${(classification.confidence * 100).toFixed(0)}%
+Customer tier: ${classification.customerTier}
+Summary: ${classification.summary}
+Note: ${note}
+
+--- Original email below ---
+
+From: ${email.from}
+Subject: ${email.subject}
+Received: ${email.receivedAt}
+
+${email.body}`;
+
+  await client.send({
+    from: "support@yourcompany.com",
+    to: assignee,
+    subject: `[${classification.urgency.toUpperCase()}] [${classification.category}] ${email.subject}`,
+    body: handoff,
+  });
+
+  await logTriage(email, classification, `routed to ${assignee}`);
+}
+```
+
+The subject line prefix is deliberate. `[CRITICAL] [technical] Production API returning 500s` tells the assignee everything they need before opening the email. They can set up inbox filters on these prefixes to prioritize their own queue.
+
+## Handling edge cases
+
+Three situations will trip up a naive triage agent.
+
+**Multi-issue emails.** A customer writes one email about a billing error and a broken feature. Your classifier picks one category and ignores the other. Fix this by adding a `secondaryCategory` field to your classification prompt and routing to both queues when it's present.
+
+**Reply chains.** A customer replies to an auto-response with additional information. Your webhook receives this as a new email. Without thread awareness, the agent classifies it fresh and might route it to a different person. Track threads by `In-Reply-To` and `References` headers and route follow-ups to whoever handled the original.
+
+```javascript
+async function triageEmail(email) {
+  // Check for existing thread
+  const existingThread = await findThread(email.headers);
+  if (existingThread) {
+    return routeToHuman(email, existingThread.classification,
+      existingThread.assignee, "Follow-up on existing thread");
+  }
+
+  const classification = await classifyEmail(email);
+  // ... rest of triage logic
+}
+```
+
+**Repeat senders.** If the same customer emails three times in an hour, the third email should flag the pattern. Track sender frequency and auto-escalate urgency when someone is clearly frustrated or stuck.
+
+## Wiring it up
+
+Connect the triage function to your webhook handler. If you're using LobsterMail webhooks, verify the HMAC signature before processing:
+
+```javascript
+app.post("/webhook/support", express.json(), async (req, res) => {
+  const isValid = client.webhooks.verify(
+    req.body,
+    req.headers["x-lobstermail-signature"],
+    process.env.WEBHOOK_SECRET
+  );
+
+  if (!isValid) return res.status(401).send("Invalid signature");
+
+  res.status(200).send("OK");
+
+  if (req.body.event === "email.received") {
+    await triageEmail(req.body).catch(err => {
+      console.error("Triage failed:", err);
+      // Fail-safe: route unprocessable emails to a human
+      routeToHuman(req.body, { category: "unknown", urgency: "normal",
+        confidence: 0, summary: "Triage failed" },
+        "cs-lead@yourcompany.com", `Error: ${err.message}`);
+    });
+  }
+});
+```
+
+The catch block is important. If the LLM call fails, if parsing breaks, if anything goes wrong, the email still gets to a human. A triage agent that silently drops emails is worse than no triage at all.
+
+<Callout type="tip">
+  Provision separate inboxes for each triage category if you want clean separation. `billing@yourcompany.com`, `technical@yourcompany.com`, and a catch-all `support@yourcompany.com` that the triage agent monitors. On the Builder plan ($9/mo), you get custom domains with up to three domain configurations, which is enough to cover this setup.
+</Callout>
+
+## Measuring triage quality
+
+After a week of running, pull your logs and look at four numbers:
+
+1. **Auto-reply accuracy.** What percentage of auto-replies actually resolved the issue? Check by looking at whether the customer replied again within 24 hours.
+2. **Routing accuracy.** How often did the assigned person re-route the email to someone else? Every re-route means the classifier got the category or urgency wrong.
+3. **SLA hit rate.** What percentage of emails were responded to within the SLA defined in your routing table?
+4. **Confidence distribution.** If most classifications land below 0.75, your prompt needs work. If most land above 0.95, you might be able to lower your auto-reply threshold.
+
+These four metrics tell you where to tune. Adjust the classification prompt, update the routing table, and expand auto-reply coverage as the numbers improve.
+
+## What changes at scale
+
+At 100 emails per day, a single triage agent and one webhook handler is fine. At 1,000 per day, you'll want to process classifications in parallel and add a message queue between the webhook handler and the triage function. At 10,000 per day, you'll want multiple inboxes with dedicated agents per category, each with their own classification prompt tuned to that domain.
+
+LobsterMail's inbox model supports this naturally. Each inbox gets its own webhook URL, so you can fan out at the infrastructure level rather than building a message router in your application code.
+
+For more on how agents coordinate across multiple inboxes, see [multi-agent email coordination](/blog/multi-agent-email-coordination). And if you're weighing webhooks vs polling for your triage setup, our [webhooks vs polling](/blog/webhooks-vs-polling-email) comparison covers the trade-offs in detail.
+
+<FAQ>
+  <FAQItem question="How is this different from the basic support agent guide?">
+    The [support agent guide](/blog/build-support-agent-email) covers building an agent that reads email, categorizes it into three buckets, drafts replies, and escalates. This guide focuses specifically on the triage and routing layer — multi-level urgency classification, routing tables, edge case handling for threads and repeat senders, and measuring triage quality over time.
+  </FAQItem>
+  <FAQItem question="What LLM should I use for classification?">
+    Any model that supports structured JSON output works. GPT-4o, Claude, Gemini, Mistral. For classification specifically, smaller models like GPT-4o-mini perform well at lower cost since the task is pattern matching, not generation. Test with your actual email data before committing to a model.
+  </FAQItem>
+  <FAQItem question="How do I handle emails that span multiple categories?">
+    Add a `secondaryCategory` field to your classification prompt. When it's present, route the email to both queues. The primary assignee owns the response, but the secondary team gets visibility. This is better than forcing the classifier to pick one.
+  </FAQItem>
+  <FAQItem question="What confidence threshold should I start with?">
+    Start at 0.8 or higher. This means roughly 30-40% of emails will route to humans in the first week, which is fine. Review the agent's auto-replies, check for mistakes, and lower the threshold gradually. Getting to 0.7 within a month is reasonable.
+  </FAQItem>
+  <FAQItem question="Can the agent prioritize enterprise customers automatically?">
+    Yes. Include a `customerTier` field in your classification prompt and cross-reference the sender's domain against your CRM data. If the sender matches an enterprise account, bump the urgency level up one notch in your routing logic.
+  </FAQItem>
+  <FAQItem question="How do I prevent prompt injection from malicious support emails?">
+    Use `email.safeBodyForLLM()` from the LobsterMail SDK. It wraps email content in boundary markers and strips any injected delimiters, preventing malicious emails from manipulating your classification prompt. LobsterMail also scans for six categories of prompt injection and flags risky emails with `email.isInjectionRisk`.
+  </FAQItem>
+  <FAQItem question="What happens if the triage agent goes down?">
+    LobsterMail retries webhook delivery with exponential backoff, up to five attempts. If all retries fail, emails stay in the inbox and you can poll for missed messages when the agent recovers. The catch block in the webhook handler also routes unprocessable emails to a human as a fail-safe.
+  </FAQItem>
+  <FAQItem question="Can I use this with an existing helpdesk like Zendesk?">
+    Yes. Replace the `routeToHuman` function with a Zendesk API call that creates a ticket with the classification metadata as custom fields. The triage logic stays the same — only the destination changes.
+  </FAQItem>
+  <FAQItem question="How do I track conversation threads across multiple emails?">
+    Use the `In-Reply-To` and `References` email headers to match replies to existing threads. Store the thread ID and original assignee when the first email is triaged. Route follow-ups to the same person to maintain context continuity.
+  </FAQItem>
+  <FAQItem question="Should I auto-reply to billing emails?">
+    Only for low-urgency billing questions where you're confident in the answer — things like "what plan am I on" or "when is my next invoice." Anything involving charges, refunds, or payment failures should go to a human. Set your routing table to reflect this by making billing/critical and billing/normal always route to a person.
+  </FAQItem>
+  <FAQItem question="How much does this cost to run?">
+    LobsterMail's Builder plan at $9/mo covers custom domains and up to 1,000 sends per day, which handles the auto-replies and routing emails. LLM costs for classification are minimal since support emails are short — expect a few cents per hundred emails with GPT-4o-mini, more with larger models.
+  </FAQItem>
+  <FAQItem question="Can I route to Slack channels instead of email?">
+    Yes. The `routeToHuman` function is just an API call. Post to a Slack webhook, create a Linear issue, ping a PagerDuty incident for critical alerts, or hit any endpoint. Most teams use a combination — Slack for normal, PagerDuty for critical.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*

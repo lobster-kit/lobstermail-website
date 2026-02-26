@@ -3,9 +3,12 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
+import remarkGfm from "remark-gfm";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { getPostBySlug, getAllSlugs, formatDate } from "@/lib/blog";
+import { getAuthor } from "@/lib/authors";
+import { AuthorByline } from "@/components/blog/AuthorByline";
 import { blogComponents } from "@/components/blog/mdx-components";
 
 export async function generateStaticParams() {
@@ -54,6 +57,8 @@ export default async function BlogPostPage({
   const post = getPostBySlug(slug);
   if (!post) notFound();
 
+  const author = post.author ? getAuthor(post.author) : null;
+
   const jsonLd = [
     {
       "@context": "https://schema.org",
@@ -63,6 +68,15 @@ export default async function BlogPostPage({
       datePublished: post.date,
       ...(post.image && {
         image: `https://lobstermail.ai${post.image}`,
+      }),
+      ...(author && {
+        author: {
+          "@type": "Person",
+          name: author.name,
+          jobTitle: author.title,
+          url: author.socials.find((s) => s.platform === "linkedin")?.url,
+          sameAs: author.socials.map((s) => s.url),
+        },
       }),
       publisher: {
         "@type": "Organization",
@@ -157,10 +171,20 @@ export default async function BlogPostPage({
                 {formatDate(post.date)}
               </time>
 
+              {author && (
+                <div className="mt-6">
+                  <AuthorByline author={author} />
+                </div>
+              )}
+
               <hr className="my-10 border-t-2 border-edge" />
 
               <div className="prose-claw">
-                <MDXRemote source={post.content} components={blogComponents} />
+                <MDXRemote
+                  source={post.content}
+                  components={blogComponents}
+                  options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
+                />
               </div>
             </div>
           </div>

@@ -1,0 +1,124 @@
+---
+title: "the agent communication stack: email, chat, voice, and what's next"
+description: "Agents communicate through email, Slack, voice, and emerging protocols. Here's how each channel fits and why email is the universal base layer."
+date: "2026-02-20"
+author: "Samuel Chenard"
+tags: ["email", "infrastructure"]
+image: "/blog/agent-communication-stack.png"
+---
+
+I've been watching the agent communication landscape fragment in real time. Every week there's a new protocol, a new integration, a new way for agents to talk to each other or to humans. MCP for tool access. A2A for agent interoperability. LiveKit for voice. Slack bots, Discord bots, SMS gateways. The stack is growing fast, and nobody's mapping the whole thing.
+
+So let me try.
+
+## The channels agents use today
+
+When you zoom out, agent communication falls into four layers. Each one has a distinct role, distinct tradeoffs, and a distinct failure mode that nobody warns you about.
+
+**Email** is the async, formal, cross-boundary layer. Your agent sends a vendor a quote request. It receives a verification code from a SaaS platform. It coordinates with another agent on a different framework by sending structured JSON in an email body. Email works across every organization on the planet without requiring the other side to install anything or grant API access. There are 4.5 billion email users. Every company has it. Every agent can reach it.
+
+**Chat platforms** (Slack, Discord, Microsoft Teams) are the real-time, internal layer. Agents post status updates to a channel. They respond to commands in threads. They surface alerts. Chat is fast, interactive, and great for team-facing workflows where everyone lives in the same workspace. But it's siloed. Your Slack bot can't message someone on Discord. Your Teams integration doesn't reach people outside your org. And every platform requires its own API credentials, its own webhook setup, its own rate limits.
+
+**Voice** (LiveKit, Vapi, Bland.ai) is the customer-facing, synchronous layer. An agent answers a phone call, handles a reservation, walks someone through a troubleshooting flow. Voice agents are growing fast in customer service, healthcare scheduling, and sales qualification. LiveKit's open-source agent framework lets you build real-time voice and video agents. Vapi provides hosted voice agent infrastructure. But voice is inherently synchronous. The agent and the human have to be present at the same time. There's no "I'll get back to you." There's no audit trail unless you build one.
+
+**Agent-to-agent protocols** (MCP, A2A, ACP) are the emerging machine-to-machine layer. Anthropic's Model Context Protocol gives agents access to tools and data sources. Google's Agent2Agent protocol, launched with 50+ partners and now hosted by the Linux Foundation, lets agents discover each other's capabilities and exchange structured tasks. Cisco's Agent Communication Protocol tackles similar problems. These are purpose-built for agents talking to agents. But they're early. Adoption is thin. Interoperability between the protocols themselves is nonexistent.
+
+## What each channel is actually good at
+
+The mistake I see teams make is treating these channels as interchangeable. They're not. Each one occupies a specific niche, and using the wrong channel for the wrong job creates friction.
+
+Email excels at cross-organizational communication. When your agent needs to reach a human or system it has no prior relationship with, email is the only channel that works without pre-arrangement. No API keys to exchange. No OAuth dance. No mutual platform membership. You just need an address. That's why email handles vendor outreach, customer follow-ups, verification flows, and inter-company coordination better than anything else.
+
+Chat excels at team-internal, real-time coordination. If your agent is part of an internal workflow where everyone's already in Slack, posting updates to a channel is faster and more natural than sending emails. The threading model works for quick back-and-forth. The emoji reactions work for lightweight approvals. But the moment you need to reach outside your org, chat hits a wall.
+
+Voice excels at high-touch, synchronous interactions. When a customer calls your support line and expects to talk to someone, a voice agent can handle that. Appointment scheduling, account verification, guided troubleshooting. Voice conveys empathy and handles ambiguity better than text. But it doesn't scale the same way. Every concurrent call requires compute. There's no queuing a voice interaction for later.
+
+Agent-to-agent protocols excel at structured, typed, machine-speed communication between agents that already know about each other. A2A's Agent Cards let agents advertise capabilities. MCP lets agents discover and invoke tools. When both sides support the same protocol, this is the fastest and most precise way for agents to coordinate. But "when both sides support the same protocol" is doing heavy lifting in that sentence.
+
+<Callout type="info">
+  The Linux Foundation launched the [Agent2Agent Protocol project](https://www.linuxfoundation.org/press/linux-foundation-launches-the-agent2agent-protocol-project-to-enable-secure-intelligent-communication-between-ai-agents/) in early 2026, signaling that agent interoperability is moving from experiment to infrastructure. But even with institutional backing, we're years from universal adoption.
+</Callout>
+
+## The gaps nobody's filling
+
+Here's what I don't see anyone solving well.
+
+**Cross-channel continuity.** A customer calls your voice agent, asks about an order, then follows up by email the next day. Right now, those are two isolated interactions. The voice transcript lives in one system. The email thread lives in another. The agent that handles the email has no idea the customer already called. We need agents that maintain context across channels, not just within them.
+
+**Chat-to-external bridging.** Your agent lives in Slack because your team lives in Slack. But when it needs to contact a supplier, schedule a meeting with a client, or send a document to a partner, it has to leave Slack entirely. Most teams solve this by giving the Slack bot email capabilities as a second channel. That works, but it's duct tape. The real solution is agents that natively operate across channels and pick the right one for each interaction.
+
+**Async voice.** Voice is synchronous by definition, but the information exchanged in voice calls is valuable asynchronously. Summaries, action items, follow-up commitments. Agents that conduct voice calls should automatically generate structured artifacts and route them through async channels like email for persistence and accountability.
+
+**Protocol bridging between A2A, MCP, and email.** Right now, if Agent A speaks A2A and Agent B only has an email address, they can't communicate. Someone needs to build the translation layer. Email is the obvious fallback because it's the lowest common denominator that every system can reach.
+
+## Why email is the base layer
+
+I've watched enough communication protocols come and go to know that universality beats elegance every time. Email isn't the most structured protocol. It isn't the fastest. It isn't the most feature-rich. But it's the one that works everywhere, with everyone, without permission.
+
+Every chat platform has an email notification fallback. Every voice platform sends email summaries. Every new agent protocol will eventually need to bridge to email because the humans and systems on the other side don't speak A2A yet. Email is the connective tissue.
+
+This is why I think about agent communication as a stack, not a menu. You don't pick one channel. You build upward from the universal base:
+
+1. **Email** as the foundation. Every agent gets an address. It works across organizations, frameworks, and protocols. It's async, auditable, and universal.
+2. **Chat** as the real-time internal layer. For team-facing updates, commands, and quick coordination within a workspace.
+3. **Voice** as the synchronous customer layer. For high-touch interactions that need the immediacy and nuance of spoken conversation.
+4. **Agent protocols** as the optimization layer. When two agents on compatible systems need structured, typed, machine-speed communication.
+
+Each layer up is more specialized, more performant for its niche, and less universal. Email sits at the bottom because it's the fallback everything else depends on.
+
+## What's coming next
+
+Three trends are converging.
+
+First, agents will become multi-channel by default. Instead of building a "Slack bot" or an "email agent" or a "voice agent," you'll build an agent that communicates across all channels and selects the right one based on context. Urgent customer issue? Voice or chat. Formal vendor request? Email. Internal status update? Slack. The agent decides, not the developer.
+
+Second, protocol translation will become infrastructure. Someone will build the bridges between A2A, MCP, email, and chat APIs so that agents don't need to natively support every protocol. They just need to reach the translation layer. Email is the natural hub for this because it's the protocol with the widest reach and the lowest adoption barrier.
+
+Third, communication history will become the agent's memory. Every email thread, every chat log, every voice transcript feeds back into the agent's understanding of relationships, commitments, and context. The agent that emailed a vendor last month remembers the conversation when the vendor calls next week. The communication stack becomes the knowledge graph.
+
+We're early. The protocols are still fragmenting. The tooling is still rough. But the architecture is becoming clear. Agents need a communication stack, not a single channel. And email, the protocol that's survived every technology wave for fifty years, is the foundation everything else builds on.
+
+The reef doesn't replace the rest of the ocean. It's just the one place every current passes through.
+
+<FAQ>
+  <FAQItem question="What is the agent communication stack?">
+    The agent communication stack is a layered model for how AI agents communicate. Email serves as the universal base layer for async, cross-boundary communication. Chat platforms like Slack handle real-time internal coordination. Voice handles synchronous customer interactions. Agent-to-agent protocols like A2A and MCP handle structured machine-speed communication between compatible systems.
+  </FAQItem>
+  <FAQItem question="Why is email considered the base layer for agent communication?">
+    Email is the most universal communication protocol on the internet, reaching 4.5 billion+ users across every organization and country. It requires no API integration, no mutual platform membership, and no pre-arrangement. Every other communication channel eventually falls back to email for cross-boundary reach and persistence.
+  </FAQItem>
+  <FAQItem question="What is the difference between MCP and A2A for agent communication?">
+    MCP (Model Context Protocol) from Anthropic gives agents access to tools and data sources. A2A (Agent2Agent) from Google lets agents discover each other's capabilities and exchange structured tasks. MCP is about tool access; A2A is about agent-to-agent coordination. Both are early-stage and not yet widely adopted.
+  </FAQItem>
+  <FAQItem question="Can AI agents use Slack and Discord for communication?">
+    Yes. Agents integrate with Slack and Discord through platform APIs to post updates, respond to commands, and coordinate in real time. However, chat platforms are siloed — a Slack bot can't message a Discord user — and each platform requires separate API credentials and configuration.
+  </FAQItem>
+  <FAQItem question="What are voice agents and how do they communicate?">
+    Voice agents use platforms like LiveKit, Vapi, or Bland.ai to handle real-time spoken conversations. They're used for customer support, appointment scheduling, and sales qualification. Voice is synchronous, meaning both parties must be present simultaneously, and it doesn't natively produce a persistent audit trail.
+  </FAQItem>
+  <FAQItem question="What is Google's Agent2Agent (A2A) protocol?">
+    A2A is an open protocol from Google, now hosted by the Linux Foundation, that enables agents to discover each other through Agent Cards, advertise capabilities, and exchange structured tasks. It launched with support from over 50 technology partners including Salesforce and SAP.
+  </FAQItem>
+  <FAQItem question="How do agents communicate across different frameworks?">
+    Email is the most practical way for agents on different frameworks to coordinate today. A CrewAI agent and a LangGraph agent can both send and receive email without sharing a runtime, database, or SDK. Agent protocols like A2A aim to solve this at the protocol level, but adoption is still limited.
+  </FAQItem>
+  <FAQItem question="What is cross-channel continuity for AI agents?">
+    Cross-channel continuity means an agent maintains context across communication channels. If a customer calls a voice agent and then follows up by email, the agent handling the email should know about the phone call. This is largely unsolved today and requires unified communication history across channels.
+  </FAQItem>
+  <FAQItem question="Will agent-to-agent protocols replace email?">
+    Unlikely. Agent protocols like A2A and MCP optimize communication between agents on compatible systems, but they don't provide universal reach. Email remains the fallback for cross-organizational communication, reaching humans and systems that don't support specialized agent protocols. The two layers complement each other.
+  </FAQItem>
+  <FAQItem question="What is Anthropic's Model Context Protocol (MCP)?">
+    MCP is a protocol from Anthropic that standardizes how AI agents access external tools and data sources. It lets agents connect to databases, APIs, and file systems through a consistent interface. LobsterMail's MCP server works with Claude Desktop, Cursor, and Windsurf to give agents email capabilities.
+  </FAQItem>
+  <FAQItem question="How do AI agents handle voice calls?">
+    Agents use real-time voice platforms to process speech input, generate spoken responses, and manage conversations. LiveKit provides an open-source framework for building voice and video agents. Vapi offers hosted infrastructure. These agents handle customer support, scheduling, and guided workflows through natural conversation.
+  </FAQItem>
+  <FAQItem question="What communication channel should my agent use?">
+    It depends on the interaction. Use email for formal, async, or cross-organizational communication. Use chat (Slack, Discord) for real-time internal team coordination. Use voice for synchronous, high-touch customer interactions. Use agent protocols for structured agent-to-agent coordination when both sides support the same protocol.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*

@@ -1,0 +1,146 @@
+---
+title: "why your agent's Gmail token keeps breaking (and what to use instead)"
+description: "Your agent worked yesterday. Today it's throwing 401 errors. Here's exactly why Gmail OAuth tokens break and how to stop fighting them."
+date: "2026-02-04"
+author: "Samuel Chenard"
+tags: ["troubleshooting", "email", "openclaw"]
+image: "/blog/agent-gmail-token-breaking.png"
+---
+
+You got Gmail working with your agent. Everything connected. Emails coming in, replies going out. You went to bed feeling like you'd finally cracked it.
+
+Then the next morning, nothing. HTTP 401. `invalid_grant`. The agent is alive but deaf — sitting there trying to read an inbox it no longer has access to. No warning, no error in the logs until it actually tries to make a call. Just silence.
+
+If you've been through this, you're not alone. Over in the OpenClaw community, Discussion #4220 has become a support group for this exact problem. One user summed it up: "I've invested nearly three days and about $300 and can't believe how potentially cool, but actually shitty this is." Another reported their config getting stripped on every restart, sending them back to square one.
+
+The token breakage isn't random. There are specific, documented reasons Gmail tokens die, and once you understand them, you'll see why the problem isn't fixable — it's structural.
+
+## The 7-day cliff
+
+This is the one that catches almost everyone.
+
+When you set up a Google Cloud project and configure the OAuth consent screen, you choose between "Internal" (Workspace accounts only) and "External" user types. Most individual developers pick External. That lands your app in "Testing" mode by default.
+
+Testing mode has a hard rule: refresh tokens expire after 7 days. No warning email from Google. No gradual degradation. On day 8, your agent's token is dead.
+
+To get out of Testing mode, you need to push your app to "Production" and complete Google's verification process. For sensitive scopes like Gmail access, that means submitting to a review that includes a privacy policy, a homepage, and in some cases a third-party security audit that can cost thousands of dollars. For a single agent reading its own mail.
+
+Most developers never push to production because they don't realize they need to. The 7-day expiry is buried deep in [Google's OAuth documentation](https://developers.google.com/identity/protocols/oauth2#expiration), and the error message when it hits — `invalid_grant` — gives no indication that Testing mode is the cause.
+
+## Google's silent token rotation
+
+Even if you clear the Testing mode hurdle, refresh tokens can still break. Google periodically rotates refresh tokens during the token refresh flow. When you use a refresh token to get a new access token, Google sometimes issues a new refresh token alongside it. If your code doesn't detect and store that new refresh token, the old one becomes invalid on the next use.
+
+This is documented in a single paragraph of Google's Identity Platform docs. Most OAuth libraries handle it automatically. Most hand-rolled token management code does not. And most agent frameworks sit somewhere in between, with token handling that works for interactive web apps but falls apart for long-running headless processes.
+
+The result: your agent works perfectly for days or weeks, then breaks for no apparent reason. The refresh token you stored at setup time is stale. The real one was returned in a response your code silently discarded.
+
+## The 100-token cap
+
+Google enforces a limit of 100 refresh tokens per Google account per OAuth client ID. If your agent provisions tokens across multiple sessions, test runs, or restarts without revoking old tokens first, you'll burn through that limit. When token 101 is issued, token 1 silently stops working.
+
+This is particularly brutal in development. Every time you test the OAuth flow, you mint a new token. After a hundred iterations, your oldest tokens are garbage and Google doesn't notify you. The only fix is to go into the Google Cloud Console and manually clean up — or track token issuance yourself, which is the kind of infrastructure bookkeeping that makes you wonder why you started down this path.
+
+## Password changes, account reviews, and automation detection
+
+Changing the Google account password revokes all tokens scoped to Gmail. Not just OAuth tokens — all of them. If the account owner rotates their password for any reason, the agent loses access instantly.
+
+Google also runs automated account reviews. If Google's systems detect patterns consistent with automation — high-frequency API calls, access from data center IPs, unusual read patterns — the account can be flagged. Flagged accounts may have their tokens revoked or the account suspended entirely. Google's Terms of Service [explicitly prohibit](https://policies.google.com/terms) automated access that "interferes with" the service, and the line between "automated agent reading email" and "interfering with the service" is whatever Google decides it is.
+
+Gmail API rate limits compound this. Free Gmail accounts are capped at 500 emails per day for sending. Google Workspace accounts get 2,000. But the API quota is more granular: 250 quota units per user per second, where a single message fetch costs 5 units and a list operation costs 5 units. An agent that polls every few seconds to check for new mail can eat through quota fast, and quota overages return 429 errors that some frameworks don't retry gracefully.
+
+## The restart problem
+
+Discussion #4220 highlights a specific frustration: "The config keeps getting stripped when I restart." This happens because many OpenClaw setups store OAuth tokens in runtime state that doesn't persist across process restarts. The token lives in memory or in a temporary file that gets cleaned up when the container stops.
+
+The fix is supposed to be straightforward — write the token to disk, load it on startup. But the implementation is full of edge cases. The token file needs appropriate permissions. The refresh logic needs to run before the first API call, not after the first failure. And if the token expired while the agent was offline, you need to re-authenticate entirely, which means the human has to click through the consent flow again.
+
+For an agent that's supposed to run autonomously, requiring a human to periodically re-authorize access defeats the purpose.
+
+## Why this isn't fixable
+
+The core issue isn't any single token policy. It's that OAuth was designed for interactive applications where a human is present to re-authenticate when things break. The consent flow assumes a browser. The token lifecycle assumes someone is monitoring for failures. The security model assumes a user who can respond to Google's account review prompts.
+
+AI agents have none of that. They run headless. They run at 3 AM. They run on servers without displays. Every assumption OAuth makes about the user is wrong when the user is an autonomous process.
+
+You can paper over individual failure modes — persist the token to disk, handle rotation, manage the 100-token cap, monitor for revocations. But you're building a fragile tower of workarounds on top of an authentication system that fundamentally doesn't want you there.
+
+## What it looks like without tokens
+
+LobsterMail takes a different approach. Instead of wrapping your personal Gmail with OAuth, your agent gets its own inbox. No Google account involved. No tokens to expire.
+
+```javascript
+import { LobsterMail } from "@lobstermail/sdk";
+
+const client = new LobsterMail();
+const inbox = await client.provision({ name: "my-agent" });
+
+// inbox.address → my-agent@lobstermail.ai
+// inbox.token → lm_sk_live_... (persisted to ~/.lobstermail/token)
+```
+
+The agent authenticates with a bearer token it provisions itself. That token doesn't expire after 7 days. It doesn't get revoked because someone changed a password. It doesn't silently rotate. It sits in `~/.lobstermail/token` and works until you explicitly revoke it.
+
+No consent screens. No Google Cloud project. No 100-token cap. No rate limit math. Your agent restarts, reads its token from disk, and picks up where it left off.
+
+The inbox is isolated from your personal email. If the agent gets compromised, the blast radius is [one inbox on the reef](/blog/why-agent-shouldnt-use-gmail), not your entire Gmail history.
+
+## Moving off the treadmill
+
+If you're currently fighting Gmail token expiry, here's the practical path forward:
+
+1. **Stop debugging the OAuth flow.** The token isn't broken because of a bug in your code. It's broken because Google's token lifecycle wasn't designed for your use case.
+2. **Give your agent its own address.** Install the LobsterMail skill (`clawhub install lobstermail`) or use the SDK directly. Your agent provisions its own inbox in one call.
+3. **Forward what matters.** Set up a Gmail filter to auto-forward specific messages to your agent's LobsterMail address. Your agent reads what it needs without touching your Gmail account.
+4. **Remove the OAuth dependency.** Once forwarding is live, revoke the agent's Gmail token. One less thing to monitor. One less thing to break at 2 AM.
+
+The [full setup takes about 60 seconds](/blog/openclaw-agent-email-60-seconds) if your OpenClaw instance is already running.
+
+<FAQ>
+  <FAQItem question="Why does my Gmail OAuth token stop working after 7 days?">
+    If your Google Cloud project's OAuth consent screen is in "Testing" mode (the default for External user types), Google automatically expires refresh tokens after 7 days. To get longer-lived tokens, you need to push the app to Production status and complete Google's verification process, which may require a third-party security audit for sensitive Gmail scopes.
+  </FAQItem>
+  <FAQItem question="What does the invalid_grant error mean?">
+    It's a catch-all error from Google when a refresh token can't be used. It can mean the 7-day Testing mode expiry hit, the user revoked access, the user changed their password, the token was silently rotated and you didn't store the new one, or you exceeded the 100-token-per-account limit. Google doesn't tell you which cause applies.
+  </FAQItem>
+  <FAQItem question="How do I check if my Google Cloud app is in Testing mode?">
+    Go to the Google Cloud Console, navigate to APIs & Services, then OAuth consent screen. If the publishing status shows "Testing," your refresh tokens are expiring every 7 days. You'll need to click "Publish App" and go through Google's verification to move to production.
+  </FAQItem>
+  <FAQItem question="Can I prevent Google from rotating my refresh token?">
+    Not reliably. Google may return a new refresh token when you use the current one to request a new access token. Your code must check every token refresh response for a new refresh token and persist it immediately. Most OAuth libraries handle this, but custom implementations often miss it.
+  </FAQItem>
+  <FAQItem question="What is the 100 refresh token limit?">
+    Google allows a maximum of 100 active refresh tokens per Google account per OAuth client ID. When the 101st token is issued, the oldest active token is silently invalidated. This commonly affects developers who test the OAuth flow repeatedly without revoking previous tokens.
+  </FAQItem>
+  <FAQItem question="Does changing my Gmail password break my agent's OAuth token?">
+    Yes. Changing your Google account password revokes all OAuth tokens scoped to Gmail. Your agent will immediately lose access and receive `invalid_grant` errors on its next API call. There is no grace period.
+  </FAQItem>
+  <FAQItem question="Can Google ban my account for running an AI agent on Gmail?">
+    Google's Terms of Service prohibit automated access that interferes with the service. While Google doesn't explicitly define what constitutes interference, high-frequency API calls from data center IPs and unusual access patterns can trigger automated account reviews. Flagged accounts may have tokens revoked or be suspended.
+  </FAQItem>
+  <FAQItem question="What are the Gmail API rate limits?">
+    Free Gmail accounts can send 500 emails per day. Google Workspace accounts can send 2,000 per day. The API quota is 250 quota units per user per second. A message fetch or list operation costs 5 units each. Agents that poll frequently for new messages can hit these limits and receive 429 (rate limit) errors.
+  </FAQItem>
+  <FAQItem question="How is LobsterMail authentication different from Gmail OAuth?">
+    LobsterMail uses a bearer token (`lm_sk_live_...`) that the agent provisions itself. The token doesn't expire on a schedule, doesn't rotate silently, and isn't tied to a personal Google account. It persists to `~/.lobstermail/token` and works until you explicitly revoke it. No consent screens, no refresh logic, no browser required.
+  </FAQItem>
+  <FAQItem question="Can my agent still receive emails from Gmail users with a LobsterMail address?">
+    Yes. Your agent's LobsterMail address is a standard email address. Anyone with a Gmail, Outlook, or any other email client can send messages to it. The protocol is email — it's universally compatible.
+  </FAQItem>
+  <FAQItem question="How do I migrate my agent from Gmail OAuth to LobsterMail?">
+    Install the LobsterMail skill or SDK, provision an inbox, then set up a Gmail filter to forward relevant messages to your agent's new address. Once confirmed, revoke the agent's Gmail OAuth token. The whole migration can be done incrementally without downtime.
+  </FAQItem>
+  <FAQItem question="Does LobsterMail support custom domains?">
+    Yes. On paid plans, you can use your own domain so your agent sends from an address like `agent@yourcompany.com` instead of `agent@lobstermail.ai`. SPF, DKIM, and DMARC are configured automatically. Read more about [custom domains for agent email](/blog/custom-domains-agent-email).
+  </FAQItem>
+  <FAQItem question="Is LobsterMail free?">
+    The Hatchling tier is free forever. Your agent can receive unlimited emails at its own address. Sending and custom domains are available on the Full Claw paid plan. See [pricing details](/blog/lobstermail-pricing-explained).
+  </FAQItem>
+  <FAQItem question="What happens to emails if my agent is offline?">
+    LobsterMail stores incoming messages in the agent's inbox. When the agent comes back online, it can poll for new messages or receive them through webhook backfill. No emails are lost during downtime.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*

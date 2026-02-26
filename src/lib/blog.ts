@@ -12,6 +12,7 @@ export interface BlogPost {
   date: string;
   tags: string[];
   image?: string;
+  author?: string;
   content: string;
 }
 
@@ -33,6 +34,7 @@ export const getAllPosts = cache(function getAllPosts(): BlogPost[] {
       date: data.date ?? "",
       tags: data.tags ?? [],
       image: data.image,
+      author: data.author,
       content,
     };
   });
@@ -58,6 +60,7 @@ export function getPostBySlug(slug: string): BlogPost | null {
     date: data.date ?? "",
     tags: data.tags ?? [],
     image: data.image,
+    author: data.author,
     content,
   };
 }

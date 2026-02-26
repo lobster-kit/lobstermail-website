@@ -4,18 +4,17 @@ import { FadeIn } from "./FadeIn";
 import { GetStartedPopup } from "./GetStartedPopup";
 
 const freePlanFeatures = [
-  "Unlimited inboxes",
-  "Send & receive emails",
-  "Agent provisioning",
+  "No human required",
+  "Receive emails instantly",
+  "Verify to unlock sending",
   "No credit card required",
 ];
 
 const proPlanFeatures = [
   "Everything in Free",
-  "Sending tiers",
-  "Custom domains",
-  "Dedicated IP",
-  "Priority support",
+  "Unlimited inboxes",
+  "Send up to 1,000 emails/day",
+  "10,000 emails/month",
 ];
 
 export function Pricing() {
@@ -82,10 +81,10 @@ export function Pricing() {
             <div className="glass-strong relative flex h-full flex-col items-center p-6 text-center transition-transform duration-300 hover:-translate-y-1 sm:items-stretch sm:p-8 sm:text-left">
               <div className="mb-6">
                 <p className="text-sm font-medium uppercase tracking-wider text-accent">
-                  Pro
+                  Builder
                 </p>
                 <div className="mt-3 flex items-baseline justify-center gap-1 sm:justify-start">
-                  <span className="text-4xl font-bold tracking-tight">$5</span>
+                  <span className="text-4xl font-bold tracking-tight">$9</span>
                   <span className="text-secondary">/mo</span>
                 </div>
                 <p className="mt-2 text-base text-secondary">
@@ -112,6 +111,12 @@ export function Pricing() {
             </div>
           </FadeIn>
         </div>
+
+        <FadeIn delay={0.24}>
+          <p className="mx-auto mt-8 max-w-2xl text-base text-secondary">
+            Need more? Add custom domains, dedicated IPs, and priority support.
+          </p>
+        </FadeIn>
       </div>
     </section>
   );

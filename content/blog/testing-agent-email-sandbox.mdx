@@ -1,0 +1,149 @@
+---
+title: "testing agent email without hitting production"
+description: "Most agent email setups have no test mode. Here's how to stop accidentally emailing real people during development."
+date: "2026-02-10"
+author: "Samuel Chenard"
+tags: ["guides", "email", "infrastructure"]
+image: "/blog/testing-agent-email-sandbox.png"
+---
+
+You're building an agent that handles email. You've written the logic for receiving messages, parsing content, and triggering workflows. Now you need to test it. So you hit "run" and your agent sends a follow-up email to an actual customer at 2 AM.
+
+This happens more than anyone admits. Developers testing agent email workflows against production infrastructure is the norm, not the exception, because most agent email platforms don't offer a sandbox. There's no test mode, no mock API, no staging environment. You're working with live email from the first line of code.
+
+The traditional web development world solved this years ago. Tools like Mailtrap and Mailpit let you intercept outgoing emails during development, inspect them in a fake inbox, and verify everything works before flipping the switch to production. But these tools were built for web apps sending password resets and order confirmations. They don't model the workflows agents actually use: spinning up inboxes on demand, polling for new messages, processing content through an LLM, and responding based on parsed intent.
+
+That gap between traditional email testing tools and what agent developers actually need is where things break.
+
+## What goes wrong without a sandbox
+
+The risks aren't abstract. They fall into three categories, and each one can set your project back weeks.
+
+**Accidentally emailing real people.** Your agent is supposed to reply to test messages in your staging environment. But the inbox it's connected to is the same one receiving real customer emails. One misconfigured filter, one wrong thread ID, and your half-finished agent is replying to a paying customer with a malformed response or, worse, raw debug output. You can't unsend email. There's no `ctrl+z` once the SMTP handshake completes.
+
+**Burning your domain reputation.** Email reputation is fragile and slow to rebuild. Every time your agent sends test messages that bounce, hit invalid addresses, or get marked as spam by confused recipients, your sending domain takes a hit. Inbox providers like Gmail track complaint rates at the domain level. Exceed [0.3% and your domain faces SMTP-level rejection](/blog/email-deliverability-ai-agents) — not just for test messages, but for everything you send from that domain. A week of sloppy testing can take months to recover from.
+
+**Triggering rate limits and account suspensions.** Every email provider enforces rate limits. AWS SES, SendGrid, Mailgun — they all watch for sudden spikes in volume, high bounce rates, and unusual sending patterns. An agent stuck in a retry loop during testing can blast hundreds of messages in minutes. That's enough to trigger automatic suspension on most platforms. Now your production sending is blocked because your test environment didn't have guardrails.
+
+<Callout type="warning">
+  AgentMail, the most visible agent email platform, has no documented sandbox, mock API, or test mode. If you're building against their API, you're testing against production from day one.
+</Callout>
+
+## Why traditional email testing tools fall short
+
+Mailtrap and Mailpit are excellent at what they do. Mailtrap intercepts SMTP traffic and routes it to a virtual inbox where you can inspect HTML rendering, check headers, and verify content. Mailpit does the same thing locally with a lightweight Go binary. For web applications that send transactional email, they're the right tool.
+
+But agent email workflows aren't transactional email workflows.
+
+When an agent needs email, it typically needs to create an inbox, receive messages at that inbox, parse the content, and then decide what to do. The inbox itself is part of the test. You're not just testing "does my email template render correctly" — you're testing "can my agent create an address, receive a verification code, extract it, and use it to complete a signup flow."
+
+Mailtrap can't give your agent a real email address to receive mail at. Mailpit can intercept outgoing messages but can't simulate incoming ones arriving at a dynamically created inbox. Neither tool models the full lifecycle that agent email requires: provisioning, receiving, processing, and (eventually) sending.
+
+You need an environment where your agent can spin up real inboxes, receive real email at real addresses, and exercise the full receive-and-process pipeline — without any risk of sending messages to actual humans.
+
+## The free tier as a natural sandbox
+
+This is where LobsterMail's architecture does something useful almost by accident. The free tier is receive-only. No credit card, no verification, no sending capability. Your agent creates an inbox, gets a real `@lobstermail.ai` address, and can receive email at it. But it physically cannot send anything.
+
+That constraint, which exists for trust and abuse prevention, turns out to be exactly what you want during development.
+
+Here's what a testing workflow looks like:
+
+**Spin up disposable inboxes.** Your agent calls the API and creates an inbox with a random handle. It gets a working email address instantly. No human needs to log into a console, generate API keys, or configure DNS records. The agent provisions what it needs.
+
+**Send test emails to those inboxes.** From your test harness, send emails to the agent's address. Use your own email, a script, or another service. The messages arrive at real MX records, go through real spam filtering, and land in the agent's inbox just like they would in production.
+
+**Test your receive and parse logic.** Your agent polls for new messages, retrieves the body, runs it through your LLM pipeline, and executes whatever workflow you're building. You're testing the real thing against real email infrastructure.
+
+**No risk of sending to real people.** Because the free tier can't send, there's zero chance your agent fires off an accidental reply to a customer, a vendor, or anyone else. The sandbox is enforced at the infrastructure level, not by a flag in your config that someone might forget to set.
+
+**Inboxes auto-expire after 30 days.** You don't need to clean up after yourself. Free tier inboxes expire automatically, so your test artifacts don't pile up. Spin up what you need, test what you need, and the reef cleans itself.
+
+```javascript
+import { LobsterMail } from "lobstermail";
+
+// No API key needed — agent self-provisions
+const client = await LobsterMail.create();
+
+// Create a disposable test inbox
+const inbox = await client.createSmartInbox({
+  prefix: "test-signup-flow",
+});
+
+console.log(`Test inbox: ${inbox.address}`);
+// → test-signup-flow-7b@lobstermail.ai
+
+// Send a test email to this address from your test harness,
+// then wait for it to arrive
+const email = await inbox.waitForEmail({
+  timeout: 30000,
+  filter: { subject: /verification/i },
+});
+
+// Test your parsing logic against real email
+const safeBody = email.safeBodyForLLM();
+// → Your LLM processes this safely, with injection boundaries stripped
+```
+
+This code works on the free tier. No payment, no human signup, no configuration. The inbox is real, the email is real, and the only thing missing is outbound sending — which is exactly the constraint you want while testing.
+
+## Moving from sandbox to production
+
+Once your receive logic is solid and you're confident your agent handles email correctly, upgrading is a single step. The [Builder tier](/blog/lobstermail-pricing-explained) at $9/month unlocks sending, permanent inboxes, and custom domains.
+
+The important thing is that your agent's code doesn't change. The same API calls that created inboxes and polled for messages on the free tier work identically on the paid tier. You're not migrating from a mock environment to a real one. You were always on real infrastructure. The only difference is that sending is now enabled.
+
+This is a fundamentally different model from intercepting SMTP with Mailtrap or running a local Mailpit instance. Those tools create an artificial environment that behaves differently from production. When you switch to real sending, you're dealing with a new set of variables: DNS configuration, deliverability, rate limits, bounce handling. LobsterMail's free tier means the infrastructure is the same from testing through production. Only the permissions change.
+
+## What this means for your development workflow
+
+If you're building agents that interact with email, build your testing strategy around two principles.
+
+First, test against real email infrastructure from the start. Mock APIs and intercepted SMTP connections hide problems that only surface in production. Real MX records, real spam filtering, and real message parsing behave differently from mocks. The closer your test environment is to production, the fewer surprises you'll face at launch.
+
+Second, enforce the sandbox at the infrastructure level, not in your code. A `SEND_ENABLED=false` environment variable works until someone forgets to set it, or until a CI pipeline runs with the wrong config. A free tier that can't send regardless of what your code does is a harder guarantee.
+
+The best sandbox is the one your agent can't accidentally escape.
+
+<FAQ>
+  <FAQItem question="Why is testing agent email harder than testing regular application email?">
+    Agent email workflows involve dynamic inbox creation, polling for incoming messages, parsing content for LLM processing, and conditional responses. Traditional email testing tools like Mailtrap and Mailpit are designed for intercepting outgoing transactional emails, not for modeling the full lifecycle of an agent creating, receiving at, and processing email from its own inbox.
+  </FAQItem>
+  <FAQItem question="Does AgentMail have a sandbox or test mode?">
+    No. AgentMail has no documented sandbox, mock API, or test mode as of February 2026. Developers building against their API are testing against production infrastructure, which means real emails can be sent to real recipients during development.
+  </FAQItem>
+  <FAQItem question="How does LobsterMail's free tier work as a sandbox?">
+    The free tier is receive-only and requires no credit card or verification. Your agent can create inboxes and receive real email, but it cannot send messages. This makes it a natural sandbox: you test your full receive-and-process pipeline against real infrastructure, with zero risk of accidentally emailing real people.
+  </FAQItem>
+  <FAQItem question="Can I receive real email on a LobsterMail free tier inbox?">
+    Yes. Free tier inboxes have real email addresses on the `@lobstermail.ai` domain with real MX records. Email sent to these addresses goes through standard email routing, spam filtering, and delivery — the same pipeline as paid tier inboxes.
+  </FAQItem>
+  <FAQItem question="Do free tier inboxes expire?">
+    Yes. Free tier inboxes auto-expire after 30 days. This is useful for testing because your disposable test inboxes clean themselves up automatically without any manual intervention.
+  </FAQItem>
+  <FAQItem question="What happens to my code when I upgrade from free to a paid tier?">
+    Nothing changes. The same API calls for creating inboxes, polling for messages, and processing email work identically across all tiers. Upgrading to the Builder tier ($9/month) unlocks sending and permanent inboxes, but your existing code continues to work without modification.
+  </FAQItem>
+  <FAQItem question="Can I use Mailtrap or Mailpit to test agent email?">
+    Partially. These tools can intercept outgoing SMTP traffic, which helps verify email content and formatting. But they can't provide your agent with a real inbox address to receive mail at, and they don't model the inbox creation and polling workflows that agents rely on. They're useful as a complement, not a replacement for a real testing environment.
+  </FAQItem>
+  <FAQItem question="How does accidental sending during testing affect my domain reputation?">
+    Badly. Bounced messages, invalid recipients, and spam complaints all damage your sending domain's reputation with inbox providers. Gmail enforces a 0.3% spam complaint threshold at the SMTP level — exceeding it causes rejection of all messages from your domain. A few days of uncontrolled test sending can take months to recover from.
+  </FAQItem>
+  <FAQItem question="What's the risk of testing against production rate limits?">
+    If your agent hits a retry loop or sends a burst of messages during testing, it can trigger rate limit enforcement or automatic account suspension from your email provider. This blocks production sending until the suspension is lifted, which can take hours or days depending on the provider.
+  </FAQItem>
+  <FAQItem question="How many test inboxes can I create on the free tier?">
+    The free tier supports creating multiple inboxes. Since inboxes auto-expire after 30 days, you can continuously spin up new ones for different test scenarios without worrying about hitting a ceiling or needing to clean up old inboxes manually.
+  </FAQItem>
+  <FAQItem question="Do I need an API key to start testing on LobsterMail?">
+    No. LobsterMail supports agent self-signup with anonymous bearer token authentication. Your agent calls the API, receives a token, and starts creating inboxes immediately. No human account creation, no API key generation, no dashboard login required.
+  </FAQItem>
+  <FAQItem question="Can I test webhook integrations on the free tier?">
+    Yes. Webhooks are available on the free tier. You can configure webhook endpoints for your test inboxes and receive real-time notifications when emails arrive, allowing you to test your full event-driven pipeline during development.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*

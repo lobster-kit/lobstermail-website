@@ -28,6 +28,13 @@ export async function getGuide(slug: string): Promise<Guide | null> {
   return res.json();
 }
 
+export async function getSkillContent(): Promise<string> {
+  const res = await fetch(`${API}/skill`, {
+    next: { revalidate: 600 },
+  });
+  return res.text();
+}
+
 export async function getOpenApiSpec(): Promise<string> {
   const res = await fetch(`${API}/v1/docs/openapi`, {
     next: { revalidate: 120 },

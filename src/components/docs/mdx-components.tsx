@@ -118,18 +118,25 @@ export const docsComponents: Record<string, React.ComponentType<any>> = {
 
   // Table
   table: (props) => (
-    <div className="my-6 overflow-x-auto rounded-xl border-2 border-edge">
+    <div className="my-8 overflow-x-auto rounded-xl border-2 border-edge bg-surface-2/50">
       <table className="w-full text-left text-sm" {...props} />
     </div>
   ),
   thead: (props) => (
-    <thead className="border-b-2 border-edge bg-surface-3" {...props} />
+    <thead className="border-b-2 border-edge bg-surface-3/80" {...props} />
+  ),
+  tbody: (props) => <tbody className="divide-y divide-edge-subtle" {...props} />,
+  tr: (props) => (
+    <tr className="transition-colors hover:bg-surface-3/40" {...props} />
   ),
   th: (props) => (
-    <th className="px-4 py-3 font-bold text-foreground" {...props} />
+    <th
+      className="whitespace-nowrap px-5 py-3 text-xs font-bold uppercase tracking-wider text-foreground"
+      {...props}
+    />
   ),
   td: (props) => (
-    <td className="border-t border-edge-subtle px-4 py-3 text-secondary" {...props} />
+    <td className="px-5 py-3.5 text-secondary" {...props} />
   ),
 
   // Images

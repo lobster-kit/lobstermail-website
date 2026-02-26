@@ -83,7 +83,7 @@ export function GetStartedPopup({
                   >
                     <div className="flex flex-col gap-3 px-5 py-3.5">
                       <span className="font-mono text-[13px] leading-relaxed text-foreground">
-                        Go to <span className="text-accent">api.lobstermail.ai/skill</span> and follow the instructions to set up an email inbox
+                        Go to <span className="text-accent">lobstermail.ai/skill</span> and follow the instructions to set up an email inbox
                       </span>
                       <Button
                         onPress={handleCopy}

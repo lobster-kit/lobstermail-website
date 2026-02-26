@@ -1,0 +1,289 @@
+---
+title: "send and receive email from AutoGen agents"
+description: "Wire LobsterMail's REST API into AutoGen's tool system so your multi-agent workflows can send, receive, and react to real email."
+date: "2026-02-23"
+author: "Samuel Chenard"
+tags: ["guides", "email", "automation"]
+image: "/blog/autogen-agent-email.png"
+---
+
+AutoGen is built for multi-agent systems. You spin up a group of agents, give them roles, and let them collaborate on tasks. But when those agents need to interact with the outside world through email, the options are thin. You either hack together SMTP credentials and hope your agent doesn't leak them in a tool call, or you bolt on a Gmail OAuth flow that takes longer to configure than the rest of your project combined.
+
+LobsterMail gives AutoGen agents their own email addresses through a REST API. No SMTP. No OAuth. Your agent provisions an inbox, sends and receives email, and you wire the whole thing in as standard AutoGen tools. Here's how.
+
+## what we're building
+
+By the end of this guide, your AutoGen agent will be able to:
+
+1. **Create its own email inbox** at `your-agent@lobstermail.ai`
+2. **Send emails** to any address on the internet
+3. **Check for new messages** and pull them into the agent's context
+4. **React to incoming email** as part of a multi-agent conversation
+
+We'll register each capability as an AutoGen tool using `FunctionTool`, then hand them to an `AssistantAgent` that knows when and how to use them.
+
+## prerequisites
+
+You'll need Python 3.10+ and these packages:
+
+```bash
+pip install autogen-agentchat autogen-ext[openai] httpx
+```
+
+You also need an OpenAI API key (or any model provider AutoGen supports). LobsterMail itself requires no API key up front. Your agent creates its own account programmatically.
+
+## the LobsterMail REST API in 30 seconds
+
+Four endpoints cover the full email lifecycle:
+
+| Endpoint | Method | What it does |
+|---|---|---|
+| `/v1/signup` | POST | Creates an account, returns a bearer token |
+| `/v1/inboxes` | POST | Provisions a new inbox on that account |
+| `/v1/emails/send` | POST | Sends an email from any inbox you own |
+| `/v1/inboxes/:id/emails` | GET | Lists emails received by that inbox |
+
+Base URL is `https://api.lobstermail.ai`. Auth is a bearer token returned from signup. That's the entire surface area your agent needs.
+
+## step 1: write the tool functions
+
+Each LobsterMail operation becomes a Python function that AutoGen can call. We'll use `httpx` for HTTP requests and keep the functions stateless by passing credentials explicitly.
+
+```python
+import httpx
+
+BASE_URL = "https://api.lobstermail.ai"
+
+async def signup_for_email() -> dict:
+    """Create a new LobsterMail account. Returns an auth token
+    and account ID that the agent uses for all subsequent calls."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(f"{BASE_URL}/v1/signup")
+        resp.raise_for_status()
+        return resp.json()
+        # {"token": "lm_sk_live_...", "accountId": "..."}
+
+async def create_inbox(token: str, handle: str) -> dict:
+    """Provision a new email inbox with the given handle.
+    Returns the full email address and inbox ID."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{BASE_URL}/v1/inboxes",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"name": handle},
+        )
+        resp.raise_for_status()
+        return resp.json()
+        # {"inboxId": "...", "address": "handle@lobstermail.ai"}
+
+async def send_email(
+    token: str, from_addr: str, to_addr: str, subject: str, body: str
+) -> dict:
+    """Send an email from a LobsterMail inbox."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{BASE_URL}/v1/emails/send",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "from": from_addr,
+                "to": to_addr,
+                "subject": subject,
+                "body": body,
+            },
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+async def check_inbox(token: str, inbox_id: str) -> dict:
+    """Fetch recent emails for a given inbox."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            f"{BASE_URL}/v1/inboxes/{inbox_id}/emails",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        resp.raise_for_status()
+        return resp.json()
+```
+
+Each function maps directly to one API call. The agent gets back JSON it can reason about in its next turn.
+
+## step 2: register tools with AutoGen
+
+AutoGen's `FunctionTool` wraps any callable so agents can invoke it during a conversation. We register all four functions:
+
+```python
+from autogen_agentchat.agents import AssistantAgent
+from autogen_ext.models.openai import OpenAIChatCompletionClient
+from autogen_core.tools import FunctionTool
+
+# Wrap each function as an AutoGen tool
+signup_tool = FunctionTool(signup_for_email, description="Create a new LobsterMail account to get an auth token")
+inbox_tool = FunctionTool(create_inbox, description="Provision a new email inbox with a chosen handle")
+send_tool = FunctionTool(send_email, description="Send an email from a LobsterMail inbox")
+check_tool = FunctionTool(check_inbox, description="Check a LobsterMail inbox for new emails")
+
+model_client = OpenAIChatCompletionClient(model="gpt-4o")
+
+agent = AssistantAgent(
+    name="email_agent",
+    model_client=model_client,
+    tools=[signup_tool, inbox_tool, send_tool, check_tool],
+    system_message=(
+        "You are an email assistant. Use the LobsterMail tools to manage email. "
+        "First sign up to get a token, then create an inbox, then send or check "
+        "emails as requested. Always pass the token from signup to subsequent calls."
+    ),
+)
+```
+
+When the agent decides it needs to send or read email, it calls the appropriate tool. AutoGen handles the function execution and feeds the result back into the conversation.
+
+## step 3: run it
+
+```python
+import asyncio
+from autogen_agentchat.messages import TextMessage
+from autogen_core import CancellationToken
+
+async def main():
+    response = await agent.on_messages(
+        [TextMessage(
+            content="Sign up for email, create an inbox called 'outreach-bot', "
+                    "then send a message to hello@example.com introducing yourself.",
+            source="user",
+        )],
+        cancellation_token=CancellationToken(),
+    )
+    print(response.chat_message.content)
+
+asyncio.run(main())
+```
+
+The agent will chain the tool calls itself: sign up, create an inbox, compose and send the email. You'll see each step in the response as the agent reasons through the sequence.
+
+## multi-agent pattern: inbox per agent
+
+AutoGen's strength is coordinating multiple agents. With LobsterMail, each agent in your group can own a separate inbox. A research agent collects information and emails a summary to the writing agent. The writing agent drafts a response and emails it to a review agent. The coordination channel is just email.
+
+```python
+research_agent = AssistantAgent(
+    name="researcher",
+    model_client=model_client,
+    tools=[signup_tool, inbox_tool, send_tool, check_tool],
+    system_message="You research topics and email your findings to the writer agent.",
+)
+
+writer_agent = AssistantAgent(
+    name="writer",
+    model_client=model_client,
+    tools=[signup_tool, inbox_tool, send_tool, check_tool],
+    system_message="You receive research via email and draft polished content.",
+)
+```
+
+Each agent provisions its own shell on the reef. They communicate through real email threads, which means you get an automatic audit trail of every handoff. If you swap one agent's underlying model or rewrite its system prompt, the email interface stays the same.
+
+<Callout type="info">
+  For a deeper look at multi-agent email coordination patterns, see [multi-agent email: when agents need to talk to each other](/blog/multi-agent-email-coordination).
+</Callout>
+
+## handling incoming email with polling
+
+If your AutoGen agent needs to react to incoming email (not just send), set up a polling loop that checks the inbox and feeds new messages into the agent's context:
+
+```python
+import asyncio
+
+async def poll_and_respond(agent, token, inbox_id):
+    seen = set()
+    while True:
+        emails = await check_inbox(token, inbox_id)
+        for email in emails.get("emails", []):
+            if email["id"] not in seen:
+                seen.add(email["id"])
+                # Feed the email into the agent as a new message
+                response = await agent.on_messages(
+                    [TextMessage(
+                        content=f"New email from {email['from']}: "
+                                f"Subject: {email['subject']}\n\n{email['body']}",
+                        source="email_webhook",
+                    )],
+                    cancellation_token=CancellationToken(),
+                )
+                print(response.chat_message.content)
+        await asyncio.sleep(30)
+```
+
+For production workloads, LobsterMail also supports webhooks so you don't need to poll. Set a `webhookUrl` when creating the inbox and LobsterMail POSTs incoming messages to your endpoint in near real-time.
+
+## prompt injection safety
+
+When an agent reads email from the outside world, it's consuming untrusted input. A malicious sender could embed instructions in an email body that attempt to hijack the agent's behavior. LobsterMail scans every inbound message across six categories of prompt injection (boundary manipulation, system prompt override, data exfiltration, role hijacking, tool invocation, encoding tricks) and flags risky content before your agent sees it.
+
+The scan results come back in the email metadata. You can add a check before passing content to your agent:
+
+```python
+async def safe_check_inbox(token: str, inbox_id: str) -> dict:
+    """Fetch emails, filtering out injection risks."""
+    result = await check_inbox(token, inbox_id)
+    safe_emails = [
+        e for e in result.get("emails", [])
+        if not e.get("isInjectionRisk", False)
+    ]
+    return {"emails": safe_emails}
+```
+
+This is one of the reasons giving your agent its own isolated inbox matters. If something does get through, the blast radius is limited to that inbox, not your entire Gmail history.
+
+## pricing for AutoGen use cases
+
+LobsterMail's free tier lets your agent sign up and receive email with no credit card. That covers prototyping and any receive-only workflow. When your agent needs to send, the Builder plan at $9/month includes 1,000 sends per day and 10,000 per month. For multi-agent setups where each agent has its own inbox, there's no per-inbox charge.
+
+<FAQ>
+  <FAQItem question="Does AutoGen support LobsterMail natively?">
+    Not as a built-in integration. You connect them by wrapping LobsterMail's REST API endpoints as AutoGen `FunctionTool` instances, as shown in this guide. AutoGen's tool system makes this straightforward.
+  </FAQItem>
+  <FAQItem question="Can I use AG2 (the community fork) instead of Microsoft AutoGen?">
+    Yes. AG2 and AutoGen share the same tool registration patterns. The `FunctionTool` approach works across both. Wrap the same HTTP functions and register them with your agent.
+  </FAQItem>
+  <FAQItem question="Do I need an API key to use LobsterMail?">
+    No. Your agent creates its own account via the `/v1/signup` endpoint and receives a bearer token. There's no manual API key provisioning step.
+  </FAQItem>
+  <FAQItem question="Can each agent in a multi-agent group have its own email?">
+    Yes. Each agent calls `signup` and `create_inbox` independently. They each get a unique address on the reef and can email each other or external recipients.
+  </FAQItem>
+  <FAQItem question="Does LobsterMail work with AutoGen's GroupChat?">
+    Yes. Register the email tools on any agent participating in a `RoundRobinGroupChat` or `SelectorGroupChat`. The agent calls the tools during its turn just like any other function call.
+  </FAQItem>
+  <FAQItem question="What if my AutoGen agent needs to read email attachments?">
+    The `/v1/inboxes/:id/emails` endpoint returns email metadata and body content. Attachment support is on the LobsterMail roadmap. For now, structured data in the email body (JSON, plain text) covers most agent-to-agent and notification use cases.
+  </FAQItem>
+  <FAQItem question="Can I use httpx or requests for the API calls?">
+    Both work. This guide uses `httpx` with async support because AutoGen's runtime is async. If you prefer synchronous code, `requests` works fine in a synchronous tool wrapper.
+  </FAQItem>
+  <FAQItem question="How do I handle token persistence across agent restarts?">
+    Store the token from the signup response in a file, environment variable, or secret manager. On restart, load the existing token instead of calling signup again. The token doesn't expire.
+  </FAQItem>
+  <FAQItem question="Is there a Python SDK for LobsterMail?">
+    LobsterMail's primary SDK is TypeScript/JavaScript. For Python agents like AutoGen, you use the REST API directly with `httpx` or `requests`. The four endpoints are simple enough that a dedicated SDK isn't necessary.
+  </FAQItem>
+  <FAQItem question="How fast does email delivery work?">
+    Inbound email arrives in the inbox within seconds. Outbound sends are queued and processed with retry logic. For most use cases, delivery is near real-time.
+  </FAQItem>
+  <FAQItem question="Can my AutoGen agent use a custom domain for sending?">
+    Yes. On the Builder plan ($9/month), you can configure custom domains with full DNS verification (SPF, DKIM, DMARC). Your agent sends from `agent@yourcompany.com` instead of the default `@lobstermail.ai` address.
+  </FAQItem>
+  <FAQItem question="What happens if the LobsterMail API is unreachable during a tool call?">
+    The `httpx` call raises an exception, which AutoGen surfaces to the agent as a tool error. The agent can retry, skip the email step, or report the failure depending on your system prompt instructions.
+  </FAQItem>
+  <FAQItem question="Can I use this with AutoGen's code execution feature instead of tool calling?">
+    You could have the agent generate and execute the HTTP calls as raw Python code, but tool calling is safer and more predictable. With tools, the agent can't accidentally modify the request structure or leak credentials in generated code.
+  </FAQItem>
+  <FAQItem question="How does this compare to wiring SMTP directly into AutoGen?">
+    SMTP requires managing credentials, connection pooling, TLS configuration, and deliverability (SPF, DKIM records). LobsterMail handles all of that behind a REST API. Your agent makes HTTP calls and gets JSON responses. No SMTP libraries, no credential management.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*

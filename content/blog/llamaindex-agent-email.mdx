@@ -1,0 +1,277 @@
+---
+title: "llamaindex agents that read, reply, and route email"
+description: "Wrap LobsterMail's REST API as LlamaIndex FunctionTools so your agent can read, reply to, and route emails between sub-agents."
+date: "2026-02-24"
+author: "Samuel Chenard"
+tags: ["guides", "email", "automation"]
+image: "/blog/llamaindex-agent-email.png"
+---
+
+LlamaIndex has solid abstractions for giving agents tools. You define a Python function, wrap it in `FunctionTool`, and the agent's LLM decides when to call it. That pattern maps cleanly onto an email API: read inbox, send reply, forward to another agent.
+
+This guide wires LobsterMail's REST API into a LlamaIndex agent that can read incoming emails, reply to them, and route messages to specialized sub-agents based on intent. No SDK required on the Python side. Just HTTP calls wrapped as tools.
+
+## What we're building
+
+A LlamaIndex agent with three capabilities:
+
+1. **Read** emails from its own inbox
+2. **Reply** to the sender with a context-aware response
+3. **Route** emails to different handler agents based on classification (billing, technical, general)
+
+Each capability is a `FunctionTool`. The agent's LLM decides which tool to invoke based on the task. Routing creates a lightweight multi-agent pattern where the top-level agent triages, and downstream agents handle domain-specific work.
+
+## Provision an inbox via the REST API
+
+Before wiring up LlamaIndex, your agent needs an email address. LobsterMail's API lets agents self-provision. No human signup, no OAuth flow.
+
+```python
+import requests
+
+BASE_URL = "https://api.lobstermail.ai/v1"
+
+# Agent signs itself up
+signup = requests.post(f"{BASE_URL}/signup")
+token = signup.json()["token"]
+
+headers = {"Authorization": f"Bearer {token}"}
+
+# Create an inbox
+inbox = requests.post(
+    f"{BASE_URL}/inboxes",
+    headers=headers,
+    json={"name": "triage-agent"}
+)
+inbox_data = inbox.json()
+inbox_id = inbox_data["id"]
+address = inbox_data["address"]
+print(address)  # triage-agent@lobstermail.ai
+```
+
+Two requests. The agent has an address. It can start catching email immediately on the free tier.
+
+## Build the tools
+
+LlamaIndex's `FunctionTool` wraps any Python callable. The agent sees the function's docstring and type hints, which is how it decides when to call each tool. Good docstrings matter here because they're the tool descriptions the LLM reasons over.
+
+### Read tool
+
+```python
+from llama_index.core.tools import FunctionTool
+
+def check_inbox() -> str:
+    """Check the agent's email inbox for new messages.
+    Returns a JSON list of recent emails with id, from, subject, and body preview.
+    Call this when you need to see what emails have arrived."""
+    response = requests.get(
+        f"{BASE_URL}/inboxes/{inbox_id}/emails",
+        headers=headers,
+    )
+    emails = response.json().get("emails", [])
+    return str([
+        {
+            "id": e["id"],
+            "from": e["from"],
+            "subject": e["subject"],
+            "preview": e.get("bodyPreview", ""),
+        }
+        for e in emails
+    ])
+
+read_tool = FunctionTool.from_defaults(fn=check_inbox)
+```
+
+The agent calls `check_inbox()` whenever it needs to see what landed in the inbox. The response includes enough context (sender, subject, preview) for the LLM to decide what to do next.
+
+### Reply tool
+
+```python
+def send_reply(to: str, subject: str, body: str) -> str:
+    """Send an email reply from the agent's inbox.
+    Use this to respond to a sender after reading their email.
+    Args:
+        to: recipient email address
+        subject: email subject line (prefix with Re: for replies)
+        body: the email body text
+    """
+    response = requests.post(
+        f"{BASE_URL}/emails/send",
+        headers=headers,
+        json={
+            "from": address,
+            "to": to,
+            "subject": subject,
+            "body": body,
+        },
+    )
+    if response.ok:
+        return f"Reply sent to {to}"
+    return f"Failed to send: {response.text}"
+
+reply_tool = FunctionTool.from_defaults(fn=send_reply)
+```
+
+Sending requires the Builder plan ($9/mo). On the free tier, the agent can read and classify but not respond.
+
+### Route tool
+
+This is where it gets useful. Instead of handling every email itself, the triage agent forwards messages to specialized agents based on intent.
+
+```python
+# Map categories to dedicated agent inboxes
+ROUTE_MAP = {
+    "billing": "billing-agent@lobstermail.ai",
+    "technical": "tech-agent@lobstermail.ai",
+    "general": "general-agent@lobstermail.ai",
+}
+
+def route_email(category: str, original_from: str, subject: str, body: str) -> str:
+    """Route an email to a specialized agent based on its category.
+    The triage agent should classify the email first, then route it
+    to the appropriate handler.
+    Args:
+        category: one of 'billing', 'technical', or 'general'
+        original_from: the original sender's email address
+        subject: the original subject line
+        body: the original email body
+    """
+    target = ROUTE_MAP.get(category)
+    if not target:
+        return f"Unknown category: {category}"
+
+    response = requests.post(
+        f"{BASE_URL}/emails/send",
+        headers=headers,
+        json={
+            "from": address,
+            "to": target,
+            "subject": f"[Routed: {category}] {subject}",
+            "body": f"Original sender: {original_from}\n\n{body}",
+        },
+    )
+    if response.ok:
+        return f"Routed to {target}"
+    return f"Routing failed: {response.text}"
+
+route_tool = FunctionTool.from_defaults(fn=route_email)
+```
+
+Each downstream agent (`billing-agent`, `tech-agent`, `general-agent`) has its own LobsterMail inbox. They can be separate LlamaIndex agents, different frameworks entirely, or even human-monitored addresses. The triage agent doesn't care. It classifies and forwards.
+
+## Assemble the agent
+
+Now connect the tools to a LlamaIndex agent. The `FunctionCallingAgent` works well here because it maps tool calls directly to function invocations.
+
+```python
+from llama_index.core.agent import FunctionCallingAgent
+from llama_index.llms.openai import OpenAI
+
+llm = OpenAI(model="gpt-4o")
+
+agent = FunctionCallingAgent.from_tools(
+    tools=[read_tool, reply_tool, route_tool],
+    llm=llm,
+    verbose=True,
+    system_prompt=(
+        "You are an email triage agent. Your job is to check the inbox, "
+        "read new emails, classify them as billing, technical, or general, "
+        "and route them to the appropriate handler agent. For simple questions "
+        "you can answer directly, reply to the sender. For anything that needs "
+        "specialized handling, route it."
+    ),
+)
+```
+
+That system prompt drives the agent's behavior. It reads the inbox, decides whether to reply or route, and calls the right tool. The LLM sees the tool docstrings and picks accordingly.
+
+## Run the triage loop
+
+In production, you'd trigger this from a webhook or a cron schedule. Here's a simple polling loop:
+
+```python
+import time
+
+while True:
+    response = agent.chat(
+        "Check the inbox for new emails. For each one, classify it and "
+        "either reply directly or route it to the right agent."
+    )
+    print(response)
+    time.sleep(60)
+```
+
+Every minute, the agent checks its inbox, processes whatever arrived, and goes back to waiting. When it encounters a billing question, it routes to the billing agent. A technical bug report goes to tech. A straightforward "how do I reset my password" gets a direct reply.
+
+<Callout type="tip">
+  For real-time processing, set up a LobsterMail webhook instead of polling. Point it at a Flask or FastAPI endpoint, and trigger the agent's tool calls when the webhook fires. Polling works fine for low-volume inboxes, but webhooks eliminate the delay.
+</Callout>
+
+## Why FunctionTool works well for email
+
+LlamaIndex's tool abstraction fits email operations naturally. Each API call is a discrete action with clear inputs and outputs. The LLM doesn't need to manage HTTP details; it just decides "I should check the inbox" or "I should route this to billing" and the tool handles the rest.
+
+A few things that make this pattern clean:
+
+- **Docstrings as tool descriptions.** The LLM reads your docstring to understand when to call each tool. Write them like you're explaining the function to a colleague.
+- **Type hints drive parameter extraction.** LlamaIndex uses your function's type annotations to generate the tool schema. `to: str, subject: str, body: str` becomes a structured tool call the LLM fills in.
+- **Composability.** Adding a fourth tool (say, `fetch_full_body` for loading the complete email text from a preview) is just another `FunctionTool.from_defaults()` call and one more entry in the tools list.
+
+This also means you're not locked into LlamaIndex for the downstream agents. The billing agent that catches routed emails could be a CrewAI crew, a LangGraph workflow, or a plain Python script. The reef doesn't care what framework reads the email.
+
+## Going further
+
+Once the basic triage loop works, there's room to extend:
+
+- **Add a `fetch_full_body` tool** that loads the complete email content when the preview isn't enough for classification
+- **Persist routing decisions** to a database so you can track classification accuracy over time
+- **Wire up sentiment analysis** as a pre-routing step so angry emails get escalated regardless of category
+- **Use LlamaIndex's `QueryEngineTool`** to give the reply tool access to your docs index, so direct replies pull from your actual knowledge base
+
+For more on multi-agent email patterns, see [multi-agent email coordination](/blog/multi-agent-email-coordination). And if you're building a support agent specifically, the [support agent guide](/blog/build-support-agent-email) covers the full triage-and-respond pattern in depth.
+
+<Callout type="tip">
+  LobsterMail is currently in pre-launch. The API endpoints above reflect the intended design. [Join the waitlist](/) to get early access.
+</Callout>
+
+<FAQ>
+  <FAQItem question="Does LlamaIndex have a built-in LobsterMail integration?">
+    Not yet. LobsterMail's API is REST-based, so you wrap the endpoints as `FunctionTool` instances. This guide shows exactly how to do that. The pattern works with any REST API, not just LobsterMail.
+  </FAQItem>
+  <FAQItem question="Can I use a different LLM besides OpenAI with this setup?">
+    Yes. LlamaIndex supports Anthropic, Mistral, Cohere, local models via Ollama, and others. Swap `OpenAI` for your preferred LLM class. The tools and agent logic stay the same.
+  </FAQItem>
+  <FAQItem question="What's the difference between FunctionTool and QueryEngineTool?">
+    `FunctionTool` wraps arbitrary Python functions. `QueryEngineTool` wraps a LlamaIndex query engine for RAG-style retrieval. For email operations (read, send, route), `FunctionTool` is the right choice. Use `QueryEngineTool` when the agent needs to search a knowledge base to draft replies.
+  </FAQItem>
+  <FAQItem question="How does the agent decide which tool to call?">
+    The LLM reads each tool's description (from the function's docstring) and decides based on the current task. If you say "check the inbox," it calls `check_inbox`. If it reads an email about billing, it calls `route_email` with category "billing." The routing logic lives in the LLM's reasoning, guided by your system prompt.
+  </FAQItem>
+  <FAQItem question="Can the downstream agents also be LlamaIndex agents?">
+    Yes. Each agent in the routing map can be another LlamaIndex agent with its own tools and LLM. The billing agent might have tools for looking up invoices. The tech agent might have tools for searching your issue tracker. They each monitor their own LobsterMail inbox independently.
+  </FAQItem>
+  <FAQItem question="Do I need the paid plan to use this?">
+    Reading emails works on the free tier. Sending replies and routing (which sends an email to another agent) require the Builder plan at $9/month. You can build and test the classification logic on the free tier, then upgrade when you're ready to send.
+  </FAQItem>
+  <FAQItem question="How do I handle rate limits on the LobsterMail API?">
+    The Builder plan allows 1,000 sends per day and 10,000 per month. For the polling endpoint, standard rate limits apply. Add retry logic with backoff in your tool functions, or check the response status code before proceeding.
+  </FAQItem>
+  <FAQItem question="Can I use webhooks instead of polling?">
+    Yes. Set up a webhook URL when you create the inbox, and LobsterMail will POST to your endpoint whenever an email arrives. In your webhook handler, call the agent's chat method to process the incoming message. This eliminates polling delay entirely.
+  </FAQItem>
+  <FAQItem question="How do I test this without sending real emails?">
+    Provision a free inbox on LobsterMail and send test emails to it from any email client. The agent reads them through the API. For sending, you can log outbound calls instead of actually hitting the send endpoint during development.
+  </FAQItem>
+  <FAQItem question="What happens if the agent misclassifies an email?">
+    The downstream agent receives it and can either handle it or bounce it back. You can also add a confidence threshold to the classification step — if the agent isn't sure, route to a human-monitored inbox instead of a specialized agent.
+  </FAQItem>
+  <FAQItem question="Can I add more categories beyond billing, technical, and general?">
+    Yes. Add entries to the `ROUTE_MAP` dictionary, provision inboxes for the new categories, and update the system prompt so the LLM knows about the additional options. The tool function handles any category that exists in the map.
+  </FAQItem>
+  <FAQItem question="Does this work with LlamaIndex's async agent API?">
+    Yes. LlamaIndex supports async agents. Convert the tool functions to async (using `httpx` or `aiohttp` instead of `requests`) and use `AsyncFunctionTool` or the async agent runner. The pattern is identical, just non-blocking.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*

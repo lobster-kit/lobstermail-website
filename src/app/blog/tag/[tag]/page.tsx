@@ -76,10 +76,10 @@ export default async function TagPage({
         <section className="mx-auto max-w-6xl px-6 pb-28">
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {posts.map((post, i) => (
-              <FadeIn key={post.slug} delay={i * 0.06}>
+              <FadeIn key={post.slug} delay={i * 0.06} className="h-full">
                 <Link
                   href={`/blog/${post.slug}`}
-                  className="group block overflow-hidden rounded-2xl border-2 border-edge bg-background transition-transform duration-300 hover:-translate-y-1 shadow-[0_4px_20px_-4px_rgba(0,80,171,0.08)]"
+                  className="group flex h-full flex-col overflow-hidden rounded-2xl border-2 border-edge bg-background transition-transform duration-300 hover:-translate-y-1 shadow-[0_4px_20px_-4px_rgba(0,80,171,0.08)]"
                 >
                   {post.image && (
                     <div className="aspect-[16/9] overflow-hidden border-b-2 border-edge">
@@ -92,13 +92,13 @@ export default async function TagPage({
                       />
                     </div>
                   )}
-                  <div className="p-6">
+                  <div className="flex flex-1 flex-col p-6">
                     {post.tags.length > 0 && (
                       <div className="mb-3 flex flex-wrap gap-2">
                         {post.tags.slice(0, 3).map((t) => (
                           <span
                             key={t}
-                            className={`inline-flex rounded-full border-2 px-3 py-0.5 text-xs font-medium ${
+                            className={`inline-flex whitespace-nowrap rounded-full border-2 px-3 py-0.5 text-xs lg:text-[10px] font-medium ${
                               t === decoded
                                 ? "border-accent bg-accent/[0.15] text-accent"
                                 : "border-edge bg-accent/[0.08] text-accent"
@@ -109,13 +109,13 @@ export default async function TagPage({
                         ))}
                       </div>
                     )}
-                    <h2 className="h4 mb-2 line-clamp-2 transition-colors group-hover:text-accent">
+                    <h2 className="h4 mb-2 line-clamp-2 transition-colors group-hover:text-accent lg:text-[18px]!">
                       {post.title}
                     </h2>
                     <p className="mb-3 line-clamp-2 text-sm text-secondary">
                       {post.description}
                     </p>
-                    <time className="text-xs text-secondary">
+                    <time className="mt-auto text-xs text-secondary">
                       {formatDate(post.date)}
                     </time>
                   </div>

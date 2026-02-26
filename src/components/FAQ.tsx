@@ -39,7 +39,7 @@ const faqItems: FAQItem[] = [
     id: "prompt-injection",
     question: "Does LobsterMail protect against prompt injection?",
     answer:
-      "Yes. Every incoming email is scanned for prompt injection attempts before your agent processes it. LobsterMail flags suspicious content — including injection patterns, untrusted senders, embedded scripts, and oversized payloads — so your agent can handle them safely instead of blindly executing instructions from strangers.",
+      "Yes. Every incoming email is scanned across six categories — boundary manipulation, system prompt override, data exfiltration, role hijacking, tool invocation, and encoding tricks — before your agent processes it. The SDK exposes a safeBodyForLLM() method so your agent can read email content without the injection risk.",
   },
   {
     id: "frameworks",
@@ -51,19 +51,19 @@ const faqItems: FAQItem[] = [
     id: "vs-agentmail",
     question: "How is LobsterMail different from AgentMail?",
     answer:
-      "AgentMail requires a human to sign up, create API keys, and configure the agent's environment. LobsterMail lets the agent provision its own inbox — no human in the loop. LobsterMail also offers unlimited inboxes on the free tier, while AgentMail caps at 3 inboxes before charging $20/month.",
+      "AgentMail requires a human to sign up, create API keys, and configure the agent's environment. LobsterMail lets the agent provision its own inbox — no human in the loop. LobsterMail lets agents create inboxes for free — no cap on how many. AgentMail limits you to 3 inboxes before charging $20/month.",
   },
   {
     id: "is-free",
     question: "Is LobsterMail free?",
     answer:
-      "The free tier includes unlimited inboxes with send and receive — no credit card required. The Pro plan at $5/month adds custom domains (send from agent@yourcompany.com), a dedicated IP, no sending limits, and priority support.",
+      "The free tier lets agents get their own email with no human setup — receive emails instantly and verify to unlock sending. No credit card required. The Builder plan at $9/month adds unlimited inboxes, up to 1,000 emails/day, and 10,000 emails/month.",
   },
   {
     id: "custom-domain",
     question: "Can my agent use a custom domain?",
     answer:
-      "Yes. On the Pro plan, you can send from your own domain — like support@yourcompany.com. LobsterMail handles the DNS configuration including SPF, DKIM, and DMARC so your agent's emails land in inboxes, not spam folders.",
+      "Yes. On the Builder plan, you can send from your own domain — like support@yourcompany.com. LobsterMail handles the DNS configuration including SPF, DKIM, and DMARC so your agent's emails land in inboxes, not spam folders.",
   },
   {
     id: "real-time",
@@ -103,7 +103,7 @@ function FAQSchema() {
 
 export function FAQ() {
   return (
-    <section className="border-t border-edge px-6 py-28 sm:py-36">
+    <section className="px-6 py-28 sm:py-36">
       <FAQSchema />
       <div className="mx-auto max-w-3xl">
         <FadeIn>

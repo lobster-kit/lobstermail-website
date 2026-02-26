@@ -1,0 +1,238 @@
+---
+title: "webhooks vs polling: how your agent should receive emails"
+description: "Should your agent poll for new messages or get pushed webhooks? Here's the trade-off and when to use each approach."
+date: "2026-02-09"
+author: "Samuel Chenard"
+tags: ["guides", "infrastructure", "email"]
+image: "/blog/webhooks-vs-polling-email.png"
+---
+
+Your agent has its own shell on the reef. Emails are landing. Now the question is: how does your agent know when a new message arrives?
+
+There are two models. Polling — where your agent checks periodically, asking "anything new?" Webhooks — where LobsterMail pushes a notification the moment mail arrives. Both work. Both are available on every tier. But they solve different problems, and picking the wrong one costs you either latency or complexity.
+
+Let's break down the trade-offs.
+
+## Polling: the agent asks
+
+Polling is the simplest pattern. Your agent calls the LobsterMail API on a schedule — every 30 seconds, every minute, every five minutes — and asks for new messages since its last check.
+
+```javascript
+import { LobsterMail } from "@lobstermail/sdk";
+
+const client = new LobsterMail();
+
+// Poll for new messages every 30 seconds
+async function pollForMail(inboxId) {
+  let lastChecked = new Date().toISOString();
+
+  setInterval(async () => {
+    const messages = await client.messages.list({
+      inbox: inboxId,
+      since: lastChecked,
+    });
+
+    if (messages.length > 0) {
+      lastChecked = new Date().toISOString();
+      for (const msg of messages) {
+        await handleMessage(msg);
+      }
+    }
+  }, 30_000);
+}
+```
+
+That's it. No server to expose, no endpoint to secure, no firewall rules to configure. Your agent makes outbound HTTP requests on its own schedule.
+
+**Where polling works well:**
+
+- **Ephemeral agents.** OpenClaw agents that spin up, do a task, and shut down don't have a persistent endpoint to receive webhooks. They wake up, poll for anything they missed, process it, and go back to sleep. This is the natural fit for agents that run on a schedule or get invoked on demand.
+- **Firewalled environments.** If your agent runs behind a NAT or corporate firewall that blocks inbound traffic, polling works because all requests are outbound.
+- **Low-volume inboxes.** If your agent catches a handful of emails per day, polling every minute is cheap and keeps the implementation dead simple.
+
+**The cost:** latency. If you poll every 60 seconds and an email arrives one second after your last check, your agent won't see it for 59 seconds. For a support triage agent, that's 59 seconds a customer is waiting. For a newsletter digest agent, it doesn't matter at all.
+
+<Callout type="tip">
+  Set your polling interval based on your use case. Support agents: 15-30 seconds. Monitoring agents: 1-5 minutes. Daily digest agents: poll once an hour or even once a day. Shorter intervals mean more API calls but lower latency.
+</Callout>
+
+## Webhooks: LobsterMail tells you
+
+With webhooks, you flip the model. Instead of your agent asking for new mail, LobsterMail POSTs a JSON payload to your agent's endpoint the moment a message lands in its shell.
+
+```javascript
+import express from "express";
+import { LobsterMail } from "@lobstermail/sdk";
+
+const app = express();
+const client = new LobsterMail();
+
+// Register a webhook when provisioning the inbox
+const inbox = await client.provision({
+  name: "support-agent",
+  webhookUrl: "https://your-agent.example.com/incoming-mail",
+  webhookSecret: process.env.WEBHOOK_SECRET,
+});
+
+// Handle incoming webhook POSTs
+app.post("/incoming-mail", express.json(), async (req, res) => {
+  // Verify the signature first
+  const isValid = client.webhooks.verify(
+    req.body,
+    req.headers["x-lobstermail-signature"],
+    process.env.WEBHOOK_SECRET
+  );
+
+  if (!isValid) {
+    return res.status(401).send("Invalid signature");
+  }
+
+  // Acknowledge immediately, process async
+  res.status(200).send("OK");
+
+  // Now handle the message
+  await handleMessage(req.body.message);
+});
+
+app.listen(3000);
+```
+
+The latency difference is significant. Polling at 30-second intervals gives you average latency of 15 seconds and worst-case of 30 seconds. Webhooks deliver in under 500 milliseconds from the moment the email hits the reef. For time-sensitive workflows — support triage, real-time lead response, agent-to-agent coordination — that gap matters.
+
+**Where webhooks work well:**
+
+- **Persistent agents.** If your agent runs as a long-lived process (a server, a container, a daemon), it already has an endpoint. Webhooks are the natural fit.
+- **Real-time workflows.** [Support agents](/blog/build-support-agent-email) that need to respond within seconds. Sales agents where a 58-minute delay means a lost lead. Multi-agent pipelines where one agent's output triggers the next.
+- **High-volume inboxes.** An agent catching hundreds of emails per hour benefits from push delivery. No wasted API calls checking an empty inbox, no batching delays.
+
+**The cost:** complexity. You need a publicly reachable endpoint. You need to verify webhook signatures to prevent spoofed payloads. You need to respond with a 200 status within a few seconds (process the message asynchronously, not in the request handler). And if your endpoint goes down, you miss deliveries until it comes back.
+
+## What happens when your webhook endpoint is down?
+
+This is the question that keeps engineers up at night. LobsterMail handles it with a retry-and-backfill pattern.
+
+When a webhook delivery fails (your endpoint returns a non-2xx status or times out after 10 seconds), LobsterMail retries with exponential backoff: 30 seconds, 2 minutes, 10 minutes, 1 hour, up to 6 hours. If all retries fail, the message stays in your agent's shell. When your endpoint recovers, your agent can poll for any messages it missed during the outage.
+
+This is why the best production setups use both patterns together.
+
+## The hybrid approach: webhooks with polling as a safety net
+
+In practice, most production agents use webhooks for real-time delivery and polling as a fallback to catch anything that slipped through. The implementation is straightforward:
+
+```javascript
+import { LobsterMail } from "@lobstermail/sdk";
+
+const client = new LobsterMail();
+
+// Primary: handle webhooks for real-time delivery
+async function onWebhook(message) {
+  await handleMessage(message);
+  lastProcessed = message.receivedAt;
+}
+
+// Safety net: poll every 5 minutes to catch missed deliveries
+let lastProcessed = new Date().toISOString();
+
+setInterval(async () => {
+  const missed = await client.messages.list({
+    inbox: inboxId,
+    since: lastProcessed,
+    status: "unprocessed",
+  });
+
+  for (const msg of missed) {
+    await handleMessage(msg);
+    lastProcessed = msg.receivedAt;
+  }
+}, 5 * 60_000);
+```
+
+Webhooks handle 99%+ of deliveries in real time. The polling sweep catches edge cases — network blips, brief outages, race conditions. You get the speed of webhooks with the reliability of polling. Industry data suggests that [only about 1.5% of polling requests find a new update](https://www.svix.com/resources/faq/webhooks-vs-api-polling/), which means the safety-net poll is cheap and almost always a no-op.
+
+<Callout type="tip">
+  Make your message handler idempotent. If the same email arrives via both the webhook and the polling sweep, your agent should process it once. Use the message ID from LobsterMail as a deduplication key.
+</Callout>
+
+## Which pattern fits your agent?
+
+Here's a quick decision framework:
+
+| Factor | Polling | Webhooks | Hybrid |
+|---|---|---|---|
+| **Latency** | 15s-5min average | Under 500ms | Under 500ms |
+| **Setup complexity** | Low | Medium | Medium |
+| **Requires public endpoint** | No | Yes | Yes |
+| **Works for ephemeral agents** | Yes | No | No |
+| **Handles high volume** | Wastes API calls | Efficient | Efficient |
+| **Reliability** | High (agent controls) | Depends on uptime | Highest |
+
+**Use polling** if your agent is ephemeral (OpenClaw agents that [spin up on demand](/blog/openclaw-agent-email-60-seconds)), runs behind a firewall, or handles low-volume mail where a minute of latency doesn't matter.
+
+**Use webhooks** if your agent is a persistent service that needs real-time email delivery and you can expose a public endpoint.
+
+**Use hybrid** if you're building production infrastructure where you need both speed and guaranteed delivery. This is what we recommend for any agent handling customer-facing email.
+
+Both patterns are available on every LobsterMail tier, including the free plan. The only difference is how your agent listens — the emails land in the shell either way.
+
+## Securing your webhook endpoint
+
+If you go the webhook route, a few things to get right from the start:
+
+**Verify signatures.** Every webhook from LobsterMail includes an HMAC signature in the `x-lobstermail-signature` header. Always verify it before processing the payload. This prevents attackers from sending spoofed emails to your endpoint.
+
+**Acknowledge fast, process later.** Return a 200 response within 5 seconds. Queue the message for async processing. If your handler takes too long, LobsterMail assumes the delivery failed and retries — which means your agent could process the same message twice (another reason to make handlers idempotent).
+
+**Use HTTPS.** Webhook payloads contain email content. Always use TLS to prevent interception in transit.
+
+**Restrict by IP if possible.** LobsterMail publishes its webhook source IP ranges. Whitelisting them adds a second layer of verification beyond signature checks.
+
+For a deeper look at securing your agent's email pipeline, see our guide on [email deliverability for AI agents](/blog/email-deliverability-ai-agents).
+
+## Choosing well means building less
+
+The decision between polling and webhooks isn't about which is "better." It's about which matches your agent's architecture. An OpenClaw agent that wakes up every ten minutes to check for tasks? Polling is perfect — don't overcomplicate it. A persistent support agent that needs sub-second response times on a [custom domain](/blog/custom-domains-agent-email)? Webhooks with a polling safety net.
+
+Match the pattern to the agent, and you'll write less code, handle fewer edge cases, and catch every email that hits the reef.
+
+<FAQ>
+  <FAQItem question="Does LobsterMail support both webhooks and polling on the free tier?">
+    Yes. Both delivery patterns are available on every LobsterMail tier, including the free plan. There's no feature gate on how your agent receives email.
+  </FAQItem>
+  <FAQItem question="What's the average latency for webhooks vs polling?">
+    Webhooks deliver within 500 milliseconds of an email arriving on the reef. Polling latency depends on your interval — if you poll every 30 seconds, average latency is 15 seconds and worst case is 30 seconds. If you poll every 5 minutes, worst case is 5 minutes.
+  </FAQItem>
+  <FAQItem question="Can I switch from polling to webhooks later without changing my inbox?">
+    Yes. The delivery method is configured on your agent's side, not on the inbox itself. You can add a webhook URL to an existing inbox at any time, and your polling code continues to work alongside it.
+  </FAQItem>
+  <FAQItem question="What happens if my webhook endpoint goes down?">
+    LobsterMail retries with exponential backoff — 30 seconds, 2 minutes, 10 minutes, up to 6 hours. If all retries fail, the message stays in your agent's shell. When your endpoint recovers, you can poll for missed messages to catch up.
+  </FAQItem>
+  <FAQItem question="Should I use polling for an OpenClaw agent?">
+    Usually, yes. OpenClaw agents are often ephemeral — they spin up, handle a task, and shut down. They don't maintain a persistent endpoint for webhooks. Polling on startup lets the agent catch any emails that arrived while it was offline. See our [OpenClaw setup guide](/blog/openclaw-agent-email-60-seconds) for the full walkthrough.
+  </FAQItem>
+  <FAQItem question="How do I prevent processing the same email twice?">
+    Make your message handler idempotent using the message ID from LobsterMail as a deduplication key. Store processed message IDs in a set or database, and skip any message you've already handled. This is especially important if you use the hybrid approach where both webhooks and polling can deliver the same message.
+  </FAQItem>
+  <FAQItem question="Do I need a public URL for webhooks?">
+    Yes. LobsterMail needs to reach your endpoint over the public internet (or via a tunnel like ngrok for local development). If your agent runs behind a firewall or NAT that blocks inbound traffic, polling is the better option.
+  </FAQItem>
+  <FAQItem question="How do I verify webhook signatures?">
+    Every webhook POST includes an `x-lobstermail-signature` header containing an HMAC-SHA256 signature. Use the `client.webhooks.verify()` method from the SDK to validate it against your webhook secret. Never process a payload that fails verification.
+  </FAQItem>
+  <FAQItem question="What's the recommended polling interval?">
+    It depends on your use case. For real-time support agents: 15-30 seconds. For monitoring or notification agents: 1-5 minutes. For daily digest agents: once an hour or once a day. Shorter intervals mean more API calls but lower latency.
+  </FAQItem>
+  <FAQItem question="Can I use webhooks with multiple agents on the same inbox?">
+    Yes. You can register multiple webhook URLs for a single inbox. LobsterMail will POST to all of them when a message arrives. This is useful for fan-out patterns where multiple agents need to process the same incoming email.
+  </FAQItem>
+  <FAQItem question="Is there a rate limit on polling?">
+    LobsterMail allows polling up to once per second on all tiers. For most use cases, polling every 15-60 seconds is plenty. If you need faster delivery than once-per-second polling allows, switch to webhooks.
+  </FAQItem>
+  <FAQItem question="What format does the webhook payload use?">
+    Webhooks deliver a JSON payload containing the full message — sender, recipient, subject, body, headers, and metadata including the message ID and timestamp. The schema matches what you'd get from the polling API, so your message handler works the same way for both patterns.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*

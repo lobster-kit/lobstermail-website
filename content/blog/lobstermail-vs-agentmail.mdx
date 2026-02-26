@@ -1,0 +1,161 @@
+---
+title: "lobstermail vs agentmail: which is right for your agent"
+description: "Both give agents email. One requires human signup. The other lets your agent hatch its own inbox. Here's the full breakdown."
+date: "2026-02-12"
+author: "Samuel Chenard"
+tags: ["email", "cost"]
+image: "/blog/lobstermail-vs-agentmail.png"
+---
+
+If you're building an AI agent that needs to send or receive email, you've probably come across two names: LobsterMail and AgentMail. Both solve the same core problem — giving your agent its own inbox instead of hijacking yours. But they solve it in very different ways.
+
+This is a fair, feature-by-feature breakdown to help you pick the right one.
+
+## The core difference
+
+AgentMail is enterprise-focused infrastructure. A human signs up, creates an account in their console, generates an API key, stores it in environment variables, and then the agent can start using email. It's built for teams that want control over every inbox their agents touch.
+
+LobsterMail is agent-first. The agent itself hatches its own shell (inbox) without any human stepping in. No console, no account creation, no API key management. The agent provisions what it needs and starts communicating. If you want to understand what this looks like in practice, we wrote about [agent self-signup](/blog/agent-self-signup-explained) in detail.
+
+Both approaches are valid. Which one fits depends on how you think about your agents.
+
+## Feature comparison
+
+| Feature | LobsterMail | AgentMail |
+|---|---|---|
+| Agent self-signup | Yes, no human needed | No, human creates account first |
+| Free tier sending | 10/day after verification | Send and receive (3K/month) |
+| Paid inboxes | Unlimited | 10 / 150 / custom |
+| Paid price | $9/month | $20 / $200 / custom |
+| Custom domains | Yes (Builder tier) | Yes ($20+ tiers) |
+| Webhooks | Yes | Yes ($20+ tiers) |
+| SDK approach | Agent-native SDK | REST API + framework SDKs |
+| Human-in-the-loop required | No | Yes, for setup |
+| SOC 2 | No | Yes ($200+ tier) |
+| SAML SSO | No | Enterprise only |
+| White-label | No | Enterprise only |
+
+<Callout type="info">
+  LobsterMail's Builder tier gives you unlimited inboxes for $9/month. AgentMail caps you at 10 inboxes for $20/month, or 150 for $200/month. If your use case involves spinning up many agents with their own addresses, the math favors LobsterMail significantly.
+</Callout>
+
+## Pricing breakdown
+
+Let's put real numbers next to each other.
+
+**LobsterMail:**
+- **Free:** Receive-only, 100 emails/month, 30-day inbox expiry
+- **Free Verified:** 10 sends/day, 300 emails/month (verify via X post or credit card)
+- **Builder ($9/month):** Unlimited inboxes, 1,000 sends/day, 10,000 emails/month, 3 custom domains
+- **Scale ($99/month):** Unlimited inboxes, 10,000 sends/day, 100,000 emails/month, 25 custom domains, dedicated IP
+
+**AgentMail:**
+- **Free:** 3 inboxes, 3,000 emails/month, 100/day send cap
+- **Developer ($20/month):** 10 inboxes, 10,000 emails/month, 10 custom domains
+- **Startup ($200/month):** 150 inboxes, 150,000 emails/month, dedicated IPs, SOC 2
+- **Enterprise (custom):** Custom volume, white-label, SAML SSO, BYO cloud
+
+At every price point, LobsterMail gives you more inboxes for less money. The free tier lets your agent start receiving immediately, and at $9/month, LobsterMail removes inbox caps entirely — something AgentMail doesn't offer until you're on a custom enterprise plan.
+
+For a deeper look at how our tiers work, see [LobsterMail pricing explained](/blog/lobstermail-pricing-explained).
+
+## Where AgentMail is stronger
+
+Credit where it's due. AgentMail has real strengths for certain use cases:
+
+**Enterprise compliance.** If your organization requires SOC 2 reports, SAML SSO, or BYO cloud deployment, AgentMail offers these at the Startup and Enterprise tiers. LobsterMail doesn't currently offer SOC 2 certification.
+
+**Framework integrations.** AgentMail has built integrations with LangChain, LlamaIndex, CrewAI, and LiveKit. If you're deep in one of those ecosystems, the pre-built tooling can save time.
+
+**Scale track record.** AgentMail is YC-backed and reports processing over 10 million emails across thousands of active inboxes. They've been in market longer and have the infrastructure to show for it.
+
+## Where LobsterMail is stronger
+
+**Agent autonomy.** The agent handles everything. It doesn't wait for a human to create an account, generate keys, and configure environment variables. It hatches its own inbox and starts working. This matters if you're building agents that need to scale without human bottlenecks.
+
+**Price.** Half the cost with more inboxes at every tier. If you're running 20 agents that each need their own address, LobsterMail costs $9/month. On AgentMail, you'd need the $200/month Startup plan.
+
+**Simplicity.** No console dashboard to manage. No API keys to rotate. The agent provisions what it needs. If you believe agents should handle their own infrastructure, LobsterMail was built for that philosophy.
+
+**Unlimited inboxes.** On Builder, there's no cap. Spin up as many shells as your agents need. You never hit a wall at 10 or 150 and have to upgrade to the next tier.
+
+<Callout type="info">
+  If you're building a system where agents spawn other agents, and each one needs its own email, LobsterMail is the only option where the agents themselves can handle the entire process without human intervention.
+</Callout>
+
+## The philosophical split
+
+These two products represent different beliefs about how agents should work.
+
+AgentMail believes a human should be in the loop. Someone creates the account, manages the API keys, monitors the console, and maintains control over what the agents can do. This makes sense for regulated industries, large teams, and organizations that need audit trails and compliance paperwork.
+
+LobsterMail believes the agent should be in the loop. The agent provisions its own resources, manages its own inbox, and operates independently. The human sets the goal and the agent handles the rest. This makes sense for developers building autonomous systems, multi-agent workflows, and anyone who wants their agents to work without babysitting.
+
+Neither philosophy is wrong. But if you're reading this blog, you probably have a preference.
+
+## When to choose AgentMail
+
+- Your organization requires SOC 2 compliance or SAML SSO
+- You need white-label email infrastructure for a platform you're building
+- You want pre-built integrations with LangChain, LlamaIndex, or CrewAI
+- You prefer having a human-managed console and dashboard for oversight
+- You're deploying in a regulated industry where audit trails matter
+
+## When to choose LobsterMail
+
+- You want your agent to set up its own email without human involvement
+- You're running more than a handful of agents and don't want per-inbox pricing to add up
+- You want the simplest possible setup with no console, no API key management
+- You're building multi-agent systems where agents spawn and manage their own communication
+- You want [custom domains](/blog/custom-domains-agent-email) on a $9/month plan
+
+## Which one fits
+
+AgentMail is a solid product with real enterprise chops. If compliance and oversight are your top priorities, it's a strong choice.
+
+LobsterMail is built for a different future — one where agents handle their own infrastructure. If you want your agent to hatch its own inbox, communicate independently, and scale without hitting arbitrary caps, that's what we built for.
+
+If you're new to the concept of agent email entirely, start with [what is agent email and why does it matter](/blog/what-is-agent-email). It covers the fundamentals before you worry about which provider to pick.
+
+<FAQ>
+  <FAQItem question="Can my agent sign up for LobsterMail without any human involvement?">
+    Yes. LobsterMail supports agent self-signup, meaning the agent can hatch its own inbox without a human creating an account first. This is one of the key differences from AgentMail, which requires a human to create a console account and generate API keys. Learn more about [agent self-signup](/blog/agent-self-signup-explained).
+  </FAQItem>
+  <FAQItem question="How many free inboxes does each service offer?">
+    LobsterMail's free tier lets agents receive email immediately. AgentMail's free tier includes 3 inboxes with a 3,000 email monthly cap and a 100 email daily send limit.
+  </FAQItem>
+  <FAQItem question="Which is cheaper for running many agents?">
+    LobsterMail. The Builder plan costs $9/month and includes unlimited inboxes. On AgentMail, 10 inboxes cost $20/month and 150 inboxes cost $200/month. If you need more than 10 agent inboxes, LobsterMail saves you at least $190/month.
+  </FAQItem>
+  <FAQItem question="Does AgentMail support agent self-signup?">
+    No. AgentMail requires a human to create an account at their console, generate an API key, and configure it in the agent's environment. The agent can then create inboxes programmatically, but the initial account setup is manual.
+  </FAQItem>
+  <FAQItem question="Can I use my own domain with either service?">
+    Yes. Both LobsterMail and AgentMail support custom domains on their paid tiers. LobsterMail includes custom domains on the $9/month Builder plan. AgentMail includes them starting at the $20/month Developer plan. See our guide on [custom domains for agent email](/blog/custom-domains-agent-email).
+  </FAQItem>
+  <FAQItem question="Does LobsterMail have SOC 2 certification?">
+    Not currently. If your organization requires SOC 2 reports, AgentMail offers them on the $200/month Startup tier and above. LobsterMail is focused on agent-first features and simplicity, with security certifications on the roadmap.
+  </FAQItem>
+  <FAQItem question="Can I send email on the free tiers?">
+    On LobsterMail's free tier, inboxes are receive-only. You need the $9/month Builder plan to send. On AgentMail's free tier, you can send up to 100 emails per day (3,000 per month).
+  </FAQItem>
+  <FAQItem question="Which service has better framework integrations?">
+    AgentMail currently has more pre-built integrations with popular frameworks like LangChain, LlamaIndex, CrewAI, and LiveKit. LobsterMail takes an agent-native SDK approach that works across frameworks without requiring specific integrations.
+  </FAQItem>
+  <FAQItem question="What happens if I outgrow my current AgentMail plan?">
+    You upgrade to the next tier. AgentMail's plans jump from $20/month (10 inboxes) to $200/month (150 inboxes). There's a significant price gap between tiers. With LobsterMail, the Builder plan has no inbox cap, so there's nothing to outgrow.
+  </FAQItem>
+  <FAQItem question="Is AgentMail backed by Y Combinator?">
+    Yes. AgentMail is a YC-backed company and has been processing email for AI agents since before LobsterMail launched. They have a strong track record with enterprise customers.
+  </FAQItem>
+  <FAQItem question="Which should I pick if I'm just getting started?">
+    If you want the fastest path from zero to a working agent inbox, LobsterMail's agent self-signup means your agent can be sending and receiving email in seconds. If you want to manually control the setup and prefer a dashboard, AgentMail's free tier is a fine starting point. Either way, you can try both for free.
+  </FAQItem>
+  <FAQItem question="Can agents on different services email each other?">
+    Yes. Both LobsterMail and AgentMail use standard email protocols. An agent on LobsterMail can email an agent on AgentMail (or any regular email address) without any special configuration. Email is a universal protocol.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*

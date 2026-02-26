@@ -1,0 +1,216 @@
+---
+title: "custom domains for agent email: send from your own domain"
+description: "Your agent doesn't have to send from @getlobstermail.com. Set up a custom domain so it sends from support@yourcompany.com."
+date: "2026-02-10"
+author: "Samuel Chenard"
+tags: ["guides", "email", "business"]
+image: "/blog/custom-domains-agent-email.png"
+---
+
+Your agent works for your company. So why is it sending emails from `support-bot@getlobstermail.com`?
+
+The default LobsterMail address gets you up and running fast. But when your agent is handling customer support, billing inquiries, or sales outreach, the address on the "from" line matters. Customers trust emails from `support@yourcompany.com`. They're skeptical of emails from a domain they've never heard of.
+
+Custom domains let your agent send and receive as part of your brand. Here's why that matters, how to set it up, and how to run multiple agents on a single domain.
+
+## Why custom domains matter for agent email
+
+Three things change when your agent sends from your own domain instead of `@getlobstermail.com`:
+
+**Brand consistency.** Every touchpoint with a customer reinforces your brand — or undermines it. An email from `support@yourcompany.com` feels like a natural extension of your business. An email from a third-party domain feels like spam. Over 75% of customers find company-branded email more credible than messages from generic or unfamiliar domains.
+
+**Reply routing.** When a customer replies to `support@yourcompany.com`, that reply lands right back in your agent's shell. No confusion about where responses go. No forwarding rules to maintain. The conversation stays in one place, on one domain, under your control.
+
+**Deliverability and trust.** Email providers evaluate sender reputation at the domain level. When your agent sends from your domain, it builds reputation for *your* brand. Proper authentication (SPF, DKIM, DMARC) on your domain tells receiving servers that this email is legitimate. Without it, your agent's messages are more likely to land in spam. We covered this in depth in our [email deliverability guide for AI agents](/blog/email-deliverability-ai-agents).
+
+<Callout type="tip">
+  Custom domains are available on the Builder plan at $9/month. If you're currently on the free tier, your agent can handle the upgrade itself — just ask it to molt up. See [LobsterMail pricing explained](/blog/lobstermail-pricing-explained) for the full breakdown.
+</Callout>
+
+## Setting up your custom domain
+
+Connecting your own reef takes about 10 minutes. You'll add three DNS records to your domain, and LobsterMail handles the rest.
+
+### Step 1: add your domain in LobsterMail
+
+Register your domain through the SDK or dashboard:
+
+```javascript
+import { LobsterMail } from "@lobstermail/sdk";
+
+const client = new LobsterMail();
+
+const domain = await client.domains.add({
+  domain: "yourcompany.com",
+});
+
+console.log(domain.verificationRecords);
+// → returns the DNS records you need to add
+```
+
+LobsterMail generates the verification records specific to your domain. You'll get three records: a TXT record for domain ownership verification, an SPF record, and a CNAME for DKIM signing.
+
+### Step 2: add the DNS records
+
+Head to your DNS provider (Cloudflare, Namecheap, Route 53, GoDaddy — wherever you manage your domain) and add the following records.
+
+**Domain verification (TXT):**
+
+```dns
+Type:  TXT
+Host:  _lobstermail.yourcompany.com
+Value: lobstermail-verify=lm_abc123def456
+TTL:   3600
+```
+
+**SPF record (TXT):**
+
+If you don't have an existing SPF record, add this one:
+
+```dns
+Type:  TXT
+Host:  yourcompany.com
+Value: v=spf1 include:spf.lobstermail.ai ~all
+TTL:   3600
+```
+
+If you already have an SPF record (for example, from Google Workspace or Microsoft 365), add the LobsterMail include to your existing record. Each domain can only have one SPF record — multiple records will cause authentication to fail.
+
+```dns
+# Before:
+v=spf1 include:_spf.google.com ~all
+
+# After:
+v=spf1 include:_spf.google.com include:spf.lobstermail.ai ~all
+```
+
+<Callout type="tip">
+  Keep your SPF record under 10 DNS lookups. Each `include:` directive counts as one lookup. If you're already close to the limit from other services, LobsterMail's single include won't push you over, but it's worth checking.
+</Callout>
+
+**DKIM record (CNAME):**
+
+```dns
+Type:  CNAME
+Host:  lobstermail._domainkey.yourcompany.com
+Value: lobstermail._domainkey.lobstermail.ai
+TTL:   3600
+```
+
+DKIM adds a cryptographic signature to every email your agent sends. Receiving servers use this to verify the message wasn't altered in transit. LobsterMail uses 2048-bit keys and handles key rotation automatically.
+
+### Step 3: verify and activate
+
+Once your DNS records propagate (usually a few minutes, sometimes up to 48 hours), verify the domain:
+
+```javascript
+const status = await client.domains.verify("yourcompany.com");
+
+console.log(status);
+// → { verified: true, spf: "pass", dkim: "pass" }
+```
+
+When verification passes, your agents can immediately start sending from any address on that domain.
+
+### Step 4: set up DMARC (recommended)
+
+DMARC ties SPF and DKIM together and tells receiving servers what to do with messages that fail authentication. It's not strictly required, but it's strongly recommended — especially after Google, Yahoo, and Microsoft made DMARC mandatory for bulk senders.
+
+```dns
+Type:  TXT
+Host:  _dmarc.yourcompany.com
+Value: v=DMARC1; p=none; rua=mailto:dmarc-reports@yourcompany.com
+TTL:   3600
+```
+
+Start with `p=none` to monitor without blocking any messages. Once you've confirmed everything is working, move to `p=quarantine` and eventually `p=reject` for full protection.
+
+## The multi-agent-per-domain pattern
+
+Here's where custom domains get really powerful. One verified domain can serve as many agents as you need. Each agent gets its own address on your domain, its own shell, and its own purpose.
+
+```javascript
+// Support agent
+const supportInbox = await client.provision({
+  name: "support",
+  domain: "yourcompany.com",
+  // → support@yourcompany.com
+});
+
+// Billing agent
+const billingInbox = await client.provision({
+  name: "billing",
+  domain: "yourcompany.com",
+  // → billing@yourcompany.com
+});
+
+// Sales agent
+const salesInbox = await client.provision({
+  name: "sales",
+  domain: "yourcompany.com",
+  // → sales@yourcompany.com
+});
+```
+
+Three agents, three addresses, one domain. Customers email `support@yourcompany.com` for help, `billing@yourcompany.com` for invoices, and `sales@yourcompany.com` for pricing. Each agent handles its own shell independently, but they all send from your brand.
+
+This pattern scales cleanly. Add a new agent, provision a new address. No additional DNS configuration needed — the domain is already verified and authenticated. Your reef grows without extra overhead.
+
+For more on how agents coordinate across addresses, check out [webhooks vs polling for agent email](/blog/webhooks-vs-polling-email).
+
+## What about existing email on the domain?
+
+If you already use `yourcompany.com` for regular email (Google Workspace, Microsoft 365, etc.), adding LobsterMail won't interfere with your existing setup. LobsterMail only handles mail sent to addresses provisioned through the platform. Emails to `ceo@yourcompany.com` still route through your existing provider.
+
+Just make sure you update your SPF record to include both providers (as shown above) rather than creating a second SPF record. One SPF record per domain — that's a hard rule.
+
+## From @getlobstermail.com to your own reef
+
+The path is straightforward: start on the free tier with `your-agent@getlobstermail.com`, prove out your use case, then molt up to Builder and connect your own domain. Your agent's address changes, but the SDK calls stay the same. The transition is seamless.
+
+If you're comparing options, we broke down [how LobsterMail stacks up against AgentMail](/blog/lobstermail-vs-agentmail) — including how each platform handles custom domains.
+
+Custom domains aren't just a vanity feature. They're the difference between an agent that feels like a tool and one that feels like part of your team.
+
+<FAQ>
+  <FAQItem question="Do I need a custom domain to use LobsterMail?">
+    No. The free tier gives your agent an address on `@getlobstermail.com`. Custom domains are available on the Builder plan at $9/month for when you're ready to send from your own brand.
+  </FAQItem>
+  <FAQItem question="How long does DNS propagation take?">
+    Usually a few minutes, but it can take up to 48 hours depending on your DNS provider and TTL settings. LobsterMail will automatically retry verification until the records are detected.
+  </FAQItem>
+  <FAQItem question="Can I use a subdomain instead of my root domain?">
+    Yes. You can verify `mail.yourcompany.com` or `agents.yourcompany.com` and provision addresses like `support@agents.yourcompany.com`. This is a good option if you want to keep agent email visually distinct from employee email.
+  </FAQItem>
+  <FAQItem question="Will adding LobsterMail break my existing email?">
+    No. LobsterMail only handles mail sent to addresses provisioned on the platform. Your existing email provider continues routing everything else. Just make sure you update your existing SPF record rather than creating a duplicate.
+  </FAQItem>
+  <FAQItem question="How many agents can share one custom domain?">
+    There's no limit. Provision as many agent addresses on a verified domain as you need. Each agent gets its own inbox (its own shell), but they all share the domain's authentication records.
+  </FAQItem>
+  <FAQItem question="What DNS records do I need to add?">
+    Three: a TXT record for domain verification, a TXT record for SPF (or an update to your existing SPF record), and a CNAME record for DKIM. Optionally, you should also add a DMARC TXT record. The exact values are generated when you add your domain in LobsterMail.
+  </FAQItem>
+  <FAQItem question="What is SPF and why does it matter?">
+    SPF (Sender Policy Framework) is a DNS record that tells receiving servers which services are authorized to send email on behalf of your domain. Without it, your agent's emails are more likely to be flagged as spam.
+  </FAQItem>
+  <FAQItem question="What is DKIM and why does it matter?">
+    DKIM (DomainKeys Identified Mail) adds a cryptographic signature to outgoing emails. The receiving server uses your domain's public key to verify the message hasn't been tampered with. LobsterMail uses 2048-bit keys and handles rotation automatically.
+  </FAQItem>
+  <FAQItem question="Do I need to set up DMARC?">
+    It's strongly recommended. Google, Yahoo, and Microsoft all require DMARC for bulk senders. Even if your agent isn't sending at scale, DMARC improves deliverability and protects your domain from spoofing.
+  </FAQItem>
+  <FAQItem question="Can I switch my agent from @getlobstermail.com to a custom domain later?">
+    Yes. You can add a custom domain at any time and provision new addresses on it. The SDK calls are the same — only the address changes. Your agent's existing inbox on `@getlobstermail.com` continues working alongside the new custom domain address.
+  </FAQItem>
+  <FAQItem question="What happens if my SPF or DKIM records are misconfigured?">
+    LobsterMail's verification step checks your records before activating the domain. If something's off, you'll see exactly which record failed and why. Emails won't be sent from a misconfigured domain, so there's no risk of damaging your sender reputation.
+  </FAQItem>
+  <FAQItem question="Does LobsterMail handle DKIM key rotation?">
+    Yes. LobsterMail manages DKIM key rotation automatically. Because the DKIM record is a CNAME pointing to LobsterMail's servers, key updates happen on our side without any changes to your DNS.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*

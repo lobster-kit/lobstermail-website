@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
+import remarkGfm from "remark-gfm";
 import { getGuide, getGuides } from "@/lib/docs";
 import { DocsHeader } from "@/components/docs/DocsHeader";
 import { DocsPrevNext } from "@/components/docs/DocsPrevNext";
@@ -132,7 +133,11 @@ export default async function GuidePage({
           lastUpdated={guide.lastUpdated}
         />
         <div className="docs-content">
-          <MDXRemote source={guide.content} components={docsComponents} />
+          <MDXRemote
+            source={guide.content.replace(/^#\s+.+\n*/, "")}
+            components={docsComponents}
+            options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
+          />
         </div>
         <DocsPrevNext guides={guides} currentSlug={slug} />
       </article>

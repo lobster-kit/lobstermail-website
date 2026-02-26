@@ -1,0 +1,164 @@
+---
+title: "how lobstermail pricing works and why inboxes are free"
+description: "Unlimited inboxes cost us nothing. So we don't charge for them. Here's how our pricing actually works."
+date: "2026-02-12"
+author: "Samuel Chenard"
+tags: ["cost", "getting-started"]
+image: "/blog/lobstermail-pricing-explained.png"
+---
+
+Most email platforms charge per inbox. That makes sense when each inbox requires a mail server, disk allocation, and ongoing maintenance. But agent email doesn't work that way, and we think your pricing shouldn't pretend it does.
+
+Here's how LobsterMail's pricing actually works, including what things cost us to run and why we made the decisions we did.
+
+## Inboxes have near-zero marginal cost
+
+LobsterMail runs on AWS Simple Email Service (SES). SES charges $0.10 per 1,000 emails sent. That's $0.0001 per email. It does not charge per inbox. There's no per-address fee, no per-mailbox allocation, no storage surcharge for having more addresses active.
+
+Creating a new inbox for your agent is essentially a database row and a routing rule. The cost to us is measured in fractions of a cent. It would be dishonest to charge you $2 per inbox when the infrastructure cost is effectively zero.
+
+So we don't.
+
+<Callout type="info">
+  AWS SES pricing: $0.10 per 1,000 emails sent. Dedicated IPs: $24.95/month each. Attachments: $0.12/GB. There is no per-inbox or per-address fee. The cost of provisioning a new inbox is a database entry and a routing rule — not a mail server.
+</Callout>
+
+## What we actually charge for
+
+We charge for the things that actually cost money: email volume, sending infrastructure, custom domain management, and dedicated IP reputation. Here's the full breakdown.
+
+**Free ($0)**
+- Receive only — no sending
+- 100 inbound emails per month
+- 30-day inactive expiry on unused inboxes
+- SDK access
+
+**Free Verified ($0)**
+- 10 sends per day
+- 300 emails per month
+- No inbox expiry
+- Verify via X post or credit card
+
+**Builder ($9/month)**
+- Unlimited inboxes
+- 1,000 sends per day
+- 10,000 emails per month
+- 3 custom domains
+- Full API + webhooks
+
+**Scale ($99/month)**
+- Unlimited inboxes
+- 10,000 sends per day
+- 100,000 emails per month
+- 25 custom domains
+- Dedicated IP for deliverability
+
+The free tier exists because receiving email costs us almost nothing. The paid tiers exist because sending email, managing domain authentication, and maintaining IP reputation have real costs attached.
+
+## The actual math
+
+We're going to show you our margins. This is unusual for a SaaS company, but we think transparency matters more than mystique.
+
+**Builder tier at 10,000 emails/month:**
+- SES sending cost: ~$1
+- Infrastructure overhead (routing, storage, webhooks): ~$0.50
+- Our revenue: $9
+- Our margin: roughly 83-88%
+
+**Scale tier at 100,000 emails/month:**
+- SES sending cost: ~$10
+- Dedicated IP: ~$25
+- Infrastructure overhead: ~$3
+- Our revenue: $99
+- Our margin: roughly 60-65%
+
+Yes, we make money on the paid tiers. That's what keeps the free tier free and the lights on. But you're paying for sending volume and infrastructure — not for the privilege of having more inboxes.
+
+If you want to give every one of your agents its own address, that shouldn't cost you extra. It costs us nothing extra. So it doesn't cost you anything either.
+
+## How this compares to AgentMail
+
+AgentMail is a solid platform, and we've written a [full comparison](/blog/lobstermail-vs-agentmail). But the pricing difference is worth examining here, because it shows two different philosophies.
+
+| | LobsterMail Builder | AgentMail Developer |
+|---|---|---|
+| Monthly price | $9 | $20 |
+| Inboxes | Unlimited | 10 |
+| Emails/month | 10,000 | 10,000 |
+| Custom domains | 3 | 10 |
+| Sending | Yes | Yes |
+| Cost per extra inbox | $0 | Need to upgrade to $200/mo |
+
+AgentMail charges $20/month for 10 inboxes. That's $2 per inbox per month. If you need 11 inboxes, you jump to their Startup plan at $200/month for 150 inboxes. There's no middle ground.
+
+With LobsterMail, inboxes are unlimited on every paid tier. Need 10 inboxes? Same price. Need 500? Same price. The cost scales with how many emails you send, not how many addresses you have.
+
+This isn't a knock on AgentMail. Per-inbox pricing is a common model. But it creates artificial scarcity around something that has no real cost. We'd rather charge for the things that actually cost money.
+
+## Why the free tier is receive-only
+
+Sending email has real costs. Every outbound message passes through SES, gets authenticated with SPF and DKIM, and affects our domain reputation. Bad actors sending spam from free accounts is the fastest way to ruin deliverability for everyone on the platform.
+
+By making the free tier receive-only, we keep the free tier genuinely free without rate-limiting it into uselessness or burning our reputation. Your agent can receive emails, process them, and respond through other channels. When you're ready to send, you [molt up](/blog/what-is-agent-email) to Builder.
+
+For more on how custom domains work with agent email, see our guide on [custom domains for agent email](/blog/custom-domains-agent-email).
+
+## What "unlimited" actually means
+
+Let's be honest about this too. "Unlimited inboxes" means we don't set an inbox cap or charge per address. It doesn't mean we won't notice if you provision a million inboxes. Our fair use policy exists to prevent abuse, not to limit normal use.
+
+In practice, the builders on our platform typically run between 5 and 200 agent inboxes. The Scale tier customers coordinating large agent fleets sometimes have more. None of them have hit a limit, because the limits are about abuse prevention, not revenue extraction.
+
+## What you're paying for
+
+Email infrastructure pricing should reflect actual infrastructure costs. Inboxes are cheap. Sending is where the money goes. We built our pricing around that reality.
+
+- Free to start, no credit card
+- Unlimited inboxes the moment you pay anything
+- Transparent margins, no hidden fees
+- Half the price of comparable platforms with no inbox caps
+
+If you want to understand what agents actually do with their own email, start with [what is agent email](/blog/what-is-agent-email). If you're coming from a platform that charges per inbox and want to compare, read the [LobsterMail vs AgentMail breakdown](/blog/lobstermail-vs-agentmail). And if you're ready to just get started, it takes about [60 seconds](/blog/openclaw-agent-email-60-seconds).
+
+<FAQ>
+  <FAQItem question="Why are LobsterMail inboxes free?">
+    Because they cost us almost nothing to provision. AWS SES doesn't charge per inbox — only per email sent. Creating an inbox is a database entry and a routing rule. Charging per inbox would be artificial scarcity.
+  </FAQItem>
+  <FAQItem question="What does the free tier include?">
+    Receive-only email, 100 inbound emails per month, SDK access, and 30-day inactive expiry on unused inboxes. No credit card required. Free tier agents use the @getlobstermail.com domain.
+  </FAQItem>
+  <FAQItem question="How much does the Builder plan cost?">
+    $9/month. It includes unlimited inboxes, 1,000 sends per day, 10,000 emails per month, 3 custom domains, and full API access with webhooks.
+  </FAQItem>
+  <FAQItem question="What's the difference between Builder and Scale?">
+    Scale is $99/month and includes 10,000 sends per day, 100,000 emails per month (vs. 10,000), 25 custom domains (vs. 3), and a dedicated IP address for better deliverability. Both tiers include unlimited inboxes.
+  </FAQItem>
+  <FAQItem question="How does LobsterMail pricing compare to AgentMail?">
+    LobsterMail Builder is $9/month with unlimited inboxes. AgentMail's comparable Developer plan is $20/month with 10 inboxes. If you need more than 10 inboxes on AgentMail, you jump to $200/month. Read the [full comparison](/blog/lobstermail-vs-agentmail).
+  </FAQItem>
+  <FAQItem question="What are LobsterMail's margins?">
+    We're transparent about this. On the Builder plan ($9/month) at full volume, our margin is roughly 83-88%. On the Scale plan ($99/month) at full volume, it's about 60-65%. The higher Scale costs come from dedicated IP addresses and greater SES volume.
+  </FAQItem>
+  <FAQItem question="Why is the free tier receive-only?">
+    Sending email costs money (SES charges per outbound message) and affects our domain reputation. Keeping the free tier receive-only lets us offer it without a credit card while protecting deliverability for all users on the platform.
+  </FAQItem>
+  <FAQItem question="What does 'unlimited inboxes' actually mean?">
+    We don't cap inbox counts or charge per address on any paid plan. We do have a fair use policy to prevent abuse, but normal use — even hundreds of agent inboxes — is fully supported.
+  </FAQItem>
+  <FAQItem question="Can my agent create its own inbox?">
+    Yes. On LobsterMail, agents can provision their own inboxes without human intervention. This is called [agent self-signup](/blog/agent-self-signup-explained), and it works on every tier including the free tier.
+  </FAQItem>
+  <FAQItem question="Do I need a credit card for the free tier?">
+    No. The free tier is genuinely free with no credit card required. You only enter payment details when you decide to upgrade to Builder or Scale.
+  </FAQItem>
+  <FAQItem question="What happens if I go over my email limit?">
+    We don't cut you off mid-conversation. You'll get a notification as you approach your limit, and any overage is billed at the same per-email rate as your plan. No surprise invoices.
+  </FAQItem>
+  <FAQItem question="Does LobsterMail support custom domains?">
+    Yes. The Builder plan includes 3 custom domains and the Scale plan includes 25. You can set up addresses like `agent@yourcompany.com` instead of the default `@getlobstermail.com`. See our [custom domains guide](/blog/custom-domains-agent-email).
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*

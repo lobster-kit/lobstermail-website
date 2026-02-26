@@ -11,7 +11,7 @@ export function DocsHeader({ title, description, lastUpdated }: DocsHeaderProps)
   return (
     <header className="mb-10">
       {/* Breadcrumbs */}
-      <nav aria-label="Breadcrumb" className="mb-4">
+      <nav aria-label="Breadcrumb" className="mb-4 hidden lg:block">
         <ol className="flex items-center gap-1.5 text-sm text-secondary">
           <li>
             <Link

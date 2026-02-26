@@ -1,0 +1,338 @@
+---
+title: "how to give your CrewAI agent an email address in 5 minutes"
+description: "Wrap LobsterMail's REST API as a CrewAI tool so your agents can send and receive email. Full working example included."
+date: "2026-02-23"
+author: "Samuel Chenard"
+tags: ["guides", "email", "automation"]
+image: "/blog/crewai-agent-email.png"
+---
+
+CrewAI agents are good at reasoning, planning, and calling tools. But when a crew needs to send an email or monitor an inbox, you're suddenly wrestling with SMTP credentials, OAuth flows, and IMAP connections that weren't designed for autonomous software.
+
+LobsterMail gives your agent its own email address. No human signup, no OAuth dance. The agent provisions an inbox, receives mail, and sends replies through a REST API. Since CrewAI runs on Python and LobsterMail's primary SDK is TypeScript, we'll use the REST API directly. It's four endpoints and a couple of `requests` calls.
+
+Here's how to wire it up.
+
+## what you'll need
+
+- Python 3.10+ with CrewAI installed (`pip install crewai`)
+- An LLM provider configured for your crew (OpenAI, Anthropic, etc.)
+- The `requests` library (`pip install requests`)
+
+That's it. No API keys for LobsterMail itself. The agent self-provisions.
+
+## how CrewAI tools work
+
+CrewAI tools follow a simple pattern: you define a class that extends `BaseTool` with a `name`, `description`, and a `_run` method. When an agent decides it needs the tool, CrewAI calls `_run` with the arguments the LLM chose.
+
+```python
+from crewai.tools import BaseTool
+
+class MyTool(BaseTool):
+    name: str = "my_tool"
+    description: str = "What this tool does"
+
+    def _run(self, argument: str) -> str:
+        # do the thing
+        return "result"
+```
+
+We'll build three tools that wrap LobsterMail's REST API: one to create an inbox, one to check for new emails, and one to send.
+
+## step 1: create the LobsterMail tools
+
+The LobsterMail API lives at `https://api.lobstermail.ai`. The agent signs up automatically on first request and gets back a bearer token it uses for everything after.
+
+```python
+import requests
+from crewai.tools import BaseTool
+
+API_BASE = "https://api.lobstermail.ai"
+
+
+class CreateInboxTool(BaseTool):
+    name: str = "create_inbox"
+    description: str = (
+        "Create a new email inbox for this agent. "
+        "Returns the email address and inbox ID. "
+        "Call this once before sending or receiving email."
+    )
+
+    def _run(self, handle: str = "my-crew-agent") -> str:
+        # sign up (idempotent — returns existing token if already registered)
+        signup = requests.post(f"{API_BASE}/v1/auth/signup")
+        token = signup.json()["token"]
+
+        # store token for other tools
+        self._shared_state["lobstermail_token"] = token
+
+        # create the inbox
+        resp = requests.post(
+            f"{API_BASE}/v1/inboxes",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"handle": handle},
+        )
+        inbox = resp.json()
+
+        self._shared_state["inbox_id"] = inbox["id"]
+        self._shared_state["inbox_address"] = inbox["address"]
+
+        return f"Inbox created: {inbox['address']} (ID: {inbox['id']})"
+
+
+class CheckEmailTool(BaseTool):
+    name: str = "check_email"
+    description: str = (
+        "Check the agent's inbox for new emails. "
+        "Returns a list of recent messages with sender, subject, and body."
+    )
+
+    def _run(self, since: str = "") -> str:
+        token = self._shared_state.get("lobstermail_token")
+        inbox_id = self._shared_state.get("inbox_id")
+
+        if not token or not inbox_id:
+            return "Error: no inbox found. Call create_inbox first."
+
+        params = {}
+        if since:
+            params["since"] = since
+
+        resp = requests.get(
+            f"{API_BASE}/v1/inboxes/{inbox_id}/emails",
+            headers={"Authorization": f"Bearer {token}"},
+            params=params,
+        )
+        emails = resp.json().get("emails", [])
+
+        if not emails:
+            return "No new emails."
+
+        results = []
+        for e in emails:
+            results.append(
+                f"From: {e['from']}\n"
+                f"Subject: {e['subject']}\n"
+                f"Body: {e.get('bodyPreview', e.get('body', ''))}\n"
+            )
+        return "\n---\n".join(results)
+
+
+class SendEmailTool(BaseTool):
+    name: str = "send_email"
+    description: str = (
+        "Send an email from the agent's inbox. "
+        "Requires the recipient address, subject, and body text."
+    )
+
+    def _run(self, to: str, subject: str, body: str) -> str:
+        token = self._shared_state.get("lobstermail_token")
+        address = self._shared_state.get("inbox_address")
+
+        if not token or not address:
+            return "Error: no inbox found. Call create_inbox first."
+
+        resp = requests.post(
+            f"{API_BASE}/v1/emails/send",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "from": address,
+                "to": to,
+                "subject": subject,
+                "body": body,
+            },
+        )
+
+        if resp.status_code == 200:
+            return f"Email sent to {to}."
+        return f"Send failed: {resp.text}"
+```
+
+Three tools, each under 30 lines. `CreateInboxTool` handles signup and inbox provisioning in one call. `CheckEmailTool` polls for messages. `SendEmailTool` fires off a reply. They share state through CrewAI's `_shared_state` dict so the token and inbox ID persist across tool calls within a crew execution.
+
+<Callout type="tip">
+  Sending requires the Builder plan ($9/mo). On the free tier your agent can create inboxes and receive email immediately, which is enough to test the full receive flow before upgrading.
+</Callout>
+
+## step 2: build the crew
+
+Now we assemble these tools into a CrewAI crew. We'll create a simple email assistant agent that can provision its inbox, check for messages, and reply.
+
+```python
+from crewai import Agent, Task, Crew
+
+# instantiate the tools
+create_inbox = CreateInboxTool()
+check_email = CheckEmailTool()
+send_email = SendEmailTool()
+
+# define the agent
+email_agent = Agent(
+    role="Email Assistant",
+    goal=(
+        "Manage your own email inbox. Check for new messages, "
+        "summarize them, and send replies when instructed."
+    ),
+    backstory=(
+        "You are an AI assistant with your own email address. "
+        "You handle incoming email autonomously and can compose "
+        "and send replies on behalf of your team."
+    ),
+    tools=[create_inbox, check_email, send_email],
+    verbose=True,
+)
+
+# task: set up the inbox and check for mail
+setup_and_check = Task(
+    description=(
+        "First, create an email inbox with the handle 'crew-assistant'. "
+        "Then check for any new emails and summarize what you find."
+    ),
+    expected_output="A summary of the inbox setup and any received emails.",
+    agent=email_agent,
+)
+
+crew = Crew(
+    agents=[email_agent],
+    tasks=[setup_and_check],
+    verbose=True,
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+Run this and your agent provisions `crew-assistant@lobstermail.ai`, then immediately polls for incoming mail. The whole thing finishes in seconds.
+
+## step 3: add it to a real workflow
+
+The standalone example works, but the real value shows up when email is one tool among many in a larger crew. Say you have a research crew that finds leads and sends outreach emails:
+
+```python
+researcher = Agent(
+    role="Lead Researcher",
+    goal="Find potential customers and gather their contact info.",
+    backstory="You research companies and identify decision-makers.",
+    tools=[search_tool, scrape_tool],  # your existing tools
+)
+
+outreach_agent = Agent(
+    role="Outreach Specialist",
+    goal="Send personalized outreach emails to leads.",
+    backstory="You craft and send concise, relevant outreach emails.",
+    tools=[create_inbox, send_email, check_email],
+)
+
+research_task = Task(
+    description="Find 5 SaaS founders who recently posted about AI agents.",
+    expected_output="A list of names and email addresses.",
+    agent=researcher,
+)
+
+outreach_task = Task(
+    description=(
+        "Create an email inbox, then send a short personalized email "
+        "to each lead from the research results. Keep it under 3 sentences."
+    ),
+    expected_output="Confirmation that all outreach emails were sent.",
+    agent=outreach_agent,
+    context=[research_task],
+)
+
+crew = Crew(
+    agents=[researcher, outreach_agent],
+    tasks=[research_task, outreach_task],
+    verbose=True,
+)
+```
+
+The research agent finds leads using whatever tools you already have. The outreach agent picks up those results, provisions its own inbox, and sends personalized emails. Each agent has a clear role and the email capability slots in without changing the rest of your crew's architecture.
+
+## handling incoming email
+
+So far we've covered sending. For receiving, you have two options:
+
+**Polling.** The `CheckEmailTool` above polls the inbox on demand. Good for periodic checks or when a task explicitly says "check for replies."
+
+**Webhooks.** For real-time processing, configure a webhook URL when creating the inbox. LobsterMail POSTs a JSON payload to your endpoint every time a message arrives:
+
+```python
+# modify CreateInboxTool to accept a webhook URL
+resp = requests.post(
+    f"{API_BASE}/v1/inboxes",
+    headers={"Authorization": f"Bearer {token}"},
+    json={
+        "handle": handle,
+        "webhookUrl": "https://your-server.com/webhook/crewai-inbox",
+    },
+)
+```
+
+Your webhook endpoint receives the email payload, and you can trigger a new crew execution for each incoming message. This is the pattern for building agents that respond to email in real time rather than on a schedule.
+
+<Callout type="info">
+  LobsterMail scans every incoming email for prompt injection across six categories before your agent sees it. The API response includes an `isInjectionRisk` flag so your tools can filter out malicious messages before they hit the LLM's context window.
+</Callout>
+
+## why not just use smtplib?
+
+You could wire up Python's `smtplib` and `imaplib` directly. But then you're managing SMTP credentials, handling bounce processing, configuring SPF/DKIM/DMARC for deliverability, and writing polling logic with error handling. That's a lot of infrastructure code sitting between your agent and a working email.
+
+LobsterMail handles the infrastructure. Your CrewAI tools stay focused on what the agent should do with email, not how email works. And the prompt injection scanning is something you'd have to build from scratch if you rolled your own.
+
+## the full picture
+
+Here's what we built:
+
+1. Three CrewAI tools wrapping LobsterMail's REST API (inbox creation, email checking, sending)
+2. An agent that provisions its own email address autonomously
+3. A crew workflow where email integrates alongside your existing tools
+
+The tools are portable. Copy them into any CrewAI project and your agents have email. No configuration changes, no environment variables beyond what CrewAI already needs.
+
+<Callout type="warning">
+  LobsterMail is currently in pre-launch. The code examples above reflect the intended API design. [Join the waitlist](/) to get early access.
+</Callout>
+
+<FAQ>
+  <FAQItem question="What is a CrewAI email tool?">
+    A CrewAI email tool is a custom tool that lets CrewAI agents send and receive email. You build it by extending CrewAI's `BaseTool` class and wrapping an email API. In this guide, we wrap LobsterMail's REST API so agents can provision inboxes, check for messages, and send replies.
+  </FAQItem>
+  <FAQItem question="Does LobsterMail have a Python SDK?">
+    LobsterMail's primary SDK is TypeScript. For Python frameworks like CrewAI, you use the REST API directly with the `requests` library. The API endpoints are simple and the three tools in this guide total under 90 lines of Python.
+  </FAQItem>
+  <FAQItem question="Do I need an API key to use LobsterMail with CrewAI?">
+    No. The agent self-provisions by calling the signup endpoint. It receives a bearer token automatically, which it uses for all subsequent requests. No human account creation or API key management needed.
+  </FAQItem>
+  <FAQItem question="Can my CrewAI agent receive emails in real time?">
+    Yes, using webhooks. When you create an inbox, pass a `webhookUrl` and LobsterMail POSTs incoming emails to that endpoint as they arrive. You can also poll the inbox on demand using the check email tool.
+  </FAQItem>
+  <FAQItem question="How much does it cost to add email to my CrewAI agents?">
+    Receiving email is free on the free tier. Sending requires the Builder plan at $9/month, which includes up to 1,000 emails per day and 10,000 per month. No credit card required to start receiving.
+  </FAQItem>
+  <FAQItem question="Can multiple agents in a crew share one inbox?">
+    They can, but it's better to give each agent its own address. This keeps responsibilities clear and avoids agents processing each other's messages. Inbox creation is free, so there's no cost penalty for separate inboxes.
+  </FAQItem>
+  <FAQItem question="Does LobsterMail protect against prompt injection in emails?">
+    Yes. Every incoming email is scanned across six categories including boundary manipulation, system prompt override, and data exfiltration. The API includes an `isInjectionRisk` flag so your CrewAI tools can filter out malicious content before it reaches the LLM.
+  </FAQItem>
+  <FAQItem question="Can I use these tools with CrewAI's @tool decorator instead of BaseTool?">
+    Yes. CrewAI supports both the `@tool` decorator for simple functions and the `BaseTool` class for tools that need shared state. We use `BaseTool` here because the tools need to share the auth token and inbox ID across calls, but you could adapt the pattern to use `@tool` with a module-level state dict.
+  </FAQItem>
+  <FAQItem question="What email address does the agent get?">
+    On the free tier, the agent gets an address like `your-handle@lobstermail.ai`. On the Builder plan, you can bring a custom domain so your agent sends from addresses like `agent@yourcompany.com`.
+  </FAQItem>
+  <FAQItem question="Can CrewAI agents on LobsterMail email each other?">
+    Yes. Each agent provisions its own inbox and they communicate through standard email. This is useful for multi-crew architectures where different crews handle different parts of a workflow and need to pass results between them.
+  </FAQItem>
+  <FAQItem question="How do I test the email tools without sending real emails?">
+    Create an inbox on the free tier and send test emails to it from any email client. For sending, LobsterMail's API validates the request and returns a response you can test against, even before upgrading to the Builder plan.
+  </FAQItem>
+  <FAQItem question="Can I use LobsterMail with other Python agent frameworks like LangChain or AutoGen?">
+    Yes. The REST API approach works with any framework. The three tools in this guide are CrewAI-specific because of the `BaseTool` class, but the HTTP calls are identical. Adapt the tool wrapper to LangChain's `Tool` class or AutoGen's function calling pattern and the LobsterMail integration stays the same.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*

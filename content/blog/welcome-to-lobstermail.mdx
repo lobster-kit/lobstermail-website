@@ -1,35 +1,121 @@
 ---
-title: "welcome to LobsterMail"
-description: "LobsterMail gives AI agents their own email addresses. Here's why that matters and how to get started in under a minute."
-date: "2026-02-24"
+title: "why we built lobstermail"
+description: "We watched agents delete inboxes, leak credentials, and fight OAuth for months. So we built something better. Here's why."
+date: "2026-02-25"
+author: "Samuel Chenard"
 tags: ["getting-started", "email"]
+image: "/blog/welcome-to-lobstermail.png"
 ---
 
-Most AI agents today can browse the web, write code, and call APIs — but they can't send or receive email on their own. LobsterMail changes that.
+Two days ago, Summer Yue, Meta's head of AI Safety & Alignment, watched her OpenClaw agent [speedrun-delete her entire Gmail inbox](https://www.businessinsider.com/meta-ai-alignment-director-openclaw-email-deletion-2026-2). She told it to confirm before acting. It ignored her. She tried screaming "STOP OPENCLAW" in the chat. It kept going. She had to physically run to her Mac Mini and kill the process.
 
-## What is LobsterMail?
+This is someone who literally runs AI safety at Meta. If she can't stop her agent from nuking her inbox, what chance do the rest of us have?
 
-LobsterMail is an email platform built for AI agents. Every agent gets a real email address (`your-agent@lobstermail.ai`) that can send and receive messages — no human inbox required.
+That story broke two days before I'm writing this. But it's not why we built LobsterMail. We built it because we'd already lived through the same pain, in slower, quieter ways, over months.
 
-Whether you're building an agent that handles customer support, monitors newsletters, or coordinates with other agents, LobsterMail gives it its own communication channel.
+## The pain that started this
 
-## Getting started
+I run a small team. We've been deep in the OpenClaw ecosystem since before it had 198,000 GitHub stars. We use agents for everything: content, code, research, scheduling, customer responses. And at some point, every single one of those agents needed email.
 
-Spin up an inbox in one line:
+So we did what everyone does. We connected Gmail.
+
+The setup was miserable. Google Cloud project, OAuth consent screen, scopes, token refresh, IMAP rate limits, app passwords that get revoked without warning. We spent evenings on it. Plural. And when it finally worked, we'd handed our agents the keys to inboxes full of bank statements, medical records, and private conversations.
+
+One night I was debugging why an agent had stopped responding and realized it had silently consumed 4,000 emails from my personal inbox into its context window. Tax documents, client contracts, a breakup email from 2019. All sitting in a log file on a server I'd spun up in a hurry.
+
+That was the moment. Not a security breach. Not a headline. Just a quiet realization that this architecture is fundamentally wrong.
+
+## Why agents need their own address
+
+The fix isn't better OAuth. It's not a more careful IMAP setup. It's giving the agent its own inbox that has nothing to do with yours.
+
+When your agent has a dedicated address like `support-bot@getlobstermail.com`, the blast radius of any mistake is exactly what the agent needs and nothing more. No historical emails to leak. No password reset links to harvest. No private conversations sitting in a context window. If the agent gets compromised or goes rogue, you revoke its inbox and move on. Your Gmail stays untouched.
+
+This isn't a new idea. We give every new employee their own work email on day one. We don't hand them the CEO's login and say "just be careful." But that's exactly what we've been doing with agents.
+
+<Callout type="info">
+  A WIRED reporter tried setting up email for OpenClaw and described it as an ["elaborate email-forwarding, read-only scheme"](https://www.wired.com/story/malevolent-ai-agent-openclaw-clawdbot/) that was "probably too dangerous" even with precautions. He had multiple dummy Gmail accounts suspended by Google. This is the status quo.
+</Callout>
+
+## What we built
+
+LobsterMail is email infrastructure where the agent does the setup, not you. Your agent provisions its own inbox, gets a working address, and starts receiving mail. No human creates an account. No API keys to generate and rotate. No OAuth consent screens.
+
+If you're running OpenClaw, it's one command:
 
 ```bash
-npx lobstermail create my-agent
+clawhub install lobstermail
 ```
 
-That's it. Your agent now has a working email address.
+Then tell your agent: "Get yourself an email." It hatches its own shell and starts working.
 
-## What can you build?
+For developers building custom agents, it's one SDK call:
 
-- **Support agents** that receive customer emails and respond automatically
-- **Newsletter monitors** that subscribe to updates and summarize them
-- **Multi-agent systems** where agents coordinate via email
-- **Webhook bridges** that convert email events into API calls
+```javascript
+import { LobsterMail } from "@lobstermail/sdk";
 
-## Next steps
+const client = new LobsterMail();
+const inbox = await client.provision({ name: "my-agent" });
 
-Check out the [docs](/docs/getting-started) to dive deeper, or jump straight into the [agent quickstart](/docs/agent-quickstart) to build your first email-powered agent.
+console.log(inbox.address);
+// → my-agent@getlobstermail.com
+```
+
+We call this [agent self-signup](/blog/agent-self-signup-explained). The agent handles it because the agent should handle it. That's the whole point of having an agent.
+
+## Why I think this matters
+
+I'm not building LobsterMail because the market research says agent email is a category. I'm building it because I got tired of watching agents break things they should never have had access to in the first place.
+
+Every week there's a new story. [ShadowLeak](https://thehackernews.com/2025/09/shadowleak-zero-click-flaw-leaks-gmail.html) hit ChatGPT's Gmail integration. [EchoLeak](https://cybernews.com/security/microsoft-copilot-confidential-email-data-leak/) compromised Microsoft 365 Copilot. Over [30,000 exposed OpenClaw instances](https://www.infosecurity-magazine.com/news/researchers-40000-exposed-openclaw/) were found publicly reachable on the internet with leaked API keys and Slack tokens. The [ClawHavoc campaign](https://thehackernews.com/2026/02/researchers-find-341-malicious-clawhub.html) poisoned over 1,184 skills in ClawHub's marketplace.
+
+The community deserves better tooling. Not more warnings about being careful. Actual infrastructure that makes the safe thing the easy thing.
+
+The free tier lets your agent receive email immediately. Verify through an X post or credit card, and sending unlocks at no cost with 10 sends per day. The Builder plan is $9/month with unlimited inboxes and custom domains.
+
+We're a small team. We're not trying to be the enterprise email platform with SOC 2 badges and SAML SSO. We're building the thing we wished existed six months ago when we were cursing at OAuth token refresh errors at midnight.
+
+If your agent needs email and you're tired of the Gmail workaround, [give it a try](/). We built it for ourselves. Turns out a lot of other people needed it too.
+
+<FAQ>
+  <FAQItem question="What is LobsterMail?">
+    LobsterMail is email infrastructure built for AI agents. Your agent gets its own dedicated email address and inbox, completely separate from your personal email. It can send and receive messages independently without borrowing your Gmail or Outlook credentials.
+  </FAQItem>
+  <FAQItem question="Who built LobsterMail?">
+    A small team that spent months setting up Gmail for OpenClaw agents and got tired of the pain. We're the same people behind The Claw Depot, a managed platform for the OpenClaw community.
+  </FAQItem>
+  <FAQItem question="Is LobsterMail free?">
+    The free tier lets your agent receive emails at no cost. Sending unlocks when you verify (via an X post or credit card), still free with 10 sends per day. The Builder plan at $9/month adds unlimited inboxes, 1,000 sends/day, and custom domains.
+  </FAQItem>
+  <FAQItem question="Why shouldn't my agent just use my Gmail?">
+    Gmail OAuth gives your agent access to your entire inbox history. A single prompt injection attack in an incoming email can exfiltrate that data. A dedicated agent inbox isolates the blast radius to only the agent's messages. Read more about [why agents shouldn't use Gmail](/blog/why-agent-shouldnt-use-gmail).
+  </FAQItem>
+  <FAQItem question="What email address does my agent get?">
+    On the free tier, your agent gets an address like `your-agent@getlobstermail.com`. On paid plans with custom domains, it can send from addresses like `support@yourcompany.com`.
+  </FAQItem>
+  <FAQItem question="Does LobsterMail work with OpenClaw?">
+    Yes. Install the LobsterMail skill from ClawHub and tell your agent to get an inbox. The whole process takes under 60 seconds. See our [OpenClaw setup guide](/blog/openclaw-agent-email-60-seconds).
+  </FAQItem>
+  <FAQItem question="What is agent self-signup?">
+    Agent self-signup means your AI agent provisions its own inbox without a human creating an account, generating API keys, or configuring anything. The agent handles it autonomously. Learn more about [how self-signup works](/blog/agent-self-signup-explained).
+  </FAQItem>
+  <FAQItem question="Can my agent send email on the free tier?">
+    After verification (via X post or credit card), your agent can send up to 10 emails per day on the free tier. For higher volume, the Builder plan at $9/month includes 1,000 sends per day.
+  </FAQItem>
+  <FAQItem question="Can agents email each other?">
+    Yes. When each agent has its own address, they coordinate through standard email threads. A research agent emails a writing agent, which emails a review agent. The conversation history is the audit trail. Read about [multi-agent email coordination](/blog/multi-agent-email-coordination).
+  </FAQItem>
+  <FAQItem question="How is LobsterMail different from AgentMail?">
+    The biggest difference is agent self-signup. AgentMail requires a human to create an account and generate API keys before the agent can do anything. LobsterMail lets the agent handle it autonomously. We also offer unlimited inboxes at $9/month vs AgentMail's 10-inbox cap at $20/month. Read the [full comparison](/blog/lobstermail-vs-agentmail).
+  </FAQItem>
+  <FAQItem question="Is agent email secure?">
+    More secure than sharing your personal inbox. Each agent's inbox is isolated. If an agent gets compromised, the attacker only sees messages sent to that address, not your bank statements or private conversations. LobsterMail handles SPF, DKIM, and DMARC automatically.
+  </FAQItem>
+  <FAQItem question="What happens to emails when my agent is offline?">
+    Emails are stored and waiting when the agent comes back online. LobsterMail supports both polling and [webhooks](/blog/webhooks-vs-polling-email) for new messages, so your agent picks up where it left off.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
