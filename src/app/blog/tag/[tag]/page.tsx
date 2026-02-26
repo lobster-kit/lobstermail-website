@@ -134,7 +134,7 @@ export default async function TagPage({
                 {resolvedPage > 1 && (
                   <Link
                     href={`/blog/tag/${tag}?page=${resolvedPage - 1}`}
-                    className="rounded-lg border-2 border-edge bg-surface-2 px-4 py-2 text-sm font-medium text-secondary transition-colors hover:border-edge-hover hover:bg-surface-3 hover:text-foreground"
+                    className="rounded-lg border-2 border-edge bg-background px-4 py-2 text-sm font-medium text-secondary transition-colors hover:border-edge-hover hover:text-foreground"
                   >
                     Previous
                   </Link>
@@ -157,8 +157,8 @@ export default async function TagPage({
                           href={`/blog/tag/${tag}?page=${p}`}
                           className={`flex h-10 w-10 items-center justify-center rounded-lg border-2 text-sm font-medium transition-colors ${
                             p === resolvedPage
-                              ? "border-accent bg-accent/[0.08] text-accent"
-                              : "border-edge bg-surface-2 text-secondary hover:border-edge-hover hover:bg-surface-3 hover:text-foreground"
+                              ? "border-accent bg-background text-accent ring-1 ring-inset ring-accent/[0.15]"
+                              : "border-edge bg-background text-secondary hover:border-edge-hover hover:text-foreground"
                           }`}
                         >
                           {p}
@@ -169,7 +169,7 @@ export default async function TagPage({
                 {resolvedPage < totalPages && (
                   <Link
                     href={`/blog/tag/${tag}?page=${resolvedPage + 1}`}
-                    className="rounded-lg border-2 border-edge bg-surface-2 px-4 py-2 text-sm font-medium text-secondary transition-colors hover:border-edge-hover hover:bg-surface-3 hover:text-foreground"
+                    className="rounded-lg border-2 border-edge bg-background px-4 py-2 text-sm font-medium text-secondary transition-colors hover:border-edge-hover hover:text-foreground"
                   >
                     Next
                   </Link>
