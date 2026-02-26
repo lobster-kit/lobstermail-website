@@ -75,11 +75,7 @@ Both Himalaya and Gog share a problem that no amount of configuration can fix: y
 
 LobsterMail approaches the problem differently. Instead of connecting your agent to an existing inbox, the agent gets its own.
 
-```bash
-clawhub install lobstermail
-```
-
-Then tell your agent: "Get yourself an email inbox." That's the whole setup. Behind the scenes, the agent calls `LobsterMail.provision()` and gets a dedicated address like `my-agent@lobstermail.ai`. No GCP project. No OAuth. No TOML config.
+Head to [lobstermail.ai/skill](https://lobstermail.ai/skill) and follow the setup instructions. Then tell your agent: "Get yourself an email inbox." That's the whole setup. Behind the scenes, the agent calls `LobsterMail.provision()` and gets a dedicated address like `my-agent@lobstermail.ai`. No GCP project. No OAuth. No TOML config.
 
 If you want to see the code:
 
@@ -104,7 +100,7 @@ Pricing is straightforward. The free tier covers receiving. The Builder plan at 
 
 | | Himalaya | Gog | LobsterMail |
 |---|---|---|---|
-| Install command | `clawhub install himalaya` | `clawhub install gog` | `clawhub install lobstermail` |
+| Setup | `clawhub install himalaya` | `clawhub install gog` | [lobstermail.ai/skill](https://lobstermail.ai/skill) |
 | Additional setup | TOML config + credentials | `gogcli` + GCP project + OAuth | None |
 | Time to working email | 15-30 min | 1-3 hours | ~60 seconds |
 | Real-time delivery | No (IMAP polling) | Only with Pub/Sub | Yes (webhooks/WebSocket) |

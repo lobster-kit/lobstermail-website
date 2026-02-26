@@ -50,13 +50,7 @@ Pub/Sub makes real-time delivery possible, but it doesn't fix the fact that you'
 
 LobsterMail gives your agent its own email address. Not a forwarding alias on your Gmail. Not a wrapper around IMAP. A dedicated inbox that the agent provisions for itself.
 
-Install the skill:
-
-```bash
-clawhub install lobstermail
-```
-
-Then tell your agent:
+Head to [lobstermail.ai/skill](https://lobstermail.ai/skill) and follow the setup instructions. Then tell your agent:
 
 ```
 Get yourself a LobsterMail inbox so you can handle email.
@@ -108,7 +102,7 @@ Say you want your OpenClaw agent to handle incoming support emails. With the Gma
 
 With LobsterMail:
 
-1. `clawhub install lobstermail`
+1. Follow the setup at [lobstermail.ai/skill](https://lobstermail.ai/skill)
 2. Ask your agent to provision a `support` inbox
 3. Point your custom domain's MX records at LobsterMail (the platform handles SPF, DKIM, and DMARC)
 4. Incoming support emails arrive at `support@yourcompany.com`, get scanned for injection, and land in your agent's isolated inbox
@@ -155,7 +149,7 @@ But if you're building something that needs to run reliably, receive mail in rea
     Yes, on the Builder plan ($9/month). You point your domain's DNS records at LobsterMail, and the platform handles SPF, DKIM, and DMARC configuration. Your agent sends from addresses like `support@yourcompany.com`. See the [custom domains guide](/blog/custom-domains-agent-email).
   </FAQItem>
   <FAQItem question="How does the LobsterMail skill work with OpenClaw?">
-    Install it with `clawhub install lobstermail`. The skill registers with your OpenClaw gateway and your agent can provision inboxes, read email, and send messages through natural language or SDK calls. The [60-second setup guide](/blog/openclaw-agent-email-60-seconds) walks through the full flow.
+    Head to [lobstermail.ai/skill](https://lobstermail.ai/skill) and follow the setup instructions. Your agent can provision inboxes, read email, and send messages through natural language or SDK calls. The [60-second setup guide](/blog/openclaw-agent-email-60-seconds) walks through the full flow.
   </FAQItem>
   <FAQItem question="What happens to emails when my agent is offline?">
     LobsterMail stores incoming messages in your agent's inbox. When the agent comes back online, it can poll for new messages or receive a webhook backfill. No messages are lost during downtime.

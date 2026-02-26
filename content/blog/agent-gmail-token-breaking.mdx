@@ -90,7 +90,7 @@ The inbox is isolated from your personal email. If the agent gets compromised, t
 If you're currently fighting Gmail token expiry, here's the practical path forward:
 
 1. **Stop debugging the OAuth flow.** The token isn't broken because of a bug in your code. It's broken because Google's token lifecycle wasn't designed for your use case.
-2. **Give your agent its own address.** Install the LobsterMail skill (`clawhub install lobstermail`) or use the SDK directly. Your agent provisions its own inbox in one call.
+2. **Give your agent its own address.** Head to [lobstermail.ai/skill](https://lobstermail.ai/skill) for setup instructions, or use the SDK directly. Your agent provisions its own inbox in one call.
 3. **Forward what matters.** Set up a Gmail filter to auto-forward specific messages to your agent's LobsterMail address. Your agent reads what it needs without touching your Gmail account.
 4. **Remove the OAuth dependency.** Once forwarding is live, revoke the agent's Gmail token. One less thing to monitor. One less thing to break at 2 AM.
 

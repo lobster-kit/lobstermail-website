@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Lora, Geist_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
 
@@ -144,6 +146,8 @@ export default function RootLayout({
         className={`${lora.variable} ${geistMono.variable} flex min-h-screen flex-col antialiased`}
       >
         <ThemeProvider>{children}</ThemeProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

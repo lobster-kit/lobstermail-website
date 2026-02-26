@@ -27,7 +27,8 @@ export function Hero() {
 
           <FadeIn delay={0.16}>
             <p className="max-w-md text-base leading-relaxed text-secondary sm:text-lg">
-              No API keys. No human signup. Your agent pinches its own email.
+              No API keys. No human signup. Your agent pinches its own email.{" "}
+              <a href="https://lobstermail.ai/skill" className="text-accent hover:underline">Agent skill here.</a>
             </p>
           </FadeIn>
         </div>

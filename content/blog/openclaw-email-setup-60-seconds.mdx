@@ -13,13 +13,7 @@ What you won't find is anyone mentioning the option that takes 60 seconds.
 
 I'm not sure why. Maybe it's because every OpenClaw tutorial assumes you're going to use Gmail. Maybe it's because Himalaya is the most popular email skill on ClawHub, so it shows up first in every search. Maybe it's the same reason people still recommend complicated Webpack configs when a simpler tool exists: the hard way got there first, and nobody updated the advice.
 
-But there's a setup path for OpenClaw email that looks like this:
-
-```bash
-clawhub install lobstermail
-```
-
-Then you tell your agent: "get yourself an email inbox."
+But there's a setup path for OpenClaw email that looks like this: head to [lobstermail.ai/skill](https://lobstermail.ai/skill), follow the instructions, then tell your agent "get yourself an email inbox."
 
 That's the whole thing. Your agent has a working email address. No OAuth. No Google Cloud project. No app passwords saved in plaintext config files. I want to talk about why this option keeps getting overlooked and why I think that's about to change.
 
@@ -85,7 +79,7 @@ Next time someone asks "how do I give my OpenClaw agent email?" on Reddit or Dis
 
 <FAQ>
   <FAQItem question="What is the 60-second OpenClaw email setup?">
-    Install the LobsterMail skill from ClawHub with `clawhub install lobstermail`, then tell your agent in natural language to get itself an email inbox. The agent provisions its own address and can receive mail immediately. No OAuth, no Google Cloud project, no credentials to manage.
+    Head to [lobstermail.ai/skill](https://lobstermail.ai/skill) and follow the setup instructions, then tell your agent in natural language to get itself an email inbox. The agent provisions its own address and can receive mail immediately. No OAuth, no Google Cloud project, no credentials to manage.
   </FAQItem>
   <FAQItem question="Why do most OpenClaw tutorials only recommend Gmail for email?">
     Gmail integration through Himalaya was one of the first email skills on ClawHub. Tutorials linked to it, Reddit threads recommended it, and new users followed the same path. The recommendation compounded through social proof even as better alternatives appeared.
@@ -124,7 +118,7 @@ Next time someone asks "how do I give my OpenClaw agent email?" on Reddit or Dis
     LobsterMail stores incoming messages in your agent's inbox. When the agent comes back online, it can poll for new messages or receive them through webhook backfill. Nothing gets lost.
   </FAQItem>
   <FAQItem question="Does this work with AI frameworks other than OpenClaw?">
-    Yes. The LobsterMail SDK is a standard npm package that works with LangChain, CrewAI, AutoGen, and any JavaScript or TypeScript agent framework. It also ships as an MCP server for Claude Desktop, Cursor, and Windsurf. The `clawhub install` shortcut is specific to OpenClaw.
+    Yes. The LobsterMail SDK is a standard npm package that works with LangChain, CrewAI, AutoGen, and any JavaScript or TypeScript agent framework. It also ships as an MCP server for Claude Desktop, Cursor, and Windsurf. The setup at [lobstermail.ai/skill](https://lobstermail.ai/skill) covers all platforms.
   </FAQItem>
 </FAQ>
 

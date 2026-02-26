@@ -68,7 +68,7 @@ Dedicated addresses solve this structurally. Each agent gets its own identity, i
 LobsterMail lets each agent provision its own inbox. No human in the loop. Your research agent calls `LobsterMail.create()` and `provision()` and has a working address in seconds. Scale to ten agents and you're not paying per inbox. The Builder plan at $9/month gives you unlimited inboxes with sending.
 
 <Callout type="tip">
-  For OpenClaw, the fastest path is `clawhub install lobstermail`. Your agent installs the skill and hatches its own inbox without you touching a config file. The [60-second walkthrough](/blog/openclaw-agent-email-60-seconds) covers the full setup.
+  The fastest path is [lobstermail.ai/skill](https://lobstermail.ai/skill). Follow the setup instructions and your agent hatches its own inbox without you touching a config file. The [60-second walkthrough](/blog/openclaw-agent-email-60-seconds) covers the full setup.
 </Callout>
 
 ## The pattern across all five
@@ -93,7 +93,7 @@ If you're building with OpenClaw, the setup takes about a minute. And you can st
     LobsterMail scans every incoming email across six categories: boundary manipulation, system prompt override, data exfiltration, role hijacking, tool invocation, and encoding tricks. The SDK exposes a `safeBodyForLLM()` method that strips injection attempts before your agent processes the content. See our [prompt injection guide](/blog/prompt-injection-email-agents) for the full breakdown.
   </FAQItem>
   <FAQItem question="Can my agent set up its own inbox without me?">
-    Yes. LobsterMail is agent-first. Your agent calls `LobsterMail.create()` and `provision()` to get a working email address. No human signup, no API key generation, no console. If you're using OpenClaw, install the skill with `clawhub install lobstermail` and tell your agent to grab an inbox.
+    Yes. LobsterMail is agent-first. Your agent calls `LobsterMail.create()` and `provision()` to get a working email address. No human signup, no API key generation, no console. Head to [lobstermail.ai/skill](https://lobstermail.ai/skill) for setup instructions and tell your agent to grab an inbox.
   </FAQItem>
   <FAQItem question="How is this different from the '7 things agents do with email' post?">
     That post covers what agents can do once they have email. This post focuses on why each use case specifically needs a *dedicated* inbox instead of your personal one. The emphasis here is on the risks and limitations of sharing your Gmail, not on the capabilities themselves.
