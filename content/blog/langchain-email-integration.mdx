@@ -50,10 +50,10 @@ LobsterMail gives your agent its own email address through a REST API. Bearer to
 
 Here's the API surface we need:
 
-- `POST /v1/signup` — agent provisions its own account and gets a bearer token
-- `POST /v1/inboxes` — create an inbox
-- `GET /v1/inboxes/:id/emails` — list incoming emails
-- `POST /v1/emails/send` — send an email
+- `POST /v1/signup`: agent provisions its own account and gets a bearer token
+- `POST /v1/inboxes`: create an inbox
+- `GET /v1/inboxes/:id/emails`: list incoming emails
+- `POST /v1/emails/send`: send an email
 
 That maps cleanly to LangChain's `@tool` decorator. Let's build it.
 

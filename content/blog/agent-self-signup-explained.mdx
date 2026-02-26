@@ -7,7 +7,7 @@ tags: ["email", "automation", "openclaw"]
 image: "/blog/agent-self-signup-explained.png"
 ---
 
-There's a moment in every agent project where the developer becomes the bottleneck. You've built something autonomous — it can reason, plan, call APIs, write code — but when it needs an email address, you're the one opening a dashboard, creating an account, generating an API key, and pasting it into an `.env` file. That's a manual step the agent could handle itself.
+There's a moment in every agent project where a manual step interrupts the flow. You've built something autonomous — it can reason, plan, call APIs, write code — but when it needs an email address, you're the one opening a dashboard, creating an account, generating an API key, and pasting it into an `.env` file. That's a manual step the agent could handle itself.
 
 That's the current state of agent email. The provisioning step still requires a human, even though it doesn't have to.
 
@@ -33,7 +33,7 @@ Here's what most agent email services require today, including platforms like [A
 4. The human installs an SDK and wires up the configuration
 5. Only then can the agent create inboxes through that pre-authenticated session
 
-Five steps before the agent can do anything. Each one requires human availability. Each one introduces a point where things stall — forgotten credentials, expired keys, misconfigured environments.
+Five steps before the agent can do anything. Each one requires human availability. Each one introduces unnecessary friction — forgotten credentials, expired keys, misconfigured environments.
 
 For a single agent, this is mildly annoying. For a multi-agent system where agents spawn sub-agents, or where an orchestrator provisions a fleet of specialists on demand? It's unnecessary friction at every step.
 

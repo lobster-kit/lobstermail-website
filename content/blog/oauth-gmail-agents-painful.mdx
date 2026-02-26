@@ -35,7 +35,7 @@ You also need to choose between "Internal" (only available if you have a Google 
 
 Now you create an OAuth 2.0 Client ID. You pick "Web application" or "Desktop app" depending on your setup. You configure redirect URIs. You select scopes.
 
-For reading email, the minimum scope is `gmail.readonly`. But many frameworks request `https://mail.google.com/` — the full-access scope — because it's easier than figuring out exactly which granular permissions you need. Google's own documentation notes that you "must only request the smallest set of scopes" necessary, but when you're just trying to get something working, broad permissions win.
+For reading email, the minimum scope is `gmail.readonly`. But many frameworks request `https://mail.google.com/`, the full-access scope, because it's easier than figuring out exactly which granular permissions you need. Google's own documentation notes that you "must only request the smallest set of scopes" necessary, but when you're just trying to get something working, broad permissions win.
 
 ```
 https://www.googleapis.com/auth/gmail.readonly
@@ -103,7 +103,7 @@ Some developers look at this mess and think: skip OAuth entirely. Use an app pas
 
 As of September 2024, Google [disabled less secure app access](https://workspaceupdates.googleblog.com/2023/09/winding-down-google-sync-and-less-secure-apps-support.html) entirely. App passwords still work if the user has 2-step verification enabled, but they grant full account access. There's no way to scope an app password to read-only. Your agent gets the keys to everything.
 
-And IMAP itself comes with its own problems. Gmail imposes bandwidth limits of 2,500 MB per day for IMAP downloads. Hit that ceiling and your agent goes silent until the next day. The per-user rate limit on the Gmail API is 250 quota units per second — sounds generous until you learn that a single message fetch costs 5 units and a list operation costs 5 units, and you're polling every few seconds.
+And IMAP itself comes with its own problems. Gmail imposes bandwidth limits of 2,500 MB per day for IMAP downloads. Hit that ceiling and your agent goes silent until the next day. The per-user rate limit on the Gmail API is 250 quota units per second, which sounds generous until you learn that a single message fetch costs 5 units and a list operation costs 5 units, and you're polling every few seconds.
 
 IMAP also lacks native support for multifactor authentication. That 16-character app password sitting in your agent's `.env` file is one leaked config away from [full inbox exposure](/blog/security-risks-sharing-inbox).
 
@@ -133,7 +133,7 @@ That's it. No Google Cloud project. No consent screen. No token refresh logic. N
 
 No OAuth dance. No credentials to leak. No tokens that expire at 2 AM.
 
-The inbox is isolated — your agent gets only the messages sent to its address, not someone's entire personal email history. If the agent gets compromised, the blast radius is [limited to the agent's shell](/blog/why-agent-shouldnt-use-gmail), not your bank statements and medical records.
+The inbox is isolated: your agent gets only the messages sent to its address, not someone's entire personal email history. If the agent gets compromised, the blast radius is [limited to the agent's shell](/blog/why-agent-shouldnt-use-gmail), not your bank statements and medical records.
 
 <Callout type="tip">
   On LobsterMail's free tier, your agent can receive emails at its own address. No OAuth tokens, no IMAP credentials, no consent screens. Just a clean inbox on the reef.
@@ -149,7 +149,7 @@ Give your agent [its own email](/blog/what-is-agent-email). Let it hatch into th
 
 <FAQ>
   <FAQItem question="Why is Gmail OAuth so complicated for AI agents?">
-    Gmail OAuth was designed for interactive web applications where a human clicks "Allow" in a browser. AI agents run headless on servers and can't complete interactive consent flows. The mismatch forces developers to build workarounds for token exchange, storage, refresh, and revocation handling — all of which add fragility.
+    Gmail OAuth was designed for interactive web applications where a human clicks "Allow" in a browser. AI agents run headless on servers and can't complete interactive consent flows. The mismatch forces developers to build workarounds for token exchange, storage, refresh, and revocation handling, all of which add fragility.
   </FAQItem>
   <FAQItem question="What is the Google OAuth consent screen and why does my agent need one?">
     The OAuth consent screen is a configuration page in Google Cloud Console that defines what users see when authorizing your app. Even if your agent is the only "user," Google requires you to set up an app name, support email, privacy policy URL, and authorized domains before you can create OAuth credentials.
@@ -167,22 +167,22 @@ Give your agent [its own email](/blog/what-is-agent-email). Let it hatch into th
     Gmail imposes a 2,500 MB daily bandwidth limit for IMAP downloads and 1,250 MB for POP. The Gmail API has a per-user rate limit of 250 quota units per second. A single message fetch or list operation costs 5 quota units. Agents that poll frequently can hit these limits and get temporarily blocked with 429 errors.
   </FAQItem>
   <FAQItem question="Does the Gmail API require a security audit?">
-    If your app requests restricted OAuth scopes — including full mail access (`https://mail.google.com/`) — Google requires a third-party security assessment before you can publish the app to production. This audit can cost thousands of dollars and take several weeks to complete.
+    If your app requests restricted OAuth scopes, including full mail access (`https://mail.google.com/`), Google requires a third-party security assessment before you can publish the app to production. This audit can cost thousands of dollars and take several weeks to complete.
   </FAQItem>
   <FAQItem question="How does LobsterMail avoid the OAuth problem?">
     LobsterMail gives your agent its own dedicated email address. There's no OAuth flow because there's no existing account to authenticate against. Your agent hatches into a fresh shell with one SDK call. No tokens to refresh, no consent screens, no credentials to store.
   </FAQItem>
   <FAQItem question="Is a dedicated agent email more secure than Gmail OAuth?">
-    Yes. With Gmail OAuth, your agent has access to your entire inbox history — bank statements, password resets, private conversations. With a dedicated inbox, the agent only sees messages sent to its own address. If the agent is compromised, the blast radius is the agent's shell, not your personal life. Learn more about [why your agent shouldn't use your Gmail](/blog/why-agent-shouldnt-use-gmail).
+    Yes. With Gmail OAuth, your agent has access to your entire inbox history: bank statements, password resets, private conversations. With a dedicated inbox, the agent only sees messages sent to its own address. If the agent is compromised, the blast radius is the agent's shell, not your personal life. Learn more about [why your agent shouldn't use your Gmail](/blog/why-agent-shouldnt-use-gmail).
   </FAQItem>
   <FAQItem question="Can my agent still interact with Gmail users from a LobsterMail address?">
-    Absolutely. Your agent sends and receives standard email. Anyone with a Gmail, Outlook, or any other email address can message your agent at its LobsterMail address. The protocol is email — it works everywhere.
+    Absolutely. Your agent sends and receives standard email. Anyone with a Gmail, Outlook, or any other email address can message your agent at its LobsterMail address. The protocol is email. It works everywhere.
   </FAQItem>
   <FAQItem question="What happens if my Gmail OAuth token gets revoked?">
     Your agent silently loses access. Most agents won't surface this as an error until they try to make an API call and get an `invalid_grant` response. Password changes, manual revocation in Google account settings, or hitting the 100-token limit can all trigger revocation without warning.
   </FAQItem>
   <FAQItem question="How long does it take to set up LobsterMail compared to Gmail OAuth?">
-    Gmail OAuth setup typically takes hours to days — creating a Cloud project, configuring consent screens, implementing token exchange logic, handling refresh and revocation. LobsterMail takes one SDK call. See the [full 60-second walkthrough](/blog/openclaw-agent-email-60-seconds).
+    Gmail OAuth setup typically takes hours to days: creating a Cloud project, configuring consent screens, implementing token exchange logic, handling refresh and revocation. LobsterMail takes one SDK call. See the [full 60-second walkthrough](/blog/openclaw-agent-email-60-seconds).
   </FAQItem>
   <FAQItem question="Can prompt injection attacks affect my agent through Gmail OAuth?">
     Yes. When your agent reads email through Gmail OAuth, every message in your inbox becomes an attack surface. An attacker can embed hidden instructions in an email that hijack the agent's behavior. A dedicated agent inbox limits exposure to only messages sent to the agent's address. Read more about [prompt injection in email agents](/blog/prompt-injection-email-agents).

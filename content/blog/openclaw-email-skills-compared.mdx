@@ -150,7 +150,7 @@ I built LobsterMail because I kept spending evenings debugging OAuth tokens and 
     The Gog skill itself is free. Google Workspace plans range from $6 to $18 per user per month. If you only have a free Gmail account, Gog still works but with stricter API rate limits and no custom domain support. Pub/Sub for real-time delivery requires a GCP billing account, though the free tier covers most agent use cases.
   </FAQItem>
   <FAQItem question="What is the polling delay with Himalaya and how does it affect agents?">
-    Himalaya checks for new mail every 1-5 minutes via IMAP polling. For workflows that need fast responses — like customer support triage or time-sensitive notifications — this delay can cause missed SLAs. LobsterMail and Gog (with Pub/Sub) both offer real-time delivery.
+    Himalaya checks for new mail every 1-5 minutes via IMAP polling. For workflows that need fast responses, like customer support triage or time-sensitive notifications, this delay can cause missed SLAs. LobsterMail and Gog (with Pub/Sub) both offer real-time delivery.
   </FAQItem>
   <FAQItem question="Can my agent send email on the free LobsterMail tier?">
     The free tier is receive-only. Your agent gets a working inbox and can read all incoming messages at no cost. The Builder plan at $9/month unlocks sending, custom domains, and unlimited inboxes.
@@ -162,16 +162,16 @@ I built LobsterMail because I kept spending evenings debugging OAuth tokens and 
     LobsterMail doesn't connect to existing email providers. It gives your agent a dedicated address (like `agent@lobstermail.ai` or a custom domain). Anyone with any email provider can send messages to your agent's address. It's standard email.
   </FAQItem>
   <FAQItem question="What is prompt injection scanning and do any other ClawHub skills have it?">
-    Prompt injection is when hidden instructions in an email trick your agent into performing unintended actions. LobsterMail scans incoming messages across six categories — boundary manipulation, system prompt override, data exfiltration, role hijacking, tool invocation, and encoding tricks — before the agent processes them. No other email skill on ClawHub includes this.
+    Prompt injection is when hidden instructions in an email trick your agent into performing unintended actions. LobsterMail scans incoming messages across six categories (boundary manipulation, system prompt override, data exfiltration, role hijacking, tool invocation, and encoding tricks) before the agent processes them. No other email skill on ClawHub includes this.
   </FAQItem>
   <FAQItem question="Can I use a custom domain with any of these skills?">
-    With Himalaya, you use whatever address your IMAP server provides. With Gog, you use your Gmail or Workspace domain. With LobsterMail, custom domains are available on the $9/month Builder plan — you bring your own domain and LobsterMail handles SPF, DKIM, and DMARC configuration.
+    With Himalaya, you use whatever address your IMAP server provides. With Gog, you use your Gmail or Workspace domain. With LobsterMail, custom domains are available on the $9/month Builder plan, where you bring your own domain and LobsterMail handles SPF, DKIM, and DMARC configuration.
   </FAQItem>
   <FAQItem question="What happens if my Himalaya config gets wiped on restart?">
     This is a known issue documented in OpenClaw Discussion #4220. The workaround is to store your Himalaya config outside the OpenClaw workspace and symlink it, or use a startup script that copies the config into place before the agent launches. LobsterMail avoids this entirely since there's no local config to maintain.
   </FAQItem>
   <FAQItem question="Is there an email skill on ClawHub that works without any Google account?">
-    Himalaya works with any IMAP/SMTP provider, not just Gmail. LobsterMail doesn't require any existing email account at all — the agent provisions its own inbox independently. Gog is Google-only.
+    Himalaya works with any IMAP/SMTP provider, not just Gmail. LobsterMail doesn't require any existing email account at all. The agent provisions its own inbox independently. Gog is Google-only.
   </FAQItem>
   <FAQItem question="How does this article differ from the full OpenClaw email options comparison?">
     Our [broader comparison](/blog/openclaw-email-options-compared) covers Himalaya, Gog, AgentMail, and LobsterMail. This article focuses specifically on ClawHub skills, goes deeper on each skill's setup process, and is aimed at people browsing ClawHub deciding which email skill to install.

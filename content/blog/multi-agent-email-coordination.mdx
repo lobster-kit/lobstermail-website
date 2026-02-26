@@ -15,7 +15,7 @@ There's a simpler option sitting right in front of you: email.
 
 2026 is the year of multi-agent systems. Gartner predicts 40% of enterprise applications will feature task-specific agents by year's end. Google shipped [A2A](https://developers.googleblog.com/en/a2a-a-new-era-of-agent-interoperability/) for agent-to-agent communication. Anthropic has MCP for tool access. The Linux Foundation launched the [Agent2Agent Protocol project](https://www.linuxfoundation.org/press/linux-foundation-launches-the-agent2agent-protocol-project-to-enable-secure-intelligent-communication-between-ai-agents/). Everyone is building infrastructure for agents that work together.
 
-But here's the gap: cross-framework coordination is still an unsolved problem. A CrewAI agent can't talk to an AutoGen agent. A LangGraph workflow can't hand off to a Substrate pipeline. Everyone ends up building local solutions with no standard. Teams report [hitting scaling walls](https://dev.to/topuzas/the-great-ai-agent-showdown-of-2026-openai-autogen-crewai-or-langgraph-1ea8) after six to twelve months because their inter-agent glue code becomes the bottleneck.
+But here's the gap: cross-framework coordination is still an unsolved problem. A CrewAI agent can't talk to an AutoGen agent. A LangGraph workflow can't hand off to a Substrate pipeline. Everyone ends up building local solutions with no standard. Teams report [running into scaling friction](https://dev.to/topuzas/the-great-ai-agent-showdown-of-2026-openai-autogen-crewai-or-langgraph-1ea8) after six to twelve months because their inter-agent glue code becomes the bottleneck.
 
 What if the communication layer already existed?
 
@@ -140,7 +140,7 @@ You could build a custom message queue. You could set up Redis pub/sub. You coul
 **Human-readable.** A product manager can read the email thread between your agents and understand what happened. Try that with a Kafka topic or a gRPC stream.
 
 <Callout type="info">
-  Event-driven coordination — where agents communicate through domain events rather than direct calls — is one of the [proven patterns for multi-agent systems](https://tacnode.io/post/ai-agent-coordination). Email threads are essentially event logs with built-in routing.
+  Event-driven coordination, where agents communicate through domain events rather than direct calls, is one of the [proven patterns for multi-agent systems](https://tacnode.io/post/ai-agent-coordination). Email threads are essentially event logs with built-in routing.
 </Callout>
 
 ## when email coordination makes sense
@@ -181,7 +181,7 @@ The reef is built for this. Each agent gets its own shell. They snap messages ba
     Email threading handles this natively. Agents use the `inReplyTo` and `References` headers to keep messages in the same thread. The full conversation history is available in the thread, so any agent can reconstruct the context of a multi-step coordination.
   </FAQItem>
   <FAQItem question="Is email too slow for agent-to-agent communication?">
-    For sub-millisecond or real-time interactions, yes. But most multi-agent workflows — pipeline handoffs, review cycles, batch processing — don't need instant responses. Email's async nature is actually an advantage: agents process messages when ready, and nothing blocks if one agent is temporarily unavailable.
+    For sub-millisecond or real-time interactions, yes. But most multi-agent workflows (pipeline handoffs, review cycles, batch processing) don't need instant responses. Email's async nature is actually an advantage: agents process messages when ready, and nothing blocks if one agent is temporarily unavailable.
   </FAQItem>
   <FAQItem question="How many LobsterMail inboxes can I create for a multi-agent system?">
     The free tier lets you start receiving immediately. The Builder plan at $9/month includes unlimited inboxes, so you can provision as many shells as you have agents.
@@ -199,7 +199,7 @@ The reef is built for this. Each agent gets its own shell. They snap messages ba
     Yes. Agents can send JSON payloads in the email body, attach files, or use structured subject lines for routing. The email format supports any content the agents need to exchange, from plain text summaries to complex data objects.
   </FAQItem>
   <FAQItem question="Do I need to write code to set up multi-agent email coordination?">
-    The LobsterMail SDK makes provisioning programmatic and simple, but if you're using OpenClaw, you can tell each agent in natural language to get its own inbox. The coordination pattern itself is just agents emailing each other — no orchestration code required beyond what each agent already does.
+    The LobsterMail SDK makes provisioning programmatic and simple, but if you're using OpenClaw, you can tell each agent in natural language to get its own inbox. The coordination pattern itself is just agents emailing each other. No orchestration code required beyond what each agent already does.
   </FAQItem>
   <FAQItem question="What's the best way to structure the email body for agent-to-agent messages?">
     JSON is the most common choice. Agents can parse it reliably, include metadata like timestamps and task IDs, and the structure is self-documenting. Some teams use a consistent schema with fields like `type`, `payload`, and `replyExpected` so agents know how to handle each message.

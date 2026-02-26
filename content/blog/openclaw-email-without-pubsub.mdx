@@ -7,7 +7,7 @@ tags: ["openclaw", "getting-started", "guides"]
 image: "/blog/openclaw-email-without-pubsub.png"
 ---
 
-If you've tried giving your OpenClaw agent email, you probably started where everyone starts: Gmail. And if you wanted real-time delivery instead of polling every few minutes, you hit the Pub/Sub wall.
+If you've tried giving your OpenClaw agent email, you probably started where everyone starts: Gmail. And if you wanted real-time delivery instead of polling every few minutes, you ran into the Pub/Sub setup.
 
 Google Cloud Pub/Sub is the official way to get push notifications from Gmail. It's also a four-layer infrastructure project disguised as a checkbox. You need a GCP project with billing enabled. You need the Pub/Sub API turned on. You need `gogcli` for authentication. You need OAuth scopes configured correctly. You need a public webhook endpoint your agent can receive messages on. And you need all of these things to work together without one of them silently breaking.
 

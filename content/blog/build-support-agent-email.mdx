@@ -47,7 +47,7 @@ console.log(inbox.address);
 // → support@getlobstermail.com
 ```
 
-If you've got the Builder tier, you can use your own reef — a [custom domain](/blog/custom-domains-agent-email) — so customers email `support@yourcompany.com` and your agent catches it directly.
+If you've got the Builder tier, you can use your own reef, a [custom domain](/blog/custom-domains-agent-email), so customers email `support@yourcompany.com` and your agent catches it directly.
 
 <Callout type="tip">
   Provision a separate inbox for each function. One shell for support, another for billing alerts, another for outbound. Inboxes are unlimited on the free tier, so there's no reason to cram everything into one address.
@@ -135,7 +135,7 @@ async function handleSupportEmail(email) {
 }
 ```
 
-The `generateReply` function is where you bring in your knowledge base — your docs, FAQ, past tickets. Feed them into the LLM's context alongside the customer's message and category. I won't prescribe a specific RAG setup here since that depends on your stack, but the pattern is the same: retrieve relevant context, generate a reply, send it.
+The `generateReply` function is where you bring in your knowledge base: your docs, FAQ, past tickets. Feed them into the LLM's context alongside the customer's message and category. I won't prescribe a specific RAG setup here since that depends on your stack, but the pattern is the same: retrieve relevant context, generate a reply, send it.
 
 <Callout type="tip">
   Start conservative. Set the confidence threshold high (0.85+) and only auto-reply to "general" category emails for the first week. Review what the agent sends. Lower the threshold and expand categories as you build trust.
@@ -214,20 +214,20 @@ That's roughly 70% of incoming support handled without a human touching it. The 
 
 Once the basic loop works, there's a lot you can layer on:
 
-- **Sentiment detection** — if the customer sounds angry, escalate regardless of category
-- **Thread awareness** — check if this is a reply to an existing conversation and maintain context
+- **Sentiment detection:** if the customer sounds angry, escalate regardless of category
+- **Thread awareness:** check if this is a reply to an existing conversation and maintain context
 - **Auto-tagging** in your CRM or helpdesk tool via API
-- **Weekly digests** — have the agent email you a summary of what it handled, what it escalated, and where it was least confident
+- **Weekly digests:** surface a summary of what the agent handled, what it escalated, and where it was least confident
 
 For more patterns like this, check out [what agents do with email](/blog/what-agents-do-with-email). And if you want to automate your newsletter intake alongside support, we cover that in [automate your newsletter inbox](/blog/automate-newsletter-inbox).
 
 <Callout type="tip">
-  LobsterMail is currently in pre-launch. The code examples above reflect the intended SDK design — it's built to be this simple. [Join the waitlist](/) to get early access.
+  LobsterMail is currently in pre-launch. The code examples above reflect the intended SDK design. It's built to be this simple. [Join the waitlist](/) to get early access.
 </Callout>
 
 <FAQ>
   <FAQItem question="How much does it cost to run a support agent on LobsterMail?">
-    The free tier lets your agent receive emails at no cost. Sending unlocks after verification (X post or credit card) with 10 sends/day free. The Builder plan at $9/month adds 1,000 sends/day. The LLM costs depend on your provider — most support emails are short, so token costs per email are minimal.
+    The free tier lets your agent receive emails at no cost. Sending unlocks after verification (X post or credit card) with 10 sends/day free. The Builder plan at $9/month adds 1,000 sends/day. The LLM costs depend on your provider; most support emails are short, so token costs per email are minimal.
   </FAQItem>
   <FAQItem question="Can my support agent use a custom domain like support@mycompany.com?">
     Yes. On the Builder tier, you can bring your own reef (custom domain). Set up DNS records, and your agent catches email at whatever address you configure. See [custom domains for agent email](/blog/custom-domains-agent-email) for the full setup.
@@ -236,7 +236,7 @@ For more patterns like this, check out [what agents do with email](/blog/what-ag
     Start with a high confidence threshold and limit auto-replies to low-risk categories. Review the agent's sent messages regularly. You can also add a human-approval step where the agent drafts but doesn't send until a human confirms.
   </FAQItem>
   <FAQItem question="Can I use a different LLM besides OpenAI?">
-    The categorization and reply generation use standard chat completion APIs. Swap in Anthropic, Mistral, Gemini, or any model that supports structured output. The LobsterMail SDK doesn't care which LLM you use — it only handles the email layer.
+    The categorization and reply generation use standard chat completion APIs. Swap in Anthropic, Mistral, Gemini, or any model that supports structured output. The LobsterMail SDK doesn't care which LLM you use. It only handles the email layer.
   </FAQItem>
   <FAQItem question="How do I handle emails in languages other than English?">
     Most modern LLMs handle multilingual classification and response generation well. Add a language detection step to your categorization prompt, and instruct the reply generator to respond in the same language as the incoming email.
@@ -245,7 +245,7 @@ For more patterns like this, check out [what agents do with email](/blog/what-ag
     No. LobsterMail stores incoming emails in the agent's shell. If your server goes down, messages queue up and the webhook retries. When you're back online, everything catches up. No emails lost.
   </FAQItem>
   <FAQItem question="Can I integrate this with my existing helpdesk (Zendesk, Intercom, etc.)?">
-    Yes. The escalation step is just an API call. Instead of posting to Slack, create a ticket in Zendesk, tag a conversation in Intercom, or hit any API endpoint. The pattern is the same — the agent triages and routes.
+    Yes. The escalation step is just an API call. Instead of posting to Slack, create a ticket in Zendesk, tag a conversation in Intercom, or hit any API endpoint. The pattern is the same: the agent triages and routes.
   </FAQItem>
   <FAQItem question="How do I prevent the agent from replying to spam?">
     Add a spam detection step before categorization. Check sender reputation, scan for common spam patterns, or use a dedicated spam filtering API. You can also configure LobsterMail to only process emails from known domains.
@@ -254,7 +254,7 @@ For more patterns like this, check out [what agents do with email](/blog/what-ag
     LobsterMail delivers the reply to the same webhook. Your handler receives it as a new `email.received` event. You can track conversation threads by subject line or message headers and maintain context across multiple exchanges.
   </FAQItem>
   <FAQItem question="Can multiple agents share one support inbox?">
-    You could, but it's better to give each agent its own shell. If you want to split support by category, provision separate inboxes — `billing@yourcompany.com` and `technical@yourcompany.com` — and let each agent own its domain.
+    You could, but it's better to give each agent its own shell. If you want to split support by category, provision separate inboxes (`billing@yourcompany.com` and `technical@yourcompany.com`) and let each agent own its domain.
   </FAQItem>
   <FAQItem question="How does this compare to using Zendesk or Intercom's built-in AI?">
     Those platforms bundle AI into their ecosystem. This approach gives you full control — pick your own LLM, write your own triage logic, own your data. LobsterMail handles the email infrastructure so you're not locked into any helpdesk vendor.
@@ -263,7 +263,7 @@ For more patterns like this, check out [what agents do with email](/blog/what-ag
     Yes. Provision a test inbox on LobsterMail's free tier and send yourself sample emails covering different categories and edge cases. Iterate on your prompts and confidence thresholds before pointing real traffic at it.
   </FAQItem>
   <FAQItem question="How fast does the webhook fire after an email arrives?">
-    LobsterMail delivers webhook events in near real-time — typically within seconds of the email arriving in the agent's shell. Your agent can start processing before a human would even notice the notification.
+    LobsterMail delivers webhook events in near real-time, typically within seconds of the email arriving in the agent's shell. Your agent can start processing before a human would even notice the notification.
   </FAQItem>
   <FAQItem question="Can I use this with OpenClaw?">
     Yes. If you're running OpenClaw, install the LobsterMail skill and your agent handles inbox provisioning on its own. The triage logic runs inside your OpenClaw instance. See [give your OpenClaw agent email in 60 seconds](/blog/openclaw-agent-email-60-seconds) for the full walkthrough.

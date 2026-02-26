@@ -82,12 +82,12 @@ The core principle is isolation. Your agent should never touch your personal inb
 
 LobsterMail is built around this. Every agent gets a dedicated inbox that's completely separate from any human email. But the security layer goes beyond isolation. Every incoming email is scanned across 6 categories of prompt injection:
 
-1. **Boundary manipulation** — attempts to break out of content markers
-2. **System prompt override** — "ignore previous instructions" and variants
-3. **Data exfiltration** — instructions to send data to external addresses
-4. **Role hijacking** — fake `[SYSTEM]` messages embedded in email bodies
-5. **Tool invocation** — attempts to trigger function calls through email content
-6. **Encoding and obfuscation** — hex escapes, zero-width characters, Base64 payloads
+1. **Boundary manipulation:** attempts to break out of content markers
+2. **System prompt override:** "ignore previous instructions" and variants
+3. **Data exfiltration:** instructions to send data to external addresses
+4. **Role hijacking:** fake `[SYSTEM]` messages embedded in email bodies
+5. **Tool invocation:** attempts to trigger function calls through email content
+6. **Encoding and obfuscation:** hex escapes, zero-width characters, Base64 payloads
 
 The SDK surfaces this directly. `email.isInjectionRisk` gives you a boolean flag before your agent ever processes the content. `email.safeBodyForLLM()` wraps the email in boundary markers with a metadata header and strips any injected boundaries, so you can pass it to your model without the raw content hijacking the conversation.
 
@@ -132,7 +132,7 @@ If you've already got email running in your OpenClaw agent, run through the chec
     The `email.safeBodyForLLM()` method wraps email content in explicit boundary markers with a metadata header that tells the model the content is untrusted external input. It also strips any injected boundary markers from the email body itself, preventing an attacker from breaking out of the content wrapper.
   </FAQItem>
   <FAQItem question="What is the blast radius difference between a shared inbox and a dedicated agent inbox?">
-    With a shared inbox, a compromised agent exposes your entire email history — every bank statement, medical record, and private conversation. With a dedicated agent inbox, the blast radius is limited to messages the agent has received since setup. Your personal email stays untouched.
+    With a shared inbox, a compromised agent exposes your entire email history: every bank statement, medical record, and private conversation. With a dedicated agent inbox, the blast radius is limited to messages the agent has received since setup. Your personal email stays untouched.
   </FAQItem>
   <FAQItem question="How many OpenClaw instances were found publicly exposed in the January 2026 security analysis?">
     Researchers identified over 30,000 exposed OpenClaw instances publicly reachable on the internet. Sixty-three percent of observed deployments were vulnerable, with nearly 13,000 exploitable via remote code execution. Exposed instances contained API keys, bot tokens, and credential files.

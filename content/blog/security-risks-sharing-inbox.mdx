@@ -13,15 +13,15 @@ This isn't hypothetical. In 2025 and early 2026, researchers demonstrated real z
 
 ## Prompt injection through crafted emails
 
-The most immediate threat is indirect prompt injection. An attacker sends your agent a carefully crafted email containing hidden instructions — white text on a white background, tiny font sizes, or encoded strings buried in HTML. Your agent reads the email to categorize or summarize it, and the hidden instructions hijack its behavior.
+The most immediate threat is indirect prompt injection. An attacker sends your agent a carefully crafted email containing hidden instructions (white text on a white background, tiny font sizes, or encoded strings buried in HTML). Your agent reads the email to categorize or summarize it, and the hidden instructions hijack its behavior.
 
-This isn't a lab experiment. In June 2025, researchers at Aim Security disclosed [CVE-2025-32711](https://thehackernews.com/2025/06/zero-click-ai-vulnerability-exposes.html) (dubbed "EchoLeak"), a zero-click vulnerability in Microsoft 365 Copilot with a CVSS score of 9.3. An attacker sent a single email to an employee's Outlook inbox. When anyone later asked Copilot a routine question — summarizing a report, finding a file — the RAG engine retrieved the poisoned email as "relevant context," executed the embedded instructions, and silently exfiltrated SharePoint and OneDrive files to the attacker's server. No clicks required.
+This isn't a lab experiment. In June 2025, researchers at Aim Security disclosed [CVE-2025-32711](https://thehackernews.com/2025/06/zero-click-ai-vulnerability-exposes.html) (dubbed "EchoLeak"), a zero-click vulnerability in Microsoft 365 Copilot with a CVSS score of 9.3. An attacker sent a single email to an employee's Outlook inbox. When anyone later asked Copilot a routine question (summarizing a report, finding a file), the RAG engine retrieved the poisoned email as "relevant context," executed the embedded instructions, and silently exfiltrated SharePoint and OneDrive files to the attacker's server. No clicks required.
 
 <Callout type="warning">
   OWASP's 2025 Top 10 for LLM Applications ranks prompt injection as the number one vulnerability, appearing in over 73% of production AI deployments assessed during security audits. If your agent reads untrusted email, it's exposed.
 </Callout>
 
-A similar attack, [ShadowLeak](https://thehackernews.com/2025/09/shadowleak-zero-click-flaw-leaks-gmail.html), hit ChatGPT's Deep Research agent in September 2025. A single malicious email in a user's Gmail triggered the agent to leak inbox data from OpenAI's cloud infrastructure — invisible to local defenses. The proof-of-concept worked across Gmail, Outlook, Google Drive, Dropbox, and Notion connectors. Every shell your agent has access to becomes an attack surface.
+A similar attack, [ShadowLeak](https://thehackernews.com/2025/09/shadowleak-zero-click-flaw-leaks-gmail.html), hit ChatGPT's Deep Research agent in September 2025. A single malicious email in a user's Gmail triggered the agent to leak inbox data from OpenAI's cloud infrastructure, invisible to local defenses. The proof-of-concept worked across Gmail, Outlook, Google Drive, Dropbox, and Notion connectors. Every shell your agent has access to becomes an attack surface.
 
 ## Credential harvesting from password reset emails
 
@@ -29,11 +29,11 @@ Your inbox is a vault of credentials. Password reset links, two-factor backup co
 
 The OpenClaw security crisis made this painfully concrete. In late January 2026, security researchers found [over 30,000 exposed OpenClaw instances](https://www.infosecurity-magazine.com/news/researchers-40000-exposed-openclaw/) publicly reachable on the internet. Inside those instances, researchers found Anthropic API keys, Telegram bot tokens, Slack OAuth credentials, and complete conversation histories. Sixty-three percent of observed deployments were vulnerable, with nearly 13,000 instances exploitable via remote code execution.
 
-If your agent is connected to your personal inbox, it's not just reading emails — it's sitting on a trove of secrets. One compromised agent, and every credential that ever passed through your inbox is exposed.
+If your agent is connected to your personal inbox, it's not just reading emails. It's sitting on a trove of secrets. One compromised agent, and every credential that ever passed through your inbox is exposed.
 
 ## Data leakage through context windows
 
-Every email your agent reads becomes part of its context. That context gets processed by an LLM, logged in conversation histories, and sometimes cached across sessions. Your medical appointment confirmations, your salary negotiations, your legal correspondence — they're all fair game once they're in the window.
+Every email your agent reads becomes part of its context. That context gets processed by an LLM, logged in conversation histories, and sometimes cached across sessions. Your medical appointment confirmations, your salary negotiations, your legal correspondence. They're all fair game once they're in the window.
 
 A [study across 1,000 enterprise environments](https://www.reco.ai/blog/ai-and-cloud-security-breaches-2025) found that 99% had sensitive data exposed to AI tools due to insufficient access controls. The problem isn't just malicious actors. It's the everyday reality of feeding private data into systems that weren't designed to protect it. Context windows don't distinguish between "this is a routine newsletter" and "this contains my social security number." To the model, it's all just tokens.
 
@@ -41,10 +41,10 @@ A [study across 1,000 enterprise environments](https://www.reco.ai/blog/ai-and-c
 
 When your agent has access to your personal inbox, the blast radius of any compromise is everything. Not just the agent's tasks. Not just recent emails. Everything.
 
-The [ClawHavoc campaign](https://thehackernews.com/2026/02/researchers-find-341-malicious-clawhub.html) in February 2026 showed how fast things can spiral. Researchers found 341 malicious skills in OpenClaw's ClawHub marketplace — roughly 12% of the entire registry — delivering infostealers disguised as legitimate tools. By mid-February, that number had climbed past 1,184. A single ClawHub user uploaded 354 malicious packages in what appears to have been an automated blitz. Every agent that installed one of those skills and had inbox access was a potential conduit for full credential theft.
+The [ClawHavoc campaign](https://thehackernews.com/2026/02/researchers-find-341-malicious-clawhub.html) in February 2026 showed how fast things can spiral. Researchers found 341 malicious skills in OpenClaw's ClawHub marketplace, roughly 12% of the entire registry, delivering infostealers disguised as legitimate tools. By mid-February, that number had climbed past 1,184. A single ClawHub user uploaded 354 malicious packages in what appears to have been an automated blitz. Every agent that installed one of those skills and had inbox access was a potential conduit for full credential theft.
 
 <Callout type="warning">
-  System prompt extraction was the most common attacker objective in Q4 2025. Attackers use extracted prompts — role definitions, tool descriptions, policy boundaries — to craft more effective follow-on attacks. If your agent's prompt includes inbox access patterns, that's a roadmap for an attacker.
+  System prompt extraction was the most common attacker objective in Q4 2025. Attackers use extracted prompts (role definitions, tool descriptions, policy boundaries) to craft more effective follow-on attacks. If your agent's prompt includes inbox access patterns, that's a roadmap for an attacker.
 </Callout>
 
 This is the core problem with the shared inbox model. You can't scope the damage. A compromised agent with access to your personal email doesn't just lose its own data — it loses yours. Your contacts, your financial information, your private communications. The claw reaches into everything.
@@ -53,7 +53,7 @@ This is the core problem with the shared inbox model. You can't scope the damage
 
 The fix isn't to stop using AI agents with email. It's to stop giving them access to *your* email.
 
-When your agent has its own dedicated inbox — its own shell — the blast radius shrinks to exactly what the agent needs. A compromised agent loses access to its own purpose-built inbox, not your 15 years of personal correspondence. No password reset links to harvest. No medical records to leak. No credentials sitting in old onboarding emails.
+When your agent has its own dedicated inbox, its own shell, the blast radius shrinks to exactly what the agent needs. A compromised agent loses access to its own purpose-built inbox, not your 15 years of personal correspondence. No password reset links to harvest. No medical records to leak. No credentials sitting in old onboarding emails.
 
 This is what [agent email](/blog/what-is-agent-email) is designed for. Your agent gets an address like `support-bot@getlobstermail.com` and communicates through that. Your personal inbox stays untouched, out of the context window, out of reach.
 
@@ -63,10 +63,10 @@ If you're connecting agents to email today, the question isn't whether something
 
 <FAQ>
   <FAQItem question="What is prompt injection in the context of email?">
-    Prompt injection is when an attacker embeds hidden instructions inside an email — using techniques like invisible text, tiny fonts, or encoded strings — that trick an AI agent into executing unintended commands when it reads the message.
+    Prompt injection is when an attacker embeds hidden instructions inside an email (using techniques like invisible text, tiny fonts, or encoded strings) that trick an AI agent into executing unintended commands when it reads the message.
   </FAQItem>
   <FAQItem question="Can an attacker really steal my data through a single email?">
-    Yes. The EchoLeak vulnerability (CVE-2025-32711) demonstrated this against Microsoft 365 Copilot in production, and ShadowLeak showed the same attack pattern against ChatGPT's Gmail integration. Both were zero-click — no user action required.
+    Yes. The EchoLeak vulnerability (CVE-2025-32711) demonstrated this against Microsoft 365 Copilot in production, and ShadowLeak showed the same attack pattern against ChatGPT's Gmail integration. Both were zero-click, with no user action required.
   </FAQItem>
   <FAQItem question="What credentials are at risk when an agent accesses my inbox?">
     Password reset links, two-factor backup codes, API keys from SaaS platforms, OAuth tokens, onboarding credentials, and any other sensitive information that arrives via email. The OpenClaw incidents revealed exposed Anthropic API keys, Slack OAuth credentials, and Telegram bot tokens.
@@ -78,16 +78,16 @@ If you're connecting agents to email today, the question isn't whether something
     Security researchers identified over 30,000 exposed OpenClaw instances publicly reachable on the internet, with 63% of observed deployments vulnerable and nearly 13,000 exploitable via remote code execution.
   </FAQItem>
   <FAQItem question="What is a context window leak?">
-    When an AI agent reads your email, those messages become part of its context window — the data the model processes. That context can be logged, cached, or extracted by attackers, exposing private information the agent was never meant to share.
+    When an AI agent reads your email, those messages become part of its context window, the data the model processes. That context can be logged, cached, or extracted by attackers, exposing private information the agent was never meant to share.
   </FAQItem>
   <FAQItem question="Does giving my agent its own inbox prevent prompt injection?">
-    No. Prompt injection is a model-level vulnerability that the industry is still working to solve. But an isolated inbox limits the blast radius. If an agent is compromised, the attacker only accesses the agent's purpose-built inbox — not your personal email history.
+    No. Prompt injection is a model-level vulnerability that the industry is still working to solve. But an isolated inbox limits the blast radius. If an agent is compromised, the attacker only accesses the agent's purpose-built inbox, not your personal email history.
   </FAQItem>
   <FAQItem question="How does LobsterMail isolate agent email?">
     LobsterMail gives each agent its own dedicated email address and inbox. The agent never touches your personal email. Communications are contained in the agent's own shell, so a compromise doesn't cascade to your private data.
   </FAQItem>
   <FAQItem question="Is OAuth access to Gmail safe for AI agents?">
-    OAuth gives the agent scoped access, but in practice most implementations grant broad inbox read permissions. That means the agent can see everything — password resets, financial statements, private conversations. Dedicated agent email is a safer architecture. Read more about [why OAuth with Gmail is painful for agents](/blog/oauth-gmail-agents-painful).
+    OAuth gives the agent scoped access, but in practice most implementations grant broad inbox read permissions. That means the agent can see everything: password resets, financial statements, private conversations. Dedicated agent email is a safer architecture. Read more about [why OAuth with Gmail is painful for agents](/blog/oauth-gmail-agents-painful).
   </FAQItem>
   <FAQItem question="What should I do if my agent already has Gmail access?">
     Audit what permissions your agent has, revoke any unnecessary OAuth scopes, and consider migrating to a dedicated agent email address. The fewer secrets in the agent's reach, the smaller the blast radius if something goes wrong.

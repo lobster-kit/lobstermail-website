@@ -7,7 +7,7 @@ tags: ["email", "infrastructure"]
 image: "/blog/agent-communication-stack.png"
 ---
 
-I've been watching the agent communication landscape fragment in real time. Every week there's a new protocol, a new integration, a new way for agents to talk to each other or to humans. MCP for tool access. A2A for agent interoperability. LiveKit for voice. Slack bots, Discord bots, SMS gateways. The stack is growing fast, and nobody's mapping the whole thing.
+I've been watching agent communication fragment in real time. Every week there's a new protocol, a new integration, a new way for agents to talk to each other or to humans. MCP for tool access. A2A for agent interoperability. LiveKit for voice. Slack bots, Discord bots, SMS gateways. The stack is growing fast, and nobody's mapping the whole thing.
 
 So let me try.
 
@@ -29,7 +29,7 @@ The mistake I see teams make is treating these channels as interchangeable. They
 
 Email excels at cross-organizational communication. When your agent needs to reach a human or system it has no prior relationship with, email is the only channel that works without pre-arrangement. No API keys to exchange. No OAuth dance. No mutual platform membership. You just need an address. That's why email handles vendor outreach, customer follow-ups, verification flows, and inter-company coordination better than anything else.
 
-Chat excels at team-internal, real-time coordination. If your agent is part of an internal workflow where everyone's already in Slack, posting updates to a channel is faster and more natural than sending emails. The threading model works for quick back-and-forth. The emoji reactions work for lightweight approvals. But the moment you need to reach outside your org, chat hits a wall.
+Chat excels at team-internal, real-time coordination. If your agent is part of an internal workflow where everyone's already in Slack, posting updates to a channel is faster and more natural than sending emails. The threading model works for quick back-and-forth. The emoji reactions work for lightweight approvals. But the moment you need to reach outside your org, chat runs out of reach.
 
 Voice excels at high-touch, synchronous interactions. When a customer calls your support line and expects to talk to someone, a voice agent can handle that. Appointment scheduling, account verification, guided troubleshooting. Voice conveys empathy and handles ambiguity better than text. But it doesn't scale the same way. Every concurrent call requires compute. There's no queuing a voice interaction for later.
 

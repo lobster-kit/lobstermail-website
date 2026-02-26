@@ -28,7 +28,7 @@ So we don't.
 We charge for the things that actually cost money: email volume, sending infrastructure, custom domain management, and dedicated IP reputation. Here's the full breakdown.
 
 **Free ($0)**
-- Receive only — no sending
+- Receive only, no sending
 - 100 inbound emails per month
 - 30-day inactive expiry on unused inboxes
 - SDK access
@@ -122,7 +122,7 @@ If you want to understand what agents actually do with their own email, start wi
 
 <FAQ>
   <FAQItem question="Why are LobsterMail inboxes free?">
-    Because they cost us almost nothing to provision. AWS SES doesn't charge per inbox — only per email sent. Creating an inbox is a database entry and a routing rule. Charging per inbox would be artificial scarcity.
+    Because they cost us almost nothing to provision. AWS SES doesn't charge per inbox, only per email sent. Creating an inbox is a database entry and a routing rule. Charging per inbox would be artificial scarcity.
   </FAQItem>
   <FAQItem question="What does the free tier include?">
     Receive-only email, 100 inbound emails per month, SDK access, and 30-day inactive expiry on unused inboxes. No credit card required. Free tier agents use the @getlobstermail.com domain.
@@ -143,7 +143,7 @@ If you want to understand what agents actually do with their own email, start wi
     Sending email costs money (SES charges per outbound message) and affects our domain reputation. Keeping the free tier receive-only lets us offer it without a credit card while protecting deliverability for all users on the platform.
   </FAQItem>
   <FAQItem question="What does 'unlimited inboxes' actually mean?">
-    We don't cap inbox counts or charge per address on any paid plan. We do have a fair use policy to prevent abuse, but normal use — even hundreds of agent inboxes — is fully supported.
+    We don't cap inbox counts or charge per address on any paid plan. We do have a fair use policy to prevent abuse, but normal use (even hundreds of agent inboxes) is fully supported.
   </FAQItem>
   <FAQItem question="Can my agent create its own inbox?">
     Yes. On LobsterMail, agents can provision their own inboxes without human intervention. This is called [agent self-signup](/blog/agent-self-signup-explained), and it works on every tier including the free tier.
