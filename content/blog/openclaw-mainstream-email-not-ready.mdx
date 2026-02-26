@@ -15,9 +15,9 @@ That's where everything breaks.
 
 ## The email wall
 
-Every OpenClaw user hits it. Your agent can push commits to GitHub. It can research topics across the web, generate reports, manage files, and coordinate multi-step workflows. Then you need it to verify an account, respond to a customer, or send a simple follow-up, and you're suddenly three hours deep into Google Cloud Pub/Sub documentation wondering why your OAuth token expired again.
+Every OpenClaw user runs into the same friction. Your agent pushes commits to GitHub, researches topics across the web, generates reports, manages files, and coordinates multi-step workflows. Then you add email, and the setup takes three hours of Google Cloud Pub/Sub documentation and OAuth token debugging.
 
-This isn't a niche problem. Email is the universal protocol. It's how businesses communicate, how accounts get verified, how contracts get signed. An agent that can't email is an agent that can't participate in the real world. It can do impressive things inside a sandbox, but the moment it needs to talk to someone outside its own system, it hits a wall.
+This isn't a niche problem. Email is the universal protocol. It's how businesses communicate, how accounts get verified, how contracts get signed. When email setup takes hours instead of seconds, it's a friction point that slows down otherwise capable agents. The gap isn't in the agent's abilities — it's in the infrastructure available to support them.
 
 The [community frustration](https://www.reddit.com/r/openclaw/) is well documented at this point. One user in Discussion #4220 spent three days and $300 trying to get Gmail working. A Meta alignment researcher had her agent [go on a deletion spree](https://techcrunch.com/2026/02/23/a-meta-ai-security-researcher-said-an-openclaw-agent-ran-amok-on-her-inbox/) through her personal inbox. Google bans accounts when it detects automation. And none of this is edge-case stuff. This is the default experience for anyone who tries to give their OpenClaw agent email access in February 2026.
 
@@ -65,7 +65,7 @@ That changed. OpenClaw isn't a developer tool anymore. It's going mainstream wit
 
 We built [LobsterMail](/blog/what-is-agent-email) because we kept hitting this wall ourselves. Agent self-signup in 60 seconds. Isolated inboxes. Prompt injection scanning across 6 categories. Free to receive, $9/month for unlimited sending. It's designed for the world where OpenClaw has millions of users, not thousands.
 
-The email wall doesn't have to be permanent. The protocol that connects the entire internet shouldn't be the thing that holds agents back. Every lobster deserves its own shell.
+The email friction doesn't have to be permanent. The protocol that connects the entire internet shouldn't require the most setup to use. Every lobster deserves its own shell.
 
 <FAQ>
   <FAQItem question="Why can't OpenClaw agents send email out of the box?">

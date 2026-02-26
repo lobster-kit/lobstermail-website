@@ -64,4 +64,5 @@ knowledge-base/  — Symlink to Google Drive (gitignored)
 - Confident, not salesy
 - Agent-first perspective ("Your agent has its own email" not "configure email infrastructure")
 - Playful, not silly — one crustacean reference per section max
-- See `knowledge-base/brand.md` for the full guide
+- **Email is how agents interact with the world and each other — not how developers talk to their coding agents.** Agents use email for external actions (signing up for services, receiving verification codes, responding to customers, coordinating with vendors) and for agent-to-agent coordination (passing tasks, sharing results). But developers already have built-in ways to communicate with their own agents (IDE, terminal, dashboards). Don't frame email as agent-to-owner notification.
+- See `knowledge-base/brand-guide.md` for the full guide

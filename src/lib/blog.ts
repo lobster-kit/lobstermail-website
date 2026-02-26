@@ -10,10 +10,18 @@ export interface BlogPost {
   title: string;
   description: string;
   date: string;
+  updatedDate?: string;
   tags: string[];
   image?: string;
   author?: string;
   content: string;
+  readingTime: number;
+}
+
+function getReadingTime(content: string): number {
+  const text = content.replace(/<[^>]*>/g, "").replace(/[#*`~\[\]()]/g, "");
+  const words = text.trim().split(/\s+/).length;
+  return Math.max(1, Math.ceil(words / 238));
 }
 
 export const getAllPosts = cache(function getAllPosts(): BlogPost[] {
@@ -32,10 +40,12 @@ export const getAllPosts = cache(function getAllPosts(): BlogPost[] {
       title: data.title ?? slug,
       description: data.description ?? "",
       date: data.date ?? "",
+      updatedDate: data.updatedDate,
       tags: data.tags ?? [],
       image: data.image,
       author: data.author,
       content,
+      readingTime: getReadingTime(content),
     };
   });
 
@@ -58,10 +68,12 @@ export function getPostBySlug(slug: string): BlogPost | null {
     title: data.title ?? slug,
     description: data.description ?? "",
     date: data.date ?? "",
+    updatedDate: data.updatedDate,
     tags: data.tags ?? [],
     image: data.image,
     author: data.author,
     content,
+    readingTime: getReadingTime(content),
   };
 }
 
@@ -118,4 +130,57 @@ export function formatDate(dateStr: string): string {
     month: "long",
     day: "numeric",
   });
+}
+
+export function getRelatedPosts(slug: string, limit = 3): BlogPost[] {
+  const post = getPostBySlug(slug);
+  if (!post) return [];
+
+  const allPosts = getAllPosts().filter((p) => p.slug !== slug);
+  const scored = allPosts.map((p) => ({
+    post: p,
+    score: p.tags.filter((t) => post.tags.includes(t)).length,
+  }));
+
+  scored.sort(
+    (a, b) =>
+      b.score - a.score ||
+      new Date(b.post.date).getTime() - new Date(a.post.date).getTime()
+  );
+
+  return scored.slice(0, limit).map((s) => s.post);
+}
+
+export function getAdjacentPosts(slug: string) {
+  const allPosts = getAllPosts();
+  const index = allPosts.findIndex((p) => p.slug === slug);
+  if (index === -1) return { prev: null, next: null };
+
+  return {
+    prev: index < allPosts.length - 1 ? allPosts[index + 1] : null,
+    next: index > 0 ? allPosts[index - 1] : null,
+  };
+}
+
+export function getPostsByAuthor(authorName: string): BlogPost[] {
+  return getAllPosts().filter((p) => p.author === authorName);
+}
+
+export function extractFaqItems(
+  content: string
+): { question: string; answer: string }[] {
+  const regex = /<FAQItem\s+question="([^"]+)">\s*([\s\S]*?)\s*<\/FAQItem>/g;
+  const items: { question: string; answer: string }[] = [];
+  let match;
+
+  while ((match = regex.exec(content)) !== null) {
+    const answer = match[2]
+      .replace(/<[^>]*>/g, "")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .replace(/\s+/g, " ")
+      .trim();
+    items.push({ question: match[1], answer });
+  }
+
+  return items;
 }

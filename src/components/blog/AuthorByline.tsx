@@ -1,8 +1,10 @@
 "use client";
 
 import Image from "next/image";
+import NextLink from "next/link";
 import { Link } from "react-aria-components";
 import type { Author } from "@/lib/authors";
+import { getAuthorSlug } from "@/lib/authors";
 
 const socialIcons: Record<string, React.ReactNode> = {
   x: (
@@ -33,9 +35,12 @@ export function AuthorByline({ author }: { author: Author }) {
         className="rounded-full border-2 border-edge"
       />
       <div className="flex flex-col">
-        <span className="text-sm font-semibold text-foreground">
+        <NextLink
+          href={`/blog/author/${getAuthorSlug(author.name)}`}
+          className="text-sm font-semibold text-foreground transition-colors hover:text-accent"
+        >
           {author.name}
-        </span>
+        </NextLink>
         <span className="text-xs text-secondary">{author.title}</span>
       </div>
       <div className="flex items-center gap-2 ml-1">

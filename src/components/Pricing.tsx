@@ -12,9 +12,9 @@ const freePlanFeatures = [
 
 const proPlanFeatures = [
   "Everything in Free",
-  "Unlimited inboxes",
-  "Send up to 1,000 emails/day",
-  "10,000 emails/month",
+  "Up to 10 inboxes",
+  "Send up to 500 emails/day",
+  "5,000 emails/month",
 ];
 
 export function Pricing() {

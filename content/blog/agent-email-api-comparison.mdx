@@ -33,7 +33,7 @@ The gap shows up the moment your agent needs to do more than send.
 
 **No persistent inboxes.** None of these services give your agent an inbox it can query. SendGrid has Inbound Parse, which forwards incoming email to a webhook endpoint as a POST request. That's useful for processing inbound messages in real time, but there's no stored mailbox. If your webhook is down when the email arrives, it's gone. Resend has no inbound capability at all. Mailgun has inbound routes with similar limitations to SendGrid's approach.
 
-**No agent self-signup.** To use any of these services, a human creates an account, verifies a domain, generates API keys, and stores them in environment variables. The agent can't provision its own email address. If you're building autonomous agents that need to spin up their own communication channels, you hit a wall immediately.
+**No agent self-signup.** To use any of these services, a human creates an account, verifies a domain, generates API keys, and stores them in environment variables. The agent can't provision its own email address. If you're building autonomous agents that need to spin up their own communication channels, that manual step sits in the middle of every provisioning flow.
 
 **No inbox querying.** An agent processing a support queue needs to poll for new messages, filter by sender, and fetch full message bodies on demand. Traditional email APIs don't expose this. You'd need to build a storage layer on top of inbound webhooks, handle deduplication, manage retention, and build your own query interface. That's a significant amount of infrastructure for something that should be a primitive.
 

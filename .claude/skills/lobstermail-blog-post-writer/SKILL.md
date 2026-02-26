@@ -163,6 +163,7 @@ Every article MUST follow these rules. AI-sounding content damages the brand.
 - Acknowledge uncertainty and mixed feelings. "I'm not sure this is the right call" is more honest than pretending everything is clear-cut.
 - Vary sentence length. Short. Then longer ones that take their time. Mix it up.
 - Be specific. "42,000 exposed installations" beats "many installations."
+- Never imply developers can't solve email on their own. They absolutely can. Our value is removing a tedious manual step so the agent can self-provision. Frame it as "your agent handles this itself" not "you'd be stuck without us." The problem is unnecessary friction, not developer inability.
 
 ### Patterns to AVOID (dead giveaways of AI writing)
 

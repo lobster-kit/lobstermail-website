@@ -41,8 +41,35 @@ export default async function BlogPage({
   const { posts, totalPages, currentPage: resolvedPage } =
     getPaginatedPosts(currentPage);
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: "Blog — LobsterMail",
+    description:
+      "Learn about AI agent email — tutorials, use cases, and updates from the LobsterMail team.",
+    url: "https://lobstermail.ai/blog",
+    publisher: {
+      "@type": "Organization",
+      name: "LobsterMail",
+      url: "https://lobstermail.ai",
+    },
+    mainEntity: {
+      "@type": "ItemList",
+      itemListElement: posts.map((post, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        url: `https://lobstermail.ai/blog/${post.slug}`,
+        name: post.title,
+      })),
+    },
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Navbar />
       <main className="pt-32">
         {/* Header */}
@@ -98,9 +125,11 @@ export default async function BlogPage({
                     <p className="mb-3 line-clamp-2 text-sm text-secondary">
                       {post.description}
                     </p>
-                    <time className="mt-auto text-xs text-secondary">
-                      {formatDate(post.date)}
-                    </time>
+                    <div className="mt-auto flex items-center gap-2 text-xs text-secondary">
+                      <time>{formatDate(post.date)}</time>
+                      <span aria-hidden="true">&middot;</span>
+                      <span>{post.readingTime} min read</span>
+                    </div>
                   </div>
                 </div>
               </FadeIn>

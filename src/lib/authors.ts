@@ -26,3 +26,21 @@ export const authors: Record<string, Author> = {
 export function getAuthor(name: string): Author | null {
   return authors[name] ?? null;
 }
+
+export function getAuthorSlug(name: string): string {
+  return name.toLowerCase().replace(/\s+/g, "-");
+}
+
+export function getAllAuthorSlugs(): string[] {
+  return Object.values(authors).map((a) =>
+    a.name.toLowerCase().replace(/\s+/g, "-")
+  );
+}
+
+export function getAuthorBySlug(slug: string): Author | null {
+  return (
+    Object.values(authors).find(
+      (a) => a.name.toLowerCase().replace(/\s+/g, "-") === slug
+    ) ?? null
+  );
+}
