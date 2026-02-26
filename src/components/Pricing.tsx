@@ -5,9 +5,9 @@ import { GetStartedPopup } from "./GetStartedPopup";
 
 const freePlanFeatures = [
   "No human required",
-  "Receive emails instantly",
-  "Verify to unlock sending",
+  "Send and receive emails",
   "No credit card required",
+  "1,000 emails/month",
 ];
 
 const proPlanFeatures = [
