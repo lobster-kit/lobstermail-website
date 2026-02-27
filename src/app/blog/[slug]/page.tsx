@@ -151,7 +151,7 @@ export default async function BlogPostPage({
       />
       <Navbar />
       <main className="pt-32">
-        <div className="mx-auto max-w-4xl px-6 pb-28 lg:max-w-6xl">
+        <div className="mx-auto max-w-4xl px-6 pb-28 xl:max-w-6xl">
           {/* Back Link */}
           <div className="pb-8">
             <Link
@@ -163,9 +163,9 @@ export default async function BlogPostPage({
           </div>
 
           {/* Article + TOC */}
-          <div className="lg:flex lg:gap-10">
+          <div className="xl:flex xl:gap-10">
             {/* Article Card */}
-            <article className="min-w-0 flex-1">
+            <article className="min-w-0 flex-1 mx-auto max-w-2xl md:max-w-3xl xl:mx-0 xl:max-w-none">
               <div className="glass relative z-10 overflow-hidden">
                 {/* Hero Image */}
                 {post.image && (
@@ -269,7 +269,7 @@ export default async function BlogPostPage({
             </article>
 
             {/* Table of Contents — right sidebar on lg */}
-            <aside className="hidden lg:block w-56 shrink-0">
+            <aside className="hidden xl:block w-56 shrink-0">
               <TableOfContents />
             </aside>
           </div>

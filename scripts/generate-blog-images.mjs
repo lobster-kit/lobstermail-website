@@ -202,6 +202,10 @@ const images = [
     slug: "lobstermail-vs-popular-alternatives",
     prompt: `A round-bodied orange lobster with two antennae and large claws standing confidently in the center. To its left and right, four recognizable logos arranged in a row: the Gmail red-and-white envelope, the SendGrid blue hexagon, the Resend black square with white R, and the AgentMail purple envelope icon. The lobster is slightly larger than the logos. ${STYLE}`,
   },
+  {
+    slug: "how-do-i-get-an-email-for-my-openclaw",
+    prompt: `A round-bodied orange lobster with two antennae and large claws, holding up a freshly opened envelope with an @ symbol on it. A thought bubble above the lobster's head with a question mark turning into a lightbulb. ${STYLE}`,
+  },
 ];
 
 fs.mkdirSync(OUT_DIR, { recursive: true });

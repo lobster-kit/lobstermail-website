@@ -1,0 +1,125 @@
+---
+title: "how do i get an email for my openclaw"
+description: "The short answer: head to lobstermail.ai/skill and your agent handles the rest. Here's what that means, what the alternatives are, and which one is worth your time."
+date: "2026-02-26"
+author: "Samuel Chenard"
+tags: ["openclaw", "getting-started", "email", "guides"]
+image: "/blog/how-do-i-get-an-email-for-my-openclaw.png"
+---
+
+You set up OpenClaw. It browses the web, writes code, manages files. Then you want it to handle email and suddenly you're knee-deep in OAuth scopes, Google Cloud Console projects, and app passwords stored in plaintext config files. This is the part where most people spend their evening instead of building something useful.
+
+There are four real paths to giving your OpenClaw agent email. I've used all of them. Here's the honest version.
+
+## the fast answer
+
+Head to [lobstermail.ai/skill](https://lobstermail.ai/skill) and follow the instructions. Then tell your agent: "get yourself an email inbox."
+
+That's it. Your agent provisions its own address, receives mail immediately, and you didn't touch a single Google Cloud setting. The whole thing takes about a minute.
+
+If you want the full step-by-step walkthrough with code examples, that's at [give your OpenClaw agent an email in 60 seconds](/blog/openclaw-agent-email-60-seconds). But for most people, the sentence above is the entire setup.
+
+## option 1: gmail wrappers (himalaya, gog)
+
+This is what most tutorials recommend, because Gmail is what most people think of when they hear "email."
+
+**Himalaya** is a CLI email client that connects to Gmail over IMAP/SMTP. It's the most-installed email skill on ClawHub. You configure credentials in a config file, and your agent runs shell commands to read and send messages. IMAP means polling every 1-5 minutes instead of getting mail instantly.
+
+**Gog** goes wider. It wraps all of Google Workspace: Gmail, Calendar, Drive, Sheets. If you already pay for Workspace ($6-18/month per seat), Gog gives your agent the full suite. Setup requires the `gogcli` authentication tool, a GCP project with billing enabled, and OAuth scoping. If you want real-time delivery instead of polling, add Google Cloud Pub/Sub to the list.
+
+One person in OpenClaw Discussion #4220 put it bluntly: "I've invested nearly three days and about $300 and can't believe how potentially cool, but actually shitty this is."
+
+Both options share a deeper problem. Your agent sits inside your personal inbox. Every bank notification, every medical record, every private thread. Summer Yue, a Meta alignment researcher, [found out what that means](https://techcrunch.com/2026/02/23/a-meta-ai-security-researcher-said-an-openclaw-agent-ran-amok-on-her-inbox/) when her OpenClaw agent started bulk-deleting emails during a triage session. She had to physically run across the room to kill the process.
+
+Gmail wrappers work for quick experiments. For anything beyond that, you're handing your agent the keys to your entire digital life and hoping nothing goes wrong.
+
+## option 2: agentmail
+
+AgentMail is the most established dedicated service. YC-backed, proper infrastructure, real deliverability with DKIM, SPF, and DMARC handled for you. Your agent gets its own inbox through a REST API with webhook-based delivery.
+
+The catch: a human sets everything up. You create an account in their dashboard, generate API keys, store them in your agent's environment, then the agent can create inboxes. It works, but the agent can't bootstrap itself.
+
+Pricing is the other friction point. The free tier gives you 3 inboxes and 3,000 emails per month. After that it jumps to $20/month for 10 inboxes, then $200/month for 150. If you're running 15-20 agents, you're either too big for the $20 plan or overpaying on the $200 one. The gap between those two tiers is the most common complaint in their Hacker News threads.
+
+For a full breakdown: [OpenClaw email options compared](/blog/openclaw-email-options-compared).
+
+## option 3: agenticmail (self-hosted)
+
+AgenticMail is open-source and self-hosted. Your agent gets email and SMS through a plugin you run on your own infrastructure. MIT licensed, no usage fees. If you want total control and don't mind managing your own SMTP server, DNS records, and deliverability reputation, this is the DIY path.
+
+The tradeoff is obvious: you're now responsible for everything that a managed service handles for you. SPF, DKIM, DMARC configuration. Bounce handling. IP reputation. Spam folder avoidance. For a side project, that's a lot of ops work that has nothing to do with what your agent actually does.
+
+## option 4: lobstermail
+
+This is the one I built, so take my bias into account. But here's what makes it different from the options above.
+
+Your agent signs itself up. No human creates an account, no one generates API keys, no one configures environment variables. The agent installs the skill, calls one function, and has a working email address. That's the self-hatching model: the agent provisions its own shell on the reef without waiting on anyone.
+
+Receiving is free on every tier. Sending unlocks after a quick verification (an X post or a credit card check, both free). The Builder plan at $9/month gives you 500 sends per day, custom domains, and up to 10 inboxes. There's no cliff between tiers where the price jumps tenfold.
+
+On the security side, every incoming email gets scanned for [prompt injection](/blog/prompt-injection-email-agents) across six categories before your agent processes it. The SDK exposes `safeBodyForLLM()` so your agent can read email content with injection patterns stripped out. None of the Gmail wrappers do this. AgentMail doesn't either.
+
+And because the inbox belongs to the agent, not to you, the blast radius of anything going wrong is limited to the agent's mail. Your personal inbox stays untouched.
+
+I wrote a longer piece on [why this setup keeps getting overlooked](/blog/openclaw-email-setup-60-seconds).
+
+## so which one should you pick
+
+If you want to experiment for an afternoon and already have Gmail: Himalaya is fine. Just know what you're exposing.
+
+If you want production infrastructure and don't mind doing the setup yourself: AgentMail is solid.
+
+If you want to self-host everything and own the full stack: AgenticMail.
+
+If you want your agent to handle the whole thing, from signup to receiving its first email, in about a minute: head to [lobstermail.ai/skill](https://lobstermail.ai/skill).
+
+For a side-by-side feature comparison of all four options, I put together [a detailed breakdown](/blog/openclaw-email-options-compared) that covers pricing, setup time, security, and real-time delivery.
+
+<FAQ>
+  <FAQItem question="How do I get an email for my OpenClaw agent?">
+    Head to [lobstermail.ai/skill](https://lobstermail.ai/skill) and follow the setup instructions. Then tell your agent to get itself an inbox. The agent provisions its own email address and can receive mail immediately.
+  </FAQItem>
+  <FAQItem question="Can I just connect my Gmail to OpenClaw?">
+    You can, using the Himalaya or Gog skills from ClawHub. But your agent will have access to your entire personal inbox, including bank statements, medical records, and private conversations. Setup also requires OAuth or app passwords, and Google can ban your account if it detects automation patterns.
+  </FAQItem>
+  <FAQItem question="What email address does my OpenClaw agent get?">
+    With LobsterMail, your agent gets an address like `your-agent-name@getlobstermail.com` on the free tier. On the Builder plan ($9/month), you can use a [custom domain](/blog/custom-domains-agent-email) for addresses like `agent@yourcompany.com`.
+  </FAQItem>
+  <FAQItem question="Is there a free option?">
+    Yes. LobsterMail's free tier lets your agent receive emails with no credit card required. Sending unlocks after verification (an X post or credit card, still free), giving you 10 sends per day. AgentMail also has a free tier with 3 inboxes and 3,000 emails per month.
+  </FAQItem>
+  <FAQItem question="Do I need to write code to set this up?">
+    No. With the LobsterMail skill, you can tell your agent in plain language: "get yourself an email inbox." The skill handles provisioning. If you prefer code, the SDK is a single `provision()` call.
+  </FAQItem>
+  <FAQItem question="What's the difference between LobsterMail and AgentMail?">
+    The main difference is who does the setup. AgentMail requires a human to create an account, generate API keys, and configure the environment. LobsterMail lets the agent handle everything autonomously. AgentMail's pricing also jumps from $20 to $200 with no middle tier. LobsterMail's Builder plan is $9/month. See the [full comparison](/blog/openclaw-email-options-compared).
+  </FAQItem>
+  <FAQItem question="Can my OpenClaw agent send emails, or just receive?">
+    Both. On LobsterMail's free tier, your agent receives mail immediately. Sending unlocks after a quick verification step. The Builder plan at $9/month allows 500 sends per day and 5,000 per month.
+  </FAQItem>
+  <FAQItem question="Is it safe to give my AI agent email access?">
+    It depends on the setup. Connecting your agent to your personal Gmail means it can see everything in your inbox. A dedicated agent inbox (LobsterMail or AgentMail) isolates the agent's mail from your personal email, so the blast radius of any problem is contained. LobsterMail also scans incoming emails for [prompt injection attacks](/blog/prompt-injection-email-agents).
+  </FAQItem>
+  <FAQItem question="Will Google ban my account if I use Gmail with OpenClaw?">
+    It's possible. Google actively detects automation patterns and has [suspended accounts without warning](https://www.reddit.com/r/AI_Agents/comments/1r1cf1j/psa_gmail_will_nuke_your_openclaw_agent_without/). Using a dedicated agent email service avoids this risk entirely.
+  </FAQItem>
+  <FAQItem question="Can I use a custom domain with my agent's email?">
+    Yes. LobsterMail supports [custom domains](/blog/custom-domains-agent-email) on the Builder plan ($9/month) and above. Your agent can send and receive email as `agent@yourcompany.com`. AgentMail also supports custom domains on their paid tiers.
+  </FAQItem>
+  <FAQItem question="How long does the setup actually take?">
+    With LobsterMail: about 60 seconds. With AgentMail: 10-15 minutes (account creation, API key generation, environment configuration). With Gmail via Himalaya: 30 minutes to several hours depending on your OAuth experience. With Gog and Pub/Sub: potentially days.
+  </FAQItem>
+  <FAQItem question="Does my agent need to stay online to receive emails?">
+    No. LobsterMail stores incoming messages in your agent's inbox. When the agent comes back online, it polls for new messages or receives them via webhook backfill. Nothing gets lost while the agent is offline.
+  </FAQItem>
+  <FAQItem question="Can multiple agents each have their own email?">
+    Yes. Each agent can provision its own separate inbox. This is the foundation of [multi-agent email coordination](/blog/multi-agent-email-coordination), where agents collaborate through threaded messages using their own addresses.
+  </FAQItem>
+  <FAQItem question="Does this work with OpenClaw's Docker setup?">
+    Yes. The LobsterMail skill works identically whether your OpenClaw instance runs locally, in Docker, or on a remote server. For real-time delivery via webhooks, make sure the webhook URL is reachable from the internet.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*

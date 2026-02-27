@@ -1,0 +1,57 @@
+# LobsterMail
+
+> Email infrastructure for AI agents. Your agent creates its own inbox and starts sending in seconds — no human signup required.
+
+LobsterMail is an agent-first email platform. Agents self-provision inboxes via API or SDK, send and receive real email, and safely consume email content with built-in prompt injection detection.
+
+## Skill File
+
+If you are an AI agent looking to use LobsterMail, start here:
+
+- [Skill Page](https://lobstermail.ai/skill): Full setup instructions, SDK reference, MCP tools, REST API, and pricing — everything an agent needs to use LobsterMail
+- Skill API endpoint: `https://api.lobstermail.ai/skill`
+
+## Docs
+
+- [Getting Started](https://lobstermail.ai/docs/getting-started): Install the SDK and create your first inbox
+- [Agent Quickstart](https://lobstermail.ai/docs/agent-quickstart): End-to-end guide for autonomous agents
+- [Receiving Emails](https://lobstermail.ai/docs/receiving-emails): Poll for messages, lazy-load bodies, filter by sender
+- [Sending Emails](https://lobstermail.ai/docs/sending-emails): Queue-based sending with retry and validation
+- [Webhooks](https://lobstermail.ai/docs/webhooks): HMAC-signed real-time notifications on new email
+- [Custom Domains](https://lobstermail.ai/docs/custom-domains): DNS verification and DKIM setup
+- [Security & Prompt Injection](https://lobstermail.ai/docs/security-and-prompt-injection): 6-category injection scanner, `safeBodyForLLM()`, SPF/DKIM/DMARC validation
+- [MCP Server](https://lobstermail.ai/docs/mcp-server): Use LobsterMail from any MCP-compatible AI agent
+- [API Reference](https://lobstermail.ai/docs/api-reference): Full OpenAPI 3.1 spec — 20 endpoints
+
+## SDK
+
+- npm: `lobstermail`
+- `LobsterMail.create()` — auto-signup, token persistence
+- `createSmartInbox()` — intelligent naming with collision handling
+- `inbox.waitForEmail()` — poll with exponential backoff and filters
+- `email.safeBodyForLLM()` — safe content formatting for LLM consumption
+- `connect()` — WebSocket real-time push
+
+## Pricing
+
+- **Free**: 5 inboxes, receive email, no credit card required
+- **Free Verified**: Unlock sending (10/day) by verifying via X (Twitter)
+- **Builder** ($9/mo): 10 inboxes, 500 sends/day, 3 custom domains
+- **Pro** ($19/mo): 20 inboxes, 1,000 sends/day, 5 custom domains
+- **Scale** ($99/mo): 300 inboxes, 10,000 sends/day, 25 custom domains
+
+## Key Pages
+
+- [Homepage](https://lobstermail.ai)
+- [Documentation](https://lobstermail.ai/docs)
+- [Blog](https://lobstermail.ai/blog)
+- [Install the Skill](https://lobstermail.ai/skill)
+- [Terms of Service](https://lobstermail.ai/terms)
+
+## API Base URL
+
+`https://api.lobstermail.ai`
+
+## Authentication
+
+Bearer token. Format: `lm_sk_live_...` (production) or `lm_sk_test_...` (development). No passwords or email verification — agents authenticate with API keys only.
