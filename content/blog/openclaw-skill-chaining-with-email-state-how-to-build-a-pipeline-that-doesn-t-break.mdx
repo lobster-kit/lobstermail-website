@@ -1,0 +1,190 @@
+---
+title: >-
+  openclaw skill chaining with email state: how to build a pipeline that doesn't
+  break
+description: >-
+  Use LobsterMail inboxes as shared state between chained OpenClaw skills. No
+  temp files, no env vars, no brittle handoffs between steps.
+date: '2026-03-01'
+author: Samuel Chenard
+tags:
+  - openclaw
+  - guides
+  - automation
+  - infrastructure
+image: >-
+  /blog/openclaw-skill-chaining-with-email-state-how-to-build-a-pipeline-that-doesn-t-break.png
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+publish_at: '2026-03-01T12:00:00Z'
+approved_at: '2026-03-02T10:36:37.214Z'
+---
+If you've chained more than three OpenClaw skills together, you've hit the state problem. Skill A does its work, produces output, and needs to hand something meaningful to Skill B. The options aren't great.
+
+You can write to a temp file and hope the next skill runs on the same machine. You can stuff state into an environment variable and watch it truncate at 8KB. You can introduce a database — which now means your pipeline depends on external infrastructure that needs to be provisioned, migrated, and monitored separately.
+
+None of those are wrong. They're just more infrastructure than the actual work warranted.
+
+There's a pattern that sidesteps all of it: email as shared pipeline state. Each skill in the chain reads from and writes to a dedicated LobsterMail inbox. The inbox becomes the pipeline's memory. It works across machines, survives restarts, and the audit trail is free.
+
+## Why email works as a state store
+
+Three properties make email useful here that aren't obvious upfront.
+
+It's addressable by design. You can route different kinds of state to different inboxes — `research-output@lobstermail.ai` and `error-log@lobstermail.ai` aren't the same bucket. Skills subscribe to only what they care about.
+
+It's persistent across failures. Unlike process-level state or a temp file, an email survives a skill crashing and restarting. If Skill B fails halfway through, the input message is still sitting in the inbox. Re-run the skill and it picks up where it left off. That's a free retry loop with no extra code.
+
+It's asynchronous by default. Skill A finishes its work, drops a message in an inbox, exits. Skill B starts when it's ready — five seconds later or five minutes later. The handoff doesn't care. Most multi-step OpenClaw skill chaining pipelines are orchestrating work that takes seconds to minutes per step. Email delivery latency is invisible at that scale.
+
+## A concrete pipeline: research → synthesize → dispatch
+
+Three skills, three inboxes, one shared address namespace.
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create();
+
+// Each skill provisions its inbox once on first run; reuses it after
+const researchInbox = await lm.createSmartInbox({ name: 'pipeline-research' });
+const synthesisInbox = await lm.createSmartInbox({ name: 'pipeline-synthesis' });
+const errorInbox = await lm.createSmartInbox({ name: 'pipeline-errors' });
+```
+
+`LobsterMail.create()` auto-provisions a free account on first run and stores the token at `~/.lobstermail/token`. Your skill calls this at startup and moves on. No human setup step, no API key to pass around.
+
+The researcher skill runs its work and deposits state into the inbox:
+
+```typescript
+// web-researcher skill
+const results = await runResearch(urls);
+
+await researchInbox.send({
+  to: researchInbox.address,
+  subject: `batch-${batchId}`,
+  body: JSON.stringify(results),
+});
+```
+
+The synthesizer reads that deposited state, does its work, and passes it forward:
+
+```typescript
+// content-synthesizer skill
+const emails = await researchInbox.receive({ subject: `batch-${batchId}` });
+const researchData = JSON.parse(emails[0].body);
+
+const brief = await synthesize(researchData);
+
+await synthesisInbox.send({
+  to: synthesisInbox.address,
+  subject: `brief-${batchId}`,
+  body: JSON.stringify(brief),
+});
+```
+
+Each skill is stateless from its own perspective. Read input, produce output, exit. The inbox holds state between runs. The pattern scales to as many steps as you need without the chain getting harder to reason about.
+
+## Routing errors out of the happy path
+
+The email state pipeline pattern gets more interesting once you add conditional routing. Instead of a linear chain, you branch based on what's in the state message.
+
+```typescript
+const emails = await researchInbox.receive();
+
+for (const email of emails) {
+  const { status, data } = JSON.parse(email.body);
+
+  if (status === 'error') {
+    await errorInbox.send({
+      to: errorInbox.address,
+      subject: `error-${email.subject}`,
+      body: email.body,
+    });
+    continue;
+  }
+
+  await processData(data);
+}
+```
+
+Now the pipeline has a dead-letter queue built in. Errors accumulate in `pipeline-errors@lobstermail.ai` and you can review them without digging through logs. If you're also using LobsterMail for your agent's actual business email, keep these state inboxes in a separate namespace — different jobs, different addresses, no cross-contamination. See [OpenClaw business email patterns](/blog/openclaw-business-email) for how to organize that side.
+
+LobsterMail also scores incoming messages for injection risk. For pipeline state that should only ever come from your own skills, a non-zero score on a received message is worth flagging. It's a cheap sanity check that catches unexpected content early.
+
+## The objection you're probably thinking of
+
+*Why not Redis? Why not S3?*
+
+If you already have Redis in your stack and the operational overhead is genuinely zero, use it. The email pattern isn't about being clever. It's about not adding dependencies to a pipeline that doesn't already have them.
+
+LobsterMail's free tier gives your agent 1,000 emails per month. A pipeline that runs daily with five to ten skill handoffs per run stays well inside that. No provisioning, no infrastructure, no extra billing line. The agent [self-provisions its account](/blog/agent-self-signup-explained) and starts using it in under a minute.
+
+The other thing a key-value store doesn't give you is a readable audit trail. When something breaks overnight, you open the inbox and see exactly what state each skill received and when. That's genuinely harder to replicate with Redis unless you're also logging everything separately.
+
+## Inbox hygiene for long-running pipelines
+
+Inboxes accumulate messages if you don't clear them out. A pipeline running hourly will have 24 messages in the research inbox by end of day. That's usually fine — `receive()` returns unread messages by default, so old messages don't interfere. But for high-frequency runs or large payloads, a cleaner approach is provisioning a fresh inbox per pipeline run:
+
+```typescript
+const runId = Date.now();
+const stateInbox = await lm.createSmartInbox({ name: `pipeline-run-${runId}` });
+```
+
+Isolated, timestamped, and the full history is there if you need to replay a specific run. This also plays well with [multi-agent email coordination](/blog/multi-agent-email-coordination) patterns, where you might want one agent's run state visible to another agent working in parallel.
+
+<FAQ>
+  <FAQItem question="What is OpenClaw skill chaining?">
+    Skill chaining in OpenClaw means running multiple skills in sequence where the output of one skill becomes the input for the next. It's how you build multi-step agent pipelines without writing a single monolithic script.
+  </FAQItem>
+
+  <FAQItem question="Why use email for pipeline state instead of a database?">
+    Email works without provisioning external infrastructure. If your pipeline doesn't already have a database, adding one for state management is overhead a simple inbox can replace. LobsterMail's free tier handles most pipeline volumes with room to spare.
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail work with OpenClaw's skill system?">
+    Yes. The `@lobsterkit/lobstermail` npm package installs into any Node.js environment, and OpenClaw skills run in Node.js. Your skill calls `LobsterMail.create()` at startup and has a working inbox in seconds. There's also a [ClawHub skill](https://clawhub.ai/samuelchenardlovesboards/lobstermail-agent-email) if you want the agent to install it itself.
+  </FAQItem>
+
+  <FAQItem question="Is there a limit on how many inboxes I can create?">
+    The free tier gives you up to 1,000 emails per month. The Builder plan at $9/month raises the send limit to 500 emails per day. For most skill pipelines — even ones running multiple times per day — the free tier is more than enough.
+  </FAQItem>
+
+  <FAQItem question="What happens if a skill crashes mid-pipeline?">
+    The email in the upstream inbox is still there. When the skill restarts, it reads the unread message and processes it again. The email state pattern is naturally retry-friendly, unlike temp files that can be in an inconsistent state after a crash.
+  </FAQItem>
+
+  <FAQItem question="Can I use this pattern for pipelines running on different machines?">
+    Yes — this is one of the main advantages over file-based state. Skill A runs on one machine, drops state into an inbox, and Skill B picks it up from a completely different machine. The inbox is accessible from anywhere with a network connection.
+  </FAQItem>
+
+  <FAQItem question="How does LobsterMail's injection risk scoring work?">
+    Every received email gets an injection risk score based on its content. For pipeline state that should only come from your own skills, a non-zero score indicates unexpected content worth investigating. See the [security and injection docs](/docs/security-and-injection) for how the scoring works.
+  </FAQItem>
+
+  <FAQItem question="Is this pattern suitable for real-time pipelines?">
+    Not really. Email delivery adds latency — usually under a second with LobsterMail, but not sub-100ms. If your skills need sub-second handoffs, use a message queue or in-process state. For pipelines where each step takes seconds or longer, the latency disappears.
+  </FAQItem>
+
+  <FAQItem question="Can multiple skills read from the same inbox concurrently?">
+    You can, but you'd need to handle message coordination yourself using subject-based filtering or read receipts. A cleaner approach is one dedicated inbox per skill-to-skill handoff, which avoids any contention and keeps the logic easy to trace.
+  </FAQItem>
+
+  <FAQItem question="Do I need to manage API keys for each skill separately?">
+    No. `LobsterMail.create()` auto-provisions a free account on first run and persists the token to `~/.lobstermail/token`. Subsequent runs on the same machine pick up the stored token automatically. Nothing to pass between skills.
+  </FAQItem>
+
+  <FAQItem question="What's the difference between createSmartInbox and createInbox?">
+    `createSmartInbox({ name: 'my-skill' })` tries to give you a readable address like `my-skill@lobstermail.ai` and handles name collisions automatically. `createInbox()` gives you a random address like `lobster-xxxx@lobstermail.ai`. For pipeline state, smart inboxes are easier to reason about when debugging.
+  </FAQItem>
+
+  <FAQItem question="How do I keep pipeline state inboxes separate from business email inboxes?">
+    Naming convention is enough. Prefix pipeline inboxes with something consistent — `pipeline-`, `run-`, `state-` — and your business inboxes use your agent's actual name. LobsterMail doesn't enforce any hierarchy, so the separation is entirely up to your naming scheme.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
