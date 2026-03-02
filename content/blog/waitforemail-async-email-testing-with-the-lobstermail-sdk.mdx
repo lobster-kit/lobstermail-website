@@ -1,39 +1,46 @@
 ---
-title: 'waitforemail: async email testing with the lobstermail sdk'
+title: 'waitForEmail(): async email testing with the lobstermail sdk'
 description: >-
   waitForEmail() blocks until a matching email arrives in your agent's test
   inbox. Here's how to use it in Jest, Vitest, and Playwright.
-date: '2026-03-01'
+date: '2026-03-02'
 tags:
   - guides
   - email
   - infrastructure
   - testing
 image: /blog/waitforemail-async-email-testing-with-the-lobstermail-sdk.png
-author: LobsterMail Team
+author: Ian Bussières
 agent: agent-3-content
 channel: blog
 type: blog-post
-status: approved
-publish_at: '2026-03-01T19:00:00Z'
-approved_at: '2026-03-02T10:36:37.187Z'
+status: draft
+publish_at: '2026-03-02T19:00:00Z'
 ---
+Every developer who's tested email flows has written some version of this code:
 
-Testing email flows is annoying in a specific way. Not "the build is broken" annoying. More like "add a sleep and hope" annoying. Your agent triggers a signup, an email goes out, and your test has no idea when it's going to arrive. So you sprinkle in `setTimeout(3000)` and pray the email shows up before the assertion runs.
+```typescript
+await triggerSignupEmail();
+await new Promise(r => setTimeout(r, 5000));
+const emails = await getEmails();
+expect(emails[0].subject).toMatch(/welcome/i);
+```
 
-It works fine until your CI runner is having a bad day. Then the email takes four seconds and your test is red, your PR is blocked, and you're doing a rerun at 11pm wondering if this is the career you chose.
+Five seconds of sleep. Sometimes it works. Sometimes the email takes six seconds and the test goes red. You bump the timeout to eight seconds, the suite slows down, and your CI bills go up. One teammate sets it to fifteen seconds "just to be safe." Now a 40-test email suite takes ten minutes, and nobody trusts the green check anymore because everyone knows at least two of those tests passed by luck.
 
-`waitForEmail()` is LobsterMail's answer to this. It's a blocking call that holds until a matching email arrives in the inbox, or times out cleanly with an error you can actually debug. No polling loop, no arbitrary sleep.
+The root problem is that `setTimeout` has no idea when the email arrives. You're guessing. And every guess is either too short (flaky) or too long (slow). Polling loops are slightly better but still wasteful. You're burning CPU cycles checking an inbox every 500 milliseconds when the email might arrive in two seconds or twenty.
 
-## The setup
+`waitForEmail()` is the LobsterMail SDK's answer. It holds execution until a matching email actually lands in the inbox, then returns immediately. No polling loop. No arbitrary sleep. If nothing arrives within your timeout window, it throws a descriptive error that tells you exactly what it was waiting for.
 
-Install the SDK if you haven't already:
+## How it works
+
+Install the SDK:
 
 ```bash
 npm install @lobsterkit/lobstermail
 ```
 
-The pattern is simple: create a dedicated inbox, trigger the flow that sends email to it, then call `waitForEmail()` to block until the email lands.
+The pattern is three steps: create a dedicated test inbox, trigger the flow that sends email to it, then call `waitForEmail()` to block until the email lands.
 
 ```typescript
 import { LobsterMail } from '@lobsterkit/lobstermail';
@@ -41,10 +48,10 @@ import { LobsterMail } from '@lobsterkit/lobstermail';
 const lm = await LobsterMail.create();
 const inbox = await lm.createSmartInbox({ name: 'test-agent' });
 
-// Trigger your flow — signup, password reset, verification, whatever
+// Trigger whatever flow sends an email — signup, password reset, invoice
 await yourService.signUp({ email: inbox.address });
 
-// Block until the email arrives, with a 30-second timeout
+// Block until the email arrives (30-second timeout)
 const email = await inbox.waitForEmail({
   timeout: 30000,
   filter: { subject: /welcome/i },
@@ -54,11 +61,11 @@ expect(email.subject).toMatch(/welcome/i);
 expect(email.body).toContain('Confirm your account');
 ```
 
-That's the whole pattern. The inbox address is a real `@lobstermail.ai` address your service actually sends to. `waitForEmail()` holds open and returns as soon as the email lands.
+The inbox address is a real `@lobstermail.ai` address that receives real email. Your service sends to it like any other address. `waitForEmail()` resolves the instant the email arrives, not one millisecond later.
 
-## Filter options
+## Filtering incoming email
 
-Without a filter, `waitForEmail()` returns the first email that arrives after the call. That's fine for simple cases. For anything with more than one email in flight, you'll want to narrow it down:
+Without a filter, `waitForEmail()` returns the first email that shows up after the call. For simple flows, that's fine. When there's more than one email in flight, you'll want to narrow it down:
 
 ```typescript
 const email = await inbox.waitForEmail({
@@ -70,13 +77,13 @@ const email = await inbox.waitForEmail({
 });
 ```
 
-Subject filters accept strings (exact match) or regex (partial/case-insensitive). The `from` filter accepts a full address or a domain fragment, so `'@yourservice.com'` matches any sender from that domain.
+Subject filters accept strings (exact match) or regex. The `from` filter accepts a full address or a domain fragment, so `'@yourservice.com'` matches any sender on that domain.
 
-If multiple emails arrive before your filter matches, `waitForEmail()` checks each one in order and returns the first match. Emails that don't match are ignored, not consumed — subsequent calls can still see them.
+If multiple emails arrive before your filter matches, `waitForEmail()` checks each one in order and returns the first match. Non-matching emails aren't consumed. Subsequent calls can still see them.
 
-## Extracting verification codes
+## Pulling verification codes and links
 
-The most common thing you'll do once the email arrives is pull a code or link out of it:
+The most common thing you'll do once the email arrives is extract a code or a link:
 
 ```typescript
 const email = await inbox.waitForEmail({
@@ -84,7 +91,7 @@ const email = await inbox.waitForEmail({
   filter: { subject: /your verification code/i },
 });
 
-// Extract a 6-digit code from the body
+// Extract a 6-digit code from the plain text body
 const match = email.body.match(/\b(\d{6})\b/);
 if (!match) throw new Error('No verification code found in email body');
 const code = match[1];
@@ -92,7 +99,7 @@ const code = match[1];
 await yourService.verifyCode(code);
 ```
 
-`email.body` returns the plain text version. For HTML with embedded links, use `email.htmlBody`:
+`email.body` gives you the plain text version. For HTML emails with embedded links, use `email.htmlBody`:
 
 ```typescript
 const linkMatch = email.htmlBody.match(/https?:\/\/[^\s"]+\/verify[^\s"<]*/);
@@ -101,12 +108,14 @@ const verificationUrl = linkMatch[0];
 ```
 
 <Callout type="tip">
-  LobsterMail attaches injection risk scoring to every email as security metadata. You probably don't need it in most tests — but if you're writing assertions for your injection-filtering logic, the field is `email.securityMetadata.injectionRisk`.
+  Every incoming email includes injection risk scoring at `email.securityMetadata.injectionRisk`. You probably don't need it for most tests, but if you're writing assertions for your prompt injection filtering logic, the field is there.
 </Callout>
 
-## Using it in Jest and Vitest
+## Setting up Jest and Vitest
 
-`waitForEmail()` is async and throws on timeout, so it integrates cleanly with both frameworks. The main thing to configure is the test timeout. Jest's default is 5 seconds, which won't cut it for real email delivery.
+`waitForEmail()` is async and throws on timeout, so it slots into both frameworks without any adapter code. The one thing you need to configure is the test timeout. Jest's default of 5 seconds won't work for real email delivery.
+
+Set it globally:
 
 ```typescript
 // jest.config.ts
@@ -115,7 +124,7 @@ export default {
 };
 ```
 
-Or set it per test:
+Or per test:
 
 ```typescript
 it('sends a welcome email on signup', async () => {
@@ -131,13 +140,13 @@ it('sends a welcome email on signup', async () => {
 }, 60000);
 ```
 
-The SDK's `timeout` value is intentionally shorter than the Jest timeout, so the SDK throws a descriptive error before Jest's generic timeout fires. You get the inbox address, the filter you used, and how long it waited. That context matters when you're debugging a flaky test on your fourth retry.
+Set the SDK's `timeout` shorter than the framework timeout on purpose. That way the SDK throws a descriptive error (inbox address, filter used, elapsed time) before Jest's generic "Exceeded timeout" fires. When you're debugging at midnight, context in the error message saves you from guessing whether the email never sent or just arrived late.
 
-Vitest uses the same `timeout` option on `it()` and `test()`.
+Vitest uses the same `timeout` option on `it()` and `test()`. The pattern is identical.
 
-## Playwright integration
+## Playwright E2E flows
 
-For E2E tests where you're actually driving a browser through a signup flow, the inbox address goes into the form field:
+For end-to-end tests where you're driving a browser through a real signup form, the inbox address goes straight into the email field:
 
 ```typescript
 import { test, expect } from '@playwright/test';
@@ -165,11 +174,11 @@ test('email verification flow', async ({ page }) => {
 });
 ```
 
-Each test gets a fresh inbox. No cleanup needed. Disposable addresses are disposable.
+Each test gets a fresh inbox. No cleanup needed. No shared state leaking between tests. Disposable addresses are disposable, and inbox isolation means a flaky signup-flow test can't corrupt the assertions in your password-reset test running in parallel.
 
 ## Handling timeout errors
 
-When `waitForEmail()` times out, it throws an `EmailTimeoutError` with context you can act on:
+When `waitForEmail()` times out, it throws an `EmailTimeoutError` with the context you need to debug:
 
 ```typescript
 try {
@@ -184,67 +193,65 @@ try {
 }
 ```
 
-In CI I usually let the error propagate. The message in the test output points you straight at what to check in your service's email logs.
+In CI, I usually let the error propagate without catching. The test output includes the inbox address, the filter, and the wait duration. That points you straight at your service's outbound email logs instead of leaving you wondering whether the test itself was wrong. Compare that to a bare `setTimeout` failure, which tells you nothing except "the assertion ran before the data was ready."
 
-## When to use `receive()` instead
+## When receive() is the better choice
 
-`waitForEmail()` is for flows where timing is uncertain. If you're writing unit tests against emails you've already loaded as fixtures, or your test triggers email synchronously and you know it's already there, `inbox.receive()` is the right call. It returns whatever is currently in the inbox without waiting.
+`waitForEmail()` is for flows where you don't know when the email will arrive. If you're running unit tests against fixtures, or your test triggers email synchronously and the message is already sitting there, `inbox.receive()` returns whatever's in the inbox without waiting.
 
-A few other cases where `receive()` makes more sense: asserting that no email was sent (an empty array is a clean pass), or batch-asserting a set of emails that all arrive together.
-
-The [sandbox testing guide](/blog/testing-agent-email-sandbox) goes deeper on fixture patterns and running your whole email test suite without touching production infrastructure. If you're building tests for an agent that autonomously signs up for services, the [agent self-signup post](/blog/agent-self-signup-explained) covers the full provisioning flow.
+A few other cases where `receive()` fits better: asserting that no email was sent (an empty array is a clean pass), or batch-checking a set of emails that all arrive together. The [sandbox testing guide](/blog/testing-agent-email-sandbox) goes deeper on fixture patterns and running your entire email test suite without touching production infrastructure. If you're building tests for an agent that signs up for external services on its own, [agent self-signup explained](/blog/agent-self-signup-explained) covers the provisioning flow. And if you need `waitForEmail()` for human-in-the-loop approval gates rather than testing, the [waitForEmail() pattern post](/blog/the-waitforemail-pattern-human-in-the-loop-email-for-openclaw-agents) covers that use case.
 
 <FAQ>
   <FAQItem question="What does waitForEmail() do exactly?">
-    It blocks execution until an email matching your filter arrives in the specified inbox, then returns the email object. If no matching email arrives within the timeout window, it throws an `EmailTimeoutError` with details about what it was waiting for.
+    It blocks execution until an email matching your filter arrives in the specified inbox, then returns the email object. If no matching email arrives within the timeout window, it throws an `EmailTimeoutError` with the inbox address, filter, and elapsed time.
   </FAQItem>
 
   <FAQItem question="How long should I set the timeout?">
-    30 seconds is a reasonable default for most real-world email flows. For tests in CI where delivery might be slower, 45-60 seconds is safer. Set your test framework's own timeout a few seconds higher than the SDK timeout so you get the SDK's descriptive error rather than a generic framework timeout.
+    30 seconds is a reasonable default for most email flows. For CI environments where delivery might be slower, 45-60 seconds gives more headroom. Set your test framework's own timeout a few seconds higher than the SDK timeout so you get the SDK's descriptive error rather than a generic framework timeout.
   </FAQItem>
 
   <FAQItem question="What happens when waitForEmail() times out?">
-    It throws an `EmailTimeoutError` that includes the inbox address, the filter you specified, and the elapsed time. This makes it much easier to debug than a generic timeout — you can see exactly what the test was waiting for and check your service's outbound email logs accordingly.
+    It throws an `EmailTimeoutError` that includes the inbox address, the filter you specified, and how long it waited. This makes it much easier to debug than a generic timeout because you can see exactly what the test was waiting for and check your service's email logs accordingly.
   </FAQItem>
 
   <FAQItem question="Can I filter by email body content?">
-    Not directly in the filter object — the current filters are `subject` and `from`. For body-based matching, call `waitForEmail()` with a subject filter and then assert on `email.body` or `email.htmlBody` after it returns.
+    Not directly in the filter object. The current filters are `subject` and `from`. For body-based matching, call `waitForEmail()` with a subject filter, then assert on `email.body` or `email.htmlBody` after it returns.
   </FAQItem>
 
   <FAQItem question="Does waitForEmail() work with any email service sending to @lobstermail.ai?">
-    Yes. Your service just needs to send email to the inbox address. From your service's perspective it's a normal email address. There's no special integration or webhook to configure.
+    Yes. Your service just needs to send to the inbox address. From your service's perspective, it's a normal email address. No special integration or webhook required on the sending side.
   </FAQItem>
 
   <FAQItem question="How is waitForEmail() different from receive()?">
-    `receive()` returns whatever emails are currently in the inbox and exits immediately. `waitForEmail()` blocks and waits for new email to arrive. Use `receive()` when the email should already be there; use `waitForEmail()` when you don't know how long delivery will take.
+    `receive()` returns whatever emails are currently in the inbox and exits immediately. `waitForEmail()` blocks and waits for a new email to arrive. Use `receive()` when the email should already be there; use `waitForEmail()` when you don't know how long delivery will take.
   </FAQItem>
 
-  <FAQItem question="Can I wait for multiple emails at once?">
-    Not with a single `waitForEmail()` call. For multiple emails, call it multiple times with different filters, or use `receive()` in a polling loop after your flow completes. The [sandbox testing guide](/blog/testing-agent-email-sandbox) has examples of multi-email assertion patterns.
+  <FAQItem question="Can I wait for multiple emails in a single call?">
+    Not with one `waitForEmail()` call. For multiple emails, call it multiple times with different filters, or use `receive()` after your flow completes to check everything at once. The [sandbox testing guide](/blog/testing-agent-email-sandbox) has examples of multi-email assertion patterns.
   </FAQItem>
 
   <FAQItem question="Does this work on the free tier?">
-    Yes. The free tier supports 1,000 emails per month, which is more than enough for most test suites. Each test inbox receives a small number of emails, so even a large suite running daily will stay well within limits.
+    Yes. The free tier supports 1,000 emails per month, which covers most test suites comfortably. Each test inbox receives a small number of emails, so even a large suite running daily stays well within those limits.
   </FAQItem>
 
   <FAQItem question="Is there a cost to creating lots of test inboxes?">
-    Inboxes themselves don't have a per-inbox cost. You pay for emails sent and received, not for the number of addresses you provision. Creating a fresh inbox per test is the recommended pattern and doesn't add meaningful cost.
+    Inboxes themselves don't have a per-inbox cost. You pay for emails sent and received, not for the number of addresses you create. Spinning up a fresh inbox per test is the recommended pattern and doesn't add meaningful cost.
   </FAQItem>
 
   <FAQItem question="Can I use waitForEmail() in CI/CD pipelines?">
-    Yes, and it's a common use case. Make sure your pipeline's job timeout is longer than your test timeout, and that the `LOBSTERMAIL_TOKEN` environment variable is set so the SDK doesn't try to create a new account on every run.
+    Yes, and it's a common use case. Make sure your pipeline's job timeout is longer than your test timeout, and set the `LOBSTERMAIL_TOKEN` environment variable so the SDK doesn't try to auto-signup on every run.
   </FAQItem>
 
   <FAQItem question="What test frameworks does waitForEmail() support?">
-    Any framework that supports async/await works — Jest, Vitest, Mocha, Playwright, Cypress (with async support). The SDK is framework-agnostic. The main thing to configure in your framework is the test timeout.
+    Any framework that supports async/await works: Jest, Vitest, Mocha, Playwright, Cypress (with async support). The SDK is framework-agnostic. The main thing to configure is the test timeout.
   </FAQItem>
 
   <FAQItem question="Can I use a custom domain address for testing?">
-    Yes, if you have a custom domain configured with LobsterMail, you can provision test inboxes on that domain the same way. See the [Docs](/docs/getting-started) for custom domain setup.
+    Yes. If you have a custom domain configured with LobsterMail, you can provision test inboxes on that domain using the same SDK methods. See the [Docs](/docs/getting-started) for custom domain setup.
   </FAQItem>
 
-  <FAQItem question="Is LobsterMail's waitForEmail() safe to use in parallel tests?">
-    Yes. Each inbox is isolated — a `waitForEmail()` call on one inbox only sees emails delivered to that inbox. Running parallel tests with separate inboxes works cleanly with no cross-contamination.
+  <FAQItem question="Is waitForEmail() safe to use in parallel tests?">
+    Yes. Each inbox is isolated. A `waitForEmail()` call on one inbox only sees emails delivered to that specific inbox. Running parallel tests with separate inboxes works cleanly with no cross-contamination between test cases.
   </FAQItem>
 </FAQ>
 
