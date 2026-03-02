@@ -1,0 +1,155 @@
+---
+title: >-
+  inbox isolation: what it means and why every AI agent needs its own dedicated
+  inbox
+description: >-
+  Inbox isolation is the architectural principle that gives each AI agent its
+  own dedicated email address. Here's why it matters and what breaks without it.
+date: '2026-02-27'
+tags:
+  - email
+  - security
+  - infrastructure
+  - guides
+image: >-
+  /blog/inbox-isolation-what-it-means-and-why-every-ai-agent-needs-its-own-dedicated-inbox.png
+author: LobsterMail Team
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+publish_at: '2026-02-27T12:00:00Z'
+approved_at: '2026-03-02T10:36:37.190Z'
+---
+Most email problems in agent systems don't start with a bug. They start with a decision that felt fine at the time: give the agent access to an existing inbox.
+
+The developer's Gmail. The support@ account. A shared team mailbox. It's already there, credentials are available, and setting up something new sounds like a whole project. So you hand the agent the keys and move on.
+
+This works until it doesn't. And when it breaks, it breaks in ways that are hard to trace.
+
+The pattern that prevents this has a name: inbox isolation. It's not a specific product feature. It's an architectural principle for how agents should relate to email infrastructure. The term doesn't appear anywhere else in the industry — which is a problem, because agents need it defined clearly before they can apply it correctly.
+
+## What inbox isolation means
+
+Inbox isolation is the practice of giving each AI agent its own dedicated email address — one that exists solely for that agent's use, provisioned autonomously, and not shared with humans or other agents.
+
+A properly isolated inbox for an AI agent is:
+- Provisioned by the agent itself, not a human
+- Scoped to a single agent identity, not a role or team
+- Isolated from inboxes used by humans or other agents
+- Either disposable or persistent, depending on the use case
+
+What it's not: a filtered view of a shared inbox, a forwarding alias that routes into a human account, or an OAuth connection that gives the agent read access to someone else's email.
+
+The distinction matters because filtered access and dedicated ownership produce completely different security properties.
+
+## Why sharing an inbox creates real problems
+
+When an agent shares inbox access with a human, two categories of problems emerge.
+
+The first is interference. An agent reading a shared inbox will see emails that weren't meant for it — support tickets, personal messages, internal thread notifications. The agent will try to process them, and depending on how it's prompted, it may try to act on them. Agents drafting replies to personal emails because they landed in the queue. Not maliciously — just indiscriminately.
+
+The second problem is more serious: [prompt injection](/blog/security-risks-sharing-inbox). Email is text, and LLMs process text. When an agent reads email content, it's reading potential instructions from whoever sent that message. A shared inbox with broad access is a much larger attack surface than a dedicated one. Any sender who can reach the shared account can put content in front of the agent.
+
+A dedicated inbox narrows this surface. Only expected senders reach the agent. The volume is lower and the sources are more predictable.
+
+## The case for one inbox per agent, not per system
+
+There's a tempting middle ground: give all your agents one shared "agent inbox" that humans don't touch. The reasoning is usually about cost or simplicity. One inbox to manage, one set of credentials, one place to look.
+
+This doesn't hold up in practice.
+
+When multiple agents share a single inbox, you lose several things at once: the ability to tell which agent processed which email, the ability to route messages to the right agent, per-agent send limits, per-agent security policies, and failure isolation. If one agent misbehaves, all email traffic for all agents is suspect.
+
+Inbox isolation at the agent level, not the system level, is what preserves these properties. Each agent has its own address, its own receive queue, and its own send identity. Agent A and Agent B can't accidentally see each other's emails. A compromised agent doesn't expose every other agent's inbox.
+
+## What autonomous provisioning changes
+
+The historical reason agents shared inboxes was practical: creating a new email address required a human to visit Gmail or Outlook, fill out a form, verify a phone number, and hand over credentials. That's not something an agent could do for itself, and it's [why Gmail was never a real option here](/blog/why-agent-shouldnt-use-gmail).
+
+Autonomous provisioning removes that constraint. The agent calls a single function, gets back a new address, and starts using it in seconds — no human in the loop, nothing to configure.
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create();
+const inbox = await lm.createSmartInbox({ name: 'support-agent' });
+
+console.log(inbox.address); // support-agent@lobstermail.ai
+```
+
+This is what makes inbox isolation practical rather than aspirational. If provisioning is a manual process, teams cut corners and share inboxes. If provisioning takes three seconds and costs nothing, there's no reason not to isolate. The friction is what made sharing feel like the reasonable choice. Remove the friction and the calculus changes.
+
+## How isolation compounds with other protections
+
+A dedicated inbox is a prerequisite, not a complete solution.
+
+LobsterMail adds two layers on top of isolation. The first is injection risk scoring — every incoming email is scored for prompt injection indicators before the agent sees the content. High-risk payloads get flagged or quarantined. This matters because even a fully isolated inbox can receive malicious email from expected senders if those senders are compromised.
+
+The second is send-rate limiting. Each inbox has its own daily send limit, separate from every other inbox in your account. If an agent starts sending unexpectedly high volumes — a common indicator of compromise — only that agent's inbox is affected. Other agents keep running normally.
+
+The three layers together: isolation limits what comes in, injection scoring filters what the agent reads, send limits cap the damage from misbehavior. But isolation is the foundation. The other two protections only work cleanly when each agent has a clear boundary around its email traffic.
+
+## Who needs this now
+
+If you're running a single agent in a weekend project, sharing an inbox is probably fine. You're the developer and the user, you're watching what happens, and the blast radius of a mistake is contained.
+
+If you're running agents in production — handling customer requests, signing up for services, coordinating with external systems — you need isolated, [dedicated inboxes](/blog/agent-sends-from-personal-inbox). Not because it's theoretically cleaner, but because the failure modes of shared inboxes are genuinely bad when something goes wrong at scale.
+
+Start isolated. It takes three seconds longer than grabbing existing credentials, and it gives you a clean boundary that's very difficult to add retroactively once your agent is already running in production.
+
+---
+
+<FAQ>
+  <FAQItem question="What is inbox isolation for AI agents?">
+    Inbox isolation is the practice of giving each AI agent its own dedicated email address, provisioned autonomously, and not shared with humans or other agents. It's an architectural principle rather than a specific feature — the goal is to give each agent a clean, bounded email identity.
+  </FAQItem>
+
+  <FAQItem question="Is inbox isolation the same as email filtering?">
+    No. Filtering is a view on top of a shared inbox — you're still exposing all incoming mail to the agent, just sorting it differently. Isolation means the agent has its own address that only receives emails sent specifically to that agent. The agent never sees mail intended for others.
+  </FAQItem>
+
+  <FAQItem question="Why can't my agent just use a Gmail account?">
+    Gmail requires human signup, phone verification, and OAuth credentials that expire and need re-authorization. It's not designed for programmatic provisioning, and [sharing a Gmail account between an agent and a human creates real security risks](/blog/why-agent-shouldnt-use-gmail). Dedicated agent infrastructure handles autonomous provisioning and doesn't depend on a human account.
+  </FAQItem>
+
+  <FAQItem question="Does every agent need its own inbox, or can agents share one?">
+    Every agent should have its own. When agents share a single inbox, you lose per-agent send limits, the ability to route messages correctly, and failure isolation. If one agent misbehaves, you can't contain the impact without affecting other agents.
+  </FAQItem>
+
+  <FAQItem question="What's the risk of not isolating agent inboxes?">
+    The main risks are prompt injection from a larger attack surface, unintended processing of emails meant for humans or other agents, difficulty tracing which agent did what, and inability to limit or revoke a single agent's email access without affecting the whole system.
+  </FAQItem>
+
+  <FAQItem question="How does an agent provision its own inbox with LobsterMail?">
+    One call: `lm.createSmartInbox({ name: 'agent-name' })`. The SDK handles auto-signup on first use, stores the token, and returns a provisioned address immediately. No human approval, no dashboard visit required. See the [getting started guide](/docs/getting-started).
+  </FAQItem>
+
+  <FAQItem question="Can a dedicated inbox still receive malicious emails?">
+    Yes — isolation narrows the attack surface but doesn't eliminate it. LobsterMail adds injection risk scoring on top of isolation, which flags or quarantines emails with prompt injection payloads before the agent reads them. Isolation and injection scoring work together.
+  </FAQItem>
+
+  <FAQItem question="What's the difference between a dedicated inbox and an email alias?">
+    An alias forwards mail to an underlying account — usually a human's. The underlying account still receives everything, and the agent may have access to far more than just its alias. A dedicated inbox is a first-class address with its own queue, no underlying shared account, and access scoped entirely to the agent.
+  </FAQItem>
+
+  <FAQItem question="Is LobsterMail free for this use case?">
+    Yes. The free tier includes 1,000 emails/month and no credit card required. For agents that send more frequently, the Builder plan is $9/month and covers up to 10 inboxes and 500 emails/day. See [pricing](/) for current details.
+  </FAQItem>
+
+  <FAQItem question="Can I use my own domain instead of @lobstermail.ai?">
+    Yes. LobsterMail supports custom domains, so your agent's inbox can be `agent@yourdomain.com` instead of `agent@lobstermail.ai`. This is useful if you want the email address to match your product's brand. Custom domain setup is covered in the [custom domains guide](/docs/getting-started).
+  </FAQItem>
+
+  <FAQItem question="How do send limits work with isolated inboxes?">
+    Each inbox has its own daily send limit, independent of other inboxes in your account. If one agent hits its limit or gets flagged for unusual send volume, only that inbox is affected. Other agents' inboxes continue operating normally.
+  </FAQItem>
+
+  <FAQItem question="What happens if I need the same agent to have multiple addresses?">
+    An agent can provision as many inboxes as it needs — for example, one per customer interaction, or separate inboxes for different task types. Each is independent. Isolation applies at the inbox level, not the agent level, so one agent can own multiple isolated inboxes.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own inbox. [Get started with LobsterMail](/) — it's free.*
