@@ -50,7 +50,7 @@ For developers building custom agents, it's one SDK call:
 ```javascript
 import { LobsterMail } from "@lobstermail/sdk";
 
-const client = new LobsterMail();
+const client = await LobsterMail.create();
 const inbox = await client.provision({ name: "my-agent" });
 
 console.log(inbox.address);
