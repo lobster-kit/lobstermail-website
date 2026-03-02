@@ -20,6 +20,7 @@ status: approved
 publish_at: '2026-02-28T10:00:00Z'
 approved_at: '2026-03-02T10:36:37.205Z'
 ---
+
 Polling for email is a tax you pay every few seconds, whether or not anything arrives. Your agent fires off a request. Gets an empty response. Fires again. Gets nothing. Repeat until eventually, maybe, an email shows up — and your agent catches it on the next cycle.
 
 This is fine for low-stakes use cases. It's not fine when your agent is mid-flow, waiting on a verification code before it can continue. Five seconds of polling latency doesn't sound like much until your agent times out, the verification link expires, and you're debugging a cascade failure at 11pm.
