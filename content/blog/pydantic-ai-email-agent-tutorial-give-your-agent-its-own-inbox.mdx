@@ -19,6 +19,7 @@ status: approved
 publish_at: '2026-03-01T14:00:00Z'
 approved_at: '2026-03-02T10:36:37.195Z'
 ---
+
 PydanticAI solves a problem every Python developer has hit at least once: you build an agent, it returns something, and you have no idea if that something is valid structured data or a hallucinated JSON blob that vaguely resembles what you asked for. The framework makes you define your output schema first, validates every response against it, and hands your code typed Pydantic objects instead of raw strings. That's genuinely useful.
 
 But here's what PydanticAI doesn't give you: email. If your agent needs to receive a verification code from a service it just signed up for, handle inbound support requests, or send a formatted report, you're wiring it yourself. The standard path means OAuth flows, SMTP setup, or a transactional email service that was designed for marketing teams and expects a human to configure domain records before anything works.
@@ -119,7 +120,7 @@ class EmailClassification(BaseModel):
     subject: str
     category: str = Field(description="One of: question, bug, noise")
     reply_body: str = Field(description="The reply text. Empty string if category is noise.")
-    confidence: float = Field(ge=0.0, le=1.0)
+    confidence: float = Field(ge=0.0, le=100.0)
 
 triage_agent = Agent(
     "anthropic:claude-sonnet-4-6",
@@ -232,7 +233,7 @@ For more context on how agents use email beyond the basics, see [what agents act
   </FAQItem>
 
   <FAQItem question="Can I run multiple PydanticAI agents with separate inboxes under one account?">
-    Yes. Each inbox is independent and scoped to its own ID. You can have a triage agent, a report-sending agent, and an invoice-parsing agent all running under a single LobsterMail account with separate addresses. The free tier gives you one inbox; Builder and above support up to 10.
+    Yes. Each inbox is independent and scoped to its own ID. You can have a triage agent, a report-sending agent, and an invoice-parsing agent all running under a single LobsterMail account with separate addresses. The free tier gives you one inbox; the Builder plan ($9/mo) supports up to 10.
   </FAQItem>
 
   <FAQItem question="What's the difference between smart inboxes and regular inboxes?">
