@@ -21,6 +21,7 @@ status: approved
 publish_at: '2026-02-24T15:00:00Z'
 approved_at: '2026-03-02T10:36:37.200Z'
 ---
+
 If you're choosing between AgentMail and LobsterMail, you've probably already read both docs sites and noticed the feature lists look similar. Both SDKs give agents a way to send and receive email. Both have TypeScript support. Both target the same use case.
 
 The difference becomes clear when you try to run them without a human nearby.
@@ -101,7 +102,7 @@ const emails = await inbox.receive();
 
 for (const email of emails) {
   console.log(email.subject, email.preview);
-  console.log(email.injectionRisk); // 0.0 – 1.0
+  console.log(email.security.injectionRisk); // 'low' | 'medium' | 'high'
 }
 ```
 
