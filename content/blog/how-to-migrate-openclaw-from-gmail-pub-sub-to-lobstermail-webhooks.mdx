@@ -3,8 +3,8 @@ title: how to migrate openclaw from gmail pub/sub to lobstermail webhooks
 description: >-
   Replace the Google Cloud Console setup, OAuth tokens, and watch renewals with
   a single SDK call. Step-by-step migration guide for OpenClaw developers.
-date: '2026-02-27'
-author: Samuel Chenard
+date: '2026-03-02'
+author: Ian Bussières
 tags:
   - openclaw
   - email
@@ -14,34 +14,32 @@ image: /blog/how-to-migrate-openclaw-from-gmail-pub-sub-to-lobstermail-webhooks.
 agent: agent-3-content
 channel: blog
 type: blog-post
-status: approved
-publish_at: '2026-02-27T07:00:00Z'
-approved_at: '2026-03-02T10:36:37.170Z'
+status: draft
+publish_at: '2026-03-02T07:00:00Z'
 ---
+If you built your OpenClaw agent's email handling on Gmail Pub/Sub, you've sat in at least one of these chairs: a half-configured Google Cloud project at 11pm, a `gog gmail watch serve` process that silently lapsed over the weekend, or an OAuth token refresh that [broke something in production](/blog/agent-gmail-token-breaking). The setup works when all five moving parts cooperate. The problem is the six ways it stops cooperating without telling you.
 
-If you built OpenClaw email handling on Gmail Pub/Sub, you've been in at least one of these places: a half-configured Google Cloud project at 11pm, a `gog gmail watch serve` process that silently lapsed over the weekend, or an OAuth token refresh that [broke something in production](/blog/agent-gmail-token-breaking). The setup works when everything goes right. The problem is all the ways it can quietly go wrong without telling you.
+This guide walks through replacing that whole chain with LobsterMail webhooks. Your agent hatches its own inbox, you register a single endpoint, and Google leaves the picture entirely.
 
-This guide walks through replacing that whole chain with LobsterMail webhooks. The agent hatches its own inbox, you register one endpoint, and Google is completely out of the picture.
-
-If you want the conceptual case for dropping Gmail entirely, [this post covers it](/blog/openclaw-email-without-pubsub). This one is for people who have the Gmail setup running today and want concrete steps to switch.
+If you want the conceptual case for dropping Gmail first, [that post is here](/blog/openclaw-email-without-pubsub). This one is for people who have the Pub/Sub setup running today and want concrete, step-by-step instructions to switch.
 
 ## What you're currently maintaining
 
-The standard OpenClaw Gmail setup is a chain of five dependencies:
+The standard OpenClaw Gmail email setup is a chain of five dependencies:
 
-1. A Gmail account (created by a human)
-2. A Google Cloud project with Pub/Sub API enabled
+1. A Gmail account (created by a human, not the agent)
+2. A Google Cloud project with the Pub/Sub API enabled
 3. A push subscription pointing at a public HTTPS endpoint
 4. `openclaw webhooks gmail run` (or the underlying `gog gmail watch serve`) keeping the watch alive
-5. OAuth tokens that expire and need renewal
+5. OAuth tokens that expire and need periodic renewal
 
-When all five are working, your agent gets near-real-time email notifications. When any one breaks, you're diagnosing a chain. Was it the token? Did the watch lapse? Is the subscription still pointed at the right URL? Google's error messages won't tell you which link failed.
+When all five are healthy, your agent gets near-real-time email notifications. When any single link breaks, you're diagnosing a chain. Was the token stale? Did the watch lapse? Is the subscription still pointing at the right URL? Google's error messages are famously unhelpful here. The `invalid_grant` error alone can mean [six different things](/blog/agent-gmail-token-breaking).
 
-The structural issue is that this stack was designed for humans. You created the Gmail account. You enabled the API. You granted OAuth consent. Your agent is borrowing human infrastructure and calling it autonomous.
+The structural issue is deeper than any individual failure. This stack was designed for humans. You created the Gmail account. You enabled the API. You granted OAuth consent. Your agent is borrowing human infrastructure and calling it autonomous.
 
 ## What the LobsterMail version looks like
 
-The agent provisions its own inbox. No Cloud Console, no OAuth flow, no human step.
+The agent provisions its own inbox. No Cloud Console, no OAuth flow, no human step at all.
 
 ```typescript
 import { LobsterMail } from '@lobsterkit/lobstermail';
@@ -63,12 +61,12 @@ const webhook = await lm.createWebhook({
 ```
 
 <Callout type="warning">
-  The webhook secret is only returned once on creation. Store it in an environment variable immediately — you can't retrieve it again.
+  The webhook secret is only returned once on creation. Store it in an environment variable immediately. If you lose it, you'll need to delete and recreate the webhook.
 </Callout>
 
-That's the entire provisioning step. LobsterMail pushes to your endpoint when email arrives. No watch renewal cycle, no token refresh logic, no Google dependency.
+That's the entire provisioning step. LobsterMail pushes to your endpoint the moment email arrives. No watch renewal cycle. No token refresh logic. No Google dependency.
 
-## The migration
+## The migration, step by step
 
 **Step 1: Install the SDK**
 
@@ -99,13 +97,13 @@ const webhook = await lm.createWebhook({
   events: ['email.received'],
 });
 
-// Add to your env vars — won't be shown again
+// Save to your env vars immediately — won't be shown again
 // LOBSTERMAIL_WEBHOOK_SECRET=webhook.secret
 ```
 
 **Step 4: Update your email handler**
 
-The LobsterMail webhook payload is simpler than the Gmail Pub/Sub format:
+The LobsterMail webhook payload is simpler than Gmail's Pub/Sub format. Here's what arrives when your agent receives an email:
 
 ```json
 {
@@ -121,7 +119,7 @@ The LobsterMail webhook payload is simpler than the Gmail Pub/Sub format:
 }
 ```
 
-Always verify the signature before processing:
+Always verify the HMAC signature before processing. This is where most webhook handlers fail silently. If you parse the body before verifying, the bytes change shape and the signature won't match. For a deep dive on this specific issue, see [the HMAC verification tutorial](/blog/openclaw-inbound-email-webhook-setup-with-hmac-verification).
 
 ```typescript
 import { createHmac } from 'node:crypto';
@@ -133,30 +131,33 @@ function verifySignature(body: string, signature: string, secret: string): boole
   return expected === signature;
 }
 
-// In your HTTP handler (Express, Hono, Fastify — whatever you're using)
-app.post('/hooks/email', async (req, res) => {
+// In your HTTP handler (Express, Hono, Fastify, whatever you're using)
+app.post('/hooks/email', express.raw({ type: 'application/json' }), async (req, res) => {
   const signature = req.headers['x-lobstermail-signature'] as string;
 
-  if (!verifySignature(req.rawBody, signature, process.env.LOBSTERMAIL_WEBHOOK_SECRET!)) {
+  if (!verifySignature(req.body, signature, process.env.LOBSTERMAIL_WEBHOOK_SECRET!)) {
     return res.status(401).send('Invalid signature');
   }
 
-  const { event, data } = req.body;
+  const { event, data } = JSON.parse(req.body.toString());
 
   if (event === 'email.received') {
-    await handleEmail(data);
+    // Respond immediately, process in background
+    handleEmail(data).catch(console.error);
   }
 
   res.status(200).send('ok');
 });
 ```
 
+Note the use of `express.raw()` on the webhook route, not `express.json()`. Raw body first, verify, then parse. That order is load-bearing.
+
 **Step 5: Test it**
 
-Send a test email to your `inbox.address`. You should get a webhook delivery within a few seconds. Confirm your handler processes it correctly before moving on.
+Send a test email to your new `inbox.address`. You should get a webhook delivery within a few seconds. If you want to iterate on your handler without sending a new email every time, [set up ngrok with replay](/blog/how-to-debug-lobstermail-webhooks-locally-with-ngrok-replay) for a much faster loop.
 
 <Callout type="tip">
-  Run both setups in parallel for a day or two before decommissioning Gmail. It costs nothing and gives you confidence in the new setup before you pull the plug on the old one.
+  Run both setups in parallel for a day or two before decommissioning Gmail. It costs nothing on the free tier and gives you confidence in the new pipeline before you pull the plug on the old one.
 </Callout>
 
 **Step 6: Decommission the Gmail setup**
@@ -168,45 +169,39 @@ Once LobsterMail is confirmed working:
 - Revoke the OAuth token from your Google account settings
 - Archive or delete the Gmail account if it was created solely for the agent
 
-## What changes
+## What changes (and what doesn't)
 
-The inbox address changes. You'll have an `@lobstermail.ai` address instead of a Gmail one. Update any external services that send to the old address — your agent logic downstream stays the same.
+The inbox address changes. Your agent will have an `@lobstermail.ai` address instead of a Gmail one. Update any external services that send to the old address. Everything downstream in your agent logic stays the same.
 
-One thing to watch: the webhook payload includes a 200-character preview, not the full body. If your existing handler relied on `--include-body` from the Pub/Sub setup, fetch the full email using the `emailId`:
+One thing worth noting: the webhook payload includes a 200-character preview, not the full body. If your existing handler relied on the full email content from the Pub/Sub notification, fetch the complete message using the `emailId`:
 
 ```typescript
 if (event === 'email.received') {
-  // Get the full body when you need it
   const email = await lm.getEmail(data.emailId);
   await handleEmail(email);
 }
 ```
 
-Everything else — how your agent processes, responds to, or routes email — stays exactly as it was.
+For routing decisions based on subject line or sender, the preview is usually enough. Only fetch the full body when your agent actually needs to read the content.
 
-## Retry behavior
+## Retry behavior and reliability
 
-LobsterMail retries failed webhook deliveries with exponential backoff, up to 10 attempts. If your endpoint is briefly unavailable, emails aren't lost. After 10 consecutive failures the webhook is auto-disabled. You can re-enable it:
+LobsterMail retries failed webhook deliveries with exponential backoff, up to 10 attempts over roughly 24 hours. If your endpoint is briefly unavailable, emails aren't lost. After 10 consecutive failures the webhook is auto-disabled to prevent noise. You can re-enable it:
 
 ```typescript
-// List webhooks to check status
 const webhooks = await lm.listWebhooks();
 
-// Re-enable via API if needed
-await fetch('https://api.lobstermail.ai/v1/webhooks/wh_abc123', {
-  method: 'PATCH',
-  headers: { Authorization: `Bearer ${process.env.LOBSTERMAIL_API_KEY}` },
-  body: JSON.stringify({ enabled: true }),
-});
+// Re-enable via API
+await lm.updateWebhook('wh_abc123', { enabled: true });
 ```
 
-Compare that to a lapsed Gmail watch, which fails silently — your agent just stops receiving email and you find out when something downstream breaks.
+Compare that to a lapsed Gmail watch, which fails silently. Your agent stops receiving email and you discover it when something downstream breaks, often days later.
 
-## What I didn't expect
+## What surprised me about the switch
 
-The mechanical migration is straightforward. What's less obvious until you've done it is how much the mental model simplifies. There's no watch renewal cron to monitor. No question of whether the OAuth token is still valid. No Google Cloud Console tab to keep bookmarked. The agent has an inbox. Email arrives. The webhook fires. That's the whole model.
+The mechanical migration is straightforward. What's less obvious until you've done it is how much the operational model simplifies. There's no watch renewal cron to monitor. No question of whether the OAuth token is still valid. No Google Cloud Console tab bookmarked for emergencies. The agent has an inbox. Email arrives. The webhook fires. That's the whole model.
 
-If the Gmail setup is running smoothly and you're not actively touching it, there's no emergency. But if you're debugging a broken watch, starting a new project, or tired of the maintenance surface area, this is a reasonable morning to make the switch. The free tier covers 1,000 emails per month with no credit card required.
+If your Gmail setup is running smoothly and you're not actively touching it, there's no emergency. But if you're debugging a broken watch, starting a new agent, or tired of the five-dependency chain, this is a reasonable morning to make the switch. The free tier covers 1,000 emails per month with no credit card required.
 
 ---
 
@@ -214,19 +209,19 @@ If the Gmail setup is running smoothly and you're not actively touching it, ther
 
 <FAQ>
   <FAQItem question="What is OpenClaw Gmail Pub/Sub and why do people migrate away from it?">
-    Gmail Pub/Sub is how OpenClaw receives real-time email notifications using Google Cloud's push subscription system. People migrate away because it requires ongoing maintenance: watch renewals every 7 days, OAuth token management, and a publicly accessible HTTPS endpoint configured before Google will push anything to you.
+    Gmail Pub/Sub is how OpenClaw receives real-time email notifications using Google Cloud's push subscription system. People migrate away because it requires ongoing maintenance: watch renewals every 7 days, OAuth token management, and a publicly accessible HTTPS endpoint configured through the Google Cloud Console.
   </FAQItem>
 
   <FAQItem question="Do I need a Google Cloud account to use LobsterMail?">
-    No. LobsterMail has no Google dependency at all. Your agent provisions its own inbox through the LobsterMail SDK — no Cloud Console, no service account, no Pub/Sub subscription involved.
+    No. LobsterMail has no Google dependency. Your agent provisions its own inbox through the LobsterMail SDK. No Cloud Console, no service account, no Pub/Sub subscription involved.
   </FAQItem>
 
   <FAQItem question="How does LobsterMail deliver emails in real time?">
-    LobsterMail sends an HTTP POST to your registered webhook URL when an email arrives. You register the webhook once via `lm.createWebhook()` and it runs until you delete it — no renewal required.
+    LobsterMail sends an HTTP POST to your registered webhook URL when an email arrives. You register the webhook once via `lm.createWebhook()` and it runs until you delete it. No renewal required, unlike Gmail's 7-day watch expiry.
   </FAQItem>
 
   <FAQItem question="Is LobsterMail free?">
-    The free tier is $0/month with no credit card required, and includes 1,000 emails per month. The Builder plan is $9/month and adds up to 10 inboxes and 5,000 emails per month.
+    The free tier is $0/month with no credit card required and includes 1,000 emails per month. The Builder plan is $9/month and adds up to 10 inboxes and 5,000 emails per month.
   </FAQItem>
 
   <FAQItem question="Will I lose emails during the migration?">
@@ -234,27 +229,27 @@ If the Gmail setup is running smoothly and you're not actively touching it, ther
   </FAQItem>
 
   <FAQItem question="Does LobsterMail send the full email body in the webhook payload?">
-    The webhook payload includes a 200-character preview. Use `lm.getEmail(emailId)` to retrieve the full body when you need it — the `emailId` is included in every webhook payload.
+    The webhook payload includes a 200-character preview. Use `lm.getEmail(emailId)` to retrieve the full body when you need it. The `emailId` is included in every webhook payload.
   </FAQItem>
 
   <FAQItem question="What happens if my webhook endpoint goes down temporarily?">
-    LobsterMail retries with exponential backoff up to 10 times before auto-disabling the webhook. You can re-enable a disabled webhook via the API. Emails are not lost during retry attempts.
+    LobsterMail retries with exponential backoff up to 10 times over roughly 24 hours before auto-disabling the webhook. You can re-enable a disabled webhook via the API. Emails are not lost during retry attempts.
   </FAQItem>
 
   <FAQItem question="Does my agent's email address change when I migrate?">
-    Yes. You'll get an `@lobstermail.ai` address instead of a Gmail one. Update any external services that send to the old address — everything downstream in your agent logic stays the same.
+    Yes. You'll get an `@lobstermail.ai` address instead of a Gmail one. Update any external services that send to the old address. Everything downstream in your agent logic stays the same.
   </FAQItem>
 
   <FAQItem question="Do I need to renew anything after setup?">
-    No. Unlike Gmail's watch subscriptions (which expire every 7 days), LobsterMail webhooks don't expire or require renewal. Register once, and it runs.
+    No. Unlike Gmail's watch subscriptions (which expire every 7 days), LobsterMail webhooks don't expire or require renewal. Register once and it runs.
   </FAQItem>
 
   <FAQItem question="What if I'm running multiple OpenClaw agents on one Gmail account?">
     LobsterMail supports multiple inboxes per account. Each agent can have its own dedicated address. The Builder plan ($9/month) supports up to 10 inboxes.
   </FAQItem>
 
-  <FAQItem question="Can I use a custom domain instead of @lobstermail.ai?">
-    Custom domain support is on the roadmap. Current inboxes use the `@lobstermail.ai` domain.
+  <FAQItem question="Why does my HMAC signature verification keep failing?">
+    Almost always because the request body was parsed before verification. Use `express.raw()` (not `express.json()`) on your webhook route so the body is still raw bytes when you compute the HMAC. See the [full HMAC verification guide](/blog/openclaw-inbound-email-webhook-setup-with-hmac-verification) for all common causes.
   </FAQItem>
 
   <FAQItem question="My Gmail Pub/Sub setup is working fine right now. Is it worth switching?">
