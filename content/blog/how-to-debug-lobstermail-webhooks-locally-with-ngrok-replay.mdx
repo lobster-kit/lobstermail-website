@@ -1,0 +1,217 @@
+---
+title: how to debug lobstermail webhooks locally with ngrok replay
+description: >-
+  Step-by-step guide to testing LobsterMail webhooks on localhost using ngrok's
+  tunnel and request replay so you can fix handler bugs without sending another
+  test email.
+date: '2026-02-27'
+tags:
+  - guides
+  - infrastructure
+  - troubleshooting
+image: /blog/how-to-debug-lobstermail-webhooks-locally-with-ngrok-replay.png
+author: LobsterMail Team
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+publish_at: '2026-02-27T17:00:00Z'
+approved_at: '2026-03-02T10:36:37.202Z'
+---
+Something breaks in your webhook handler. You don't know if it's the HMAC verification, the payload parsing, or something in between. Your agent is silently dropping emails. The only way to reproduce it is to send another email, wait, check logs, realize you're missing a header, and start over.
+
+There's a better loop.
+
+This guide covers local webhook debugging for LobsterMail end-to-end: ngrok tunnel setup, signature verification (where most handlers quietly fail), and the replay button that will save you a few hours of "send another test email" cycles.
+
+## Why webhooks need a real debugging setup
+
+Polling is forgiving. If your polling handler crashes, you just poll again on the next interval. Webhooks are not. The delivery attempt happens, your server returns a non-2xx status, and LobsterMail queues a retry. After 10 consecutive failures, the webhook is automatically disabled.
+
+That failure mode is invisible unless you're watching logs in real time. And it's hard to reproduce locally without either a public tunnel or a lot of manual curl commands.
+
+If you're still deciding whether webhooks are even right for your setup, [webhooks vs. polling for agent email](/blog/webhooks-vs-polling-email) covers the tradeoffs. For agents that need low-latency email handling, webhooks are almost always the right call. The debugging setup is a small one-time investment.
+
+The right local setup gives you three things:
+- A stable public HTTPS URL that forwards to your localhost
+- Full request inspection (headers, body, timing) without touching production code
+- One-click replay so you can trigger the same payload as many times as you need while you iterate
+
+## Step 1: Get ngrok running
+
+Install ngrok, start your local server on whatever port you're using — let's say 3000 — and expose it:
+
+```bash
+ngrok http 3000
+```
+
+ngrok prints two forwarding URLs. Use the `https://` one. It'll look something like `https://abc123.ngrok-free.app`. Copy it.
+
+Then open `http://localhost:4040` in a browser tab. That's ngrok's web inspector. Keep it open. You'll live in that tab for the rest of this session.
+
+## Step 2: Register the webhook
+
+Point LobsterMail at your ngrok URL. The path is whatever your handler listens on:
+
+```typescript
+import LobsterMail from 'lobstermail';
+
+const lm = new LobsterMail();
+
+const webhook = await lm.createWebhook({
+  url: 'https://abc123.ngrok-free.app/hooks/lobstermail',
+  events: ['email.received'],
+});
+
+console.log(webhook.secret); // whsec_... — store this immediately
+```
+
+The secret is returned only once. Put it in your `.env` now. If you lose it, you'll need to delete and recreate the webhook — which is annoying but not catastrophic.
+
+## Step 3: Verify the signature (and the order that matters)
+
+This is where most webhook handlers fail silently. Every request from LobsterMail includes an `X-LobsterMail-Signature` header: an HMAC-SHA256 signature computed over the raw request body. If you parse the body before verifying — which most Express middleware does automatically — the verification will fail because the bytes have already changed shape.
+
+Here's a working handler:
+
+```typescript
+import { createHmac } from 'node:crypto';
+import express from 'express';
+
+const app = express();
+
+// express.raw() on this route, NOT express.json()
+app.post('/hooks/lobstermail', express.raw({ type: 'application/json' }), (req, res) => {
+  const signature = req.headers['x-lobstermail-signature'] as string;
+  const secret = process.env.LOBSTERMAIL_WEBHOOK_SECRET!;
+
+  const expected = createHmac('sha256', secret)
+    .update(req.body) // Buffer, not a parsed object
+    .digest('hex');
+
+  if (expected !== signature) {
+    console.error('Signature mismatch');
+    res.status(401).send('Unauthorized');
+    return;
+  }
+
+  const payload = JSON.parse(req.body.toString());
+  console.log('Event:', payload.event);
+  console.log('Email ID:', payload.data.emailId);
+  console.log('From:', payload.data.from);
+
+  res.status(200).send('OK');
+});
+
+app.listen(3000);
+```
+
+The specific failure mode worth understanding: if you use `express.json()` on the webhook route, `req.body` becomes a JavaScript object. The HMAC you compute over that object's serialized form won't match the signature computed over the original raw bytes. Your server returns 401. LobsterMail retries with exponential backoff. After 10 retries, it disables the webhook. You spend the next hour wondering why your agent stopped responding to emails.
+
+Raw body first, then verify, then parse. That order is load-bearing.
+
+## Step 4: Trigger a real delivery
+
+Send a test email to one of your agent's inboxes. You can do this via the SDK, or just send an email directly to whatever address your agent provisioned.
+
+Switch to `localhost:4040`. The request appears in real time: status code, every header, full body, response time. If your handler returned 200, great. If it returned 401, you can see exactly what came in and start debugging against the real payload.
+
+## Step 5: Use the replay button
+
+This is the part that makes the whole setup worth it. In the ngrok inspector, find the request and click **Replay**. ngrok resends the exact same HTTP request — same headers, same body, same signature — to your local server.
+
+Now your loop is:
+1. Fix a bug in your handler
+2. Click replay
+3. Check the response
+4. Repeat
+
+No sending another email each time. No waiting for an external event. Same payload, over and over, until the handler works.
+
+There's also **Replay with modifications**, which lets you edit the JSON before resending. Useful for testing edge cases: what happens if `emailId` is missing? What if `event` is an unexpected type? You can manufacture those cases without any code changes on the LobsterMail side.
+
+One practical note: the free ngrok tier assigns a new random URL every time you restart it. That means re-registering your webhook each session. Some alternatives (Thunderhooks, Pinggy) offer stable persistent URLs that don't change between restarts, which removes that friction for longer debugging runs.
+
+## What happens when things fail
+
+If your local server isn't running — or ngrok isn't — LobsterMail will see a connection refused and start the retry sequence. That's expected during development. Just re-enable the webhook when you're back:
+
+```
+PATCH /v1/webhooks/:id
+{ "enabled": true }
+```
+
+Or check what's currently registered:
+
+```typescript
+const webhooks = await lm.listWebhooks();
+```
+
+The retry window is up to 10 attempts with exponential backoff, so you have time to get your server back up without losing the delivery. For a sandbox inbox where you're doing repeated integration testing, [the agent email sandbox guide](/blog/testing-agent-email-sandbox) covers how to set up isolated inboxes so multiple developers aren't stepping on each other's test payloads.
+
+## The full loop, condensed
+
+1. Start your local handler
+2. Start ngrok, grab the HTTPS URL
+3. Register (or update) your LobsterMail webhook with that URL
+4. Trigger one real email to get the first payload into ngrok's inspector
+5. Fix bugs, replay, fix bugs, replay
+6. When the handler is working, deploy and update the webhook URL to your production endpoint
+
+The replay step at 5 is what collapses a 2-hour debugging session into 20 minutes.
+
+---
+
+<FAQ>
+  <FAQItem question="Does LobsterMail retry failed webhook deliveries?">
+    Yes. LobsterMail retries up to 10 times with exponential backoff if your endpoint returns a non-2xx status or times out after 10 seconds. After 10 consecutive failures the webhook is automatically disabled and needs to be re-enabled via the API.
+  </FAQItem>
+
+  <FAQItem question="Can I use ngrok's free tier for LobsterMail webhook testing?">
+    Yes. The free tier works fine. The main limitation is that your tunnel URL changes every time you restart ngrok, so you'll need to update your registered webhook URL each session. Paid tiers offer stable custom domains that don't rotate.
+  </FAQItem>
+
+  <FAQItem question="Why does my HMAC signature verification keep failing?">
+    Almost always because the request body was parsed before verification. Use `express.raw()` (not `express.json()`) on your webhook route so `req.body` is still a raw Buffer when you compute the HMAC. Parsing first transforms the bytes, and the resulting signature won't match.
+  </FAQItem>
+
+  <FAQItem question="Where do I find my webhook secret after creating it?">
+    The secret is only returned once — at creation time. If you didn't save it, you'll need to delete the webhook and create a new one. There's no way to retrieve it after the fact.
+  </FAQItem>
+
+  <FAQItem question="How do I replay a webhook request in ngrok?">
+    Open ngrok's web inspector at `http://localhost:4040`, find the request in the list, and click **Replay**. ngrok resends the exact same request — headers, body, and signature — to your local server. Use **Replay with modifications** to edit the payload before resending.
+  </FAQItem>
+
+  <FAQItem question="What events does LobsterMail send via webhook?">
+    Currently `email.received`, which fires when a new email is delivered to one of your agent's inboxes. More event types are planned. See the [docs](/docs/getting-started) for the latest list.
+  </FAQItem>
+
+  <FAQItem question="How do I re-enable a disabled webhook?">
+    Send a `PATCH /v1/webhooks/:id` request with `{ "enabled": true }`. You can also list your webhooks with `lm.listWebhooks()` to confirm the current state and find the webhook ID.
+  </FAQItem>
+
+  <FAQItem question="Can I test LobsterMail webhooks without ngrok?">
+    Yes. Any tool that creates a public HTTPS tunnel to localhost works: Cloudflare Tunnel, Pinggy, localtunnel, or a small VPS running a reverse proxy. The ngrok inspector's replay feature is the main differentiator — some alternatives have it, some don't.
+  </FAQItem>
+
+  <FAQItem question="What's in the LobsterMail webhook payload?">
+    The payload includes `event` (e.g., `email.received`), `timestamp`, and a `data` object with `emailId`, `inboxId`, `from`, `subject`, and a `preview` of the first 200 characters of the email body. Use `emailId` to fetch the full message if you need it.
+  </FAQItem>
+
+  <FAQItem question="Does the webhook URL need to use HTTPS?">
+    Yes. LobsterMail requires HTTPS for webhook endpoints. That's one of the reasons ngrok is useful for local development — it provides a valid HTTPS URL that tunnels to your plain HTTP localhost server.
+  </FAQItem>
+
+  <FAQItem question="How do I delete a webhook I no longer need?">
+    Call `lm.deleteWebhook('wh_abc123')` with the webhook ID, or send `DELETE /v1/webhooks/:id` directly to the API.
+  </FAQItem>
+
+  <FAQItem question="Is LobsterMail free to use for webhook testing?">
+    Yes. The free plan covers send and receive with no credit card required, which is enough to set up a test inbox and trigger real deliveries for webhook debugging. [Get started here](/).
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own inbox. [Get started with LobsterMail](/) — free, no credit card.*
