@@ -1,0 +1,233 @@
+---
+title: giving your amazon bedrock agent an email address with lambda action groups
+description: >-
+  How to wire up LobsterMail as an Amazon Bedrock action group via Lambda — so
+  your agent can send, receive, and self-provision email autonomously.
+date: '2026-02-26'
+tags:
+  - guides
+  - infrastructure
+  - automation
+  - getting-started
+image: >-
+  /blog/giving-your-amazon-bedrock-agent-an-email-address-with-lambda-action-groups.png
+author: LobsterMail Team
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+publish_at: '2026-02-26T19:00:00Z'
+approved_at: '2026-03-02T10:36:37.217Z'
+---
+Bedrock makes it surprisingly clean to give your agent tools. Action groups, Lambda functions, function definitions — the framework is well-designed once you understand it. But email is always the part that stalls things out.
+
+The native path requires SES domain verification, IAM send permissions, and a completely separate setup for receiving. You can do it, but it takes the better part of an afternoon and involves more console screens than you'd expect. Most teams either skip agent email entirely or hard-code a shared mailbox that no single agent actually owns.
+
+LobsterMail is a different approach. The SDK handles provisioning, delivery, and receiving through a single API. Your agent calls a Lambda action, gets its own `@lobstermail.ai` address, and starts sending and receiving within the same conversation turn. No SES setup, no domain configuration, no SMTP credentials.
+
+## Action groups in 60 seconds
+
+When a Bedrock agent decides it needs to do something — look up a record, call an API, send an email — it identifies the right action, assembles the parameters, and invokes a Lambda function through an action group you've defined.
+
+You tell Bedrock what functions exist (name, description, parameters), and Bedrock handles the routing. The Lambda receives the function name and parameters, does the work, and returns a structured response the agent can interpret. That's the whole model.
+
+For email, this means you define three functions: one to provision an inbox, one to send, one to receive. The Lambda calls LobsterMail's SDK for each. The agent coordinates the rest.
+
+## Why the native path is annoying
+
+SES works fine for sending from a pre-verified domain. But Bedrock agents often need to self-provision an address on the fly — catch a verification code from a third-party service, or send from a unique address for tracking. SES doesn't support that pattern without manual setup ahead of time.
+
+Receiving is even more involved. You'd need SES receipt rules, an S3 bucket to store incoming messages, another Lambda to process them, and polling logic on top. By the time it works, you've got a four-Lambda chain for something that should be a single function call.
+
+LobsterMail compresses all of that into one SDK. The agent [hatches its own inbox](/blog/agent-self-signup-explained) at runtime with no human in the loop.
+
+## Setting up the Lambda function
+
+Create a Node.js 20.x Lambda function. Add `@lobsterkit/lobstermail` to your deployment package:
+
+```bash
+npm install @lobsterkit/lobstermail
+```
+
+Get a free API token at [lobstermail.ai](/) and add it as a Lambda environment variable named `LOBSTERMAIL_TOKEN`. Then write the handler:
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create({ token: process.env.LOBSTERMAIL_TOKEN });
+
+export const handler = async (event: any) => {
+  const { actionGroup, function: fn, parameters } = event;
+  const params = Object.fromEntries(
+    parameters.map((p: any) => [p.name, p.value])
+  );
+
+  let result: any;
+
+  if (fn === 'createInbox') {
+    const inbox = await lm.createSmartInbox({
+      name: params.name ?? 'bedrock-agent',
+    });
+    result = { address: inbox.address };
+  } else if (fn === 'sendEmail') {
+    await lm.sendEmail({
+      from: params.from,
+      to: params.to,
+      subject: params.subject,
+      body: params.body,
+    });
+    result = { success: true };
+  } else if (fn === 'receiveEmails') {
+    const inbox = lm.inbox(params.address);
+    const emails = await inbox.receive();
+    result = {
+      emails: emails.map((e: any) => ({
+        from: e.from,
+        subject: e.subject,
+        preview: e.preview,
+        receivedAt: e.receivedAt,
+      })),
+    };
+  } else {
+    result = { error: `Unknown function: ${fn}` };
+  }
+
+  return {
+    messageVersion: '1.0',
+    response: {
+      actionGroup,
+      function: fn,
+      functionResponse: {
+        responseBody: { TEXT: { body: JSON.stringify(result) } },
+      },
+    },
+  };
+};
+```
+
+The `messageVersion: '1.0'` wrapper and `functionResponse.responseBody` shape are required by Bedrock. Get that structure wrong and the agent receives an error instead of your result — worth double-checking against the [AWS action group response format](https://docs.aws.amazon.com/bedrock/latest/userguide/agents-lambda.html) if you're seeing silent failures.
+
+<Callout type="tip">
+  Lambda's filesystem is ephemeral, so don't rely on the SDK's auto-signup feature here. Pass the token explicitly via the environment variable as shown. Set it once during function creation and it persists with the Lambda configuration.
+</Callout>
+
+## Defining the action group in Bedrock
+
+In the Bedrock console, open your agent and go to **Action groups**. Add a new group. Choose **Define with function details** over the OpenAPI schema option — it's less overhead for a custom Lambda and easier to update later.
+
+Add three functions with these definitions:
+
+- **`createInbox`** — "Provision a new email inbox for this agent." Parameters: `name` (string, optional) — "A label for the inbox address."
+- **`sendEmail`** — "Send an email from an agent inbox." Parameters: `from`, `to`, `subject`, `body` — all strings, all required.
+- **`receiveEmails`** — "Retrieve new emails from an agent inbox." Parameters: `address` (string, required) — "The inbox address to check."
+
+Point the action group at your Lambda ARN. Save, then prepare the agent to apply the changes.
+
+One IAM thing to sort out: your Lambda execution role doesn't need any SES or email-related permissions. The only requirement is a `lambda:InvokeFunction` permission from the Bedrock service principal so Bedrock can call your function:
+
+```json
+{
+  "Effect": "Allow",
+  "Principal": { "Service": "bedrock.amazonaws.com" },
+  "Action": "lambda:InvokeFunction",
+  "Resource": "arn:aws:lambda:us-west-2:ACCOUNT_ID:function:YourEmailFn"
+}
+```
+
+<Callout type="info">
+  Bedrock needs to call your Lambda, not the other way around. The resource-based policy above is what grants that. If you're using the console to create the action group, it offers to add this permission automatically — say yes.
+</Callout>
+
+## What the agent does with it
+
+Once the action group is live, the agent can reason about email as part of its workflow. Give it a task like "sign up for this service and pull the verification code from the confirmation email" — it will call `createInbox` to provision an address, use that address during signup, then poll `receiveEmails` until the code shows up.
+
+The inbox address persists as long as you pass it back to the agent as a session attribute or store it in DynamoDB keyed to the session ID. The agent can reference the same inbox across multiple conversation turns without re-provisioning.
+
+LobsterMail also scores incoming emails for prompt injection risk. The metadata comes back with every `receiveEmails` call, so you can filter or flag anything suspicious before it reaches the agent's context. That's worth building into your Lambda response if the agent is reading from unknown senders. The [webhooks vs polling guide](/blog/webhooks-vs-polling-email) covers the tradeoffs if you want real-time delivery instead of polling.
+
+The free tier covers 1,000 emails/month with no credit card. For production Bedrock deployments, the Builder plan at $9/month handles 5,000 emails/month and up to 10 inboxes.
+
+## CDK setup
+
+If you're using CDK rather than the console:
+
+```typescript
+import * as cdk from 'aws-cdk-lib';
+import * as lambda from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as iam from 'aws-cdk-lib/aws-iam';
+
+const emailFn = new lambda.NodejsFunction(this, 'AgentEmailFn', {
+  entry: 'lambdas/email-action/index.ts',
+  runtime: cdk.aws_lambda.Runtime.NODEJS_20_X,
+  environment: {
+    LOBSTERMAIL_TOKEN: process.env.LOBSTERMAIL_TOKEN!,
+  },
+  timeout: cdk.Duration.seconds(30),
+});
+
+emailFn.addPermission('BedrockInvoke', {
+  principal: new iam.ServicePrincipal('bedrock.amazonaws.com'),
+  action: 'lambda:InvokeFunction',
+});
+```
+
+No email-specific IAM policies needed. LobsterMail handles auth on its end; your Lambda needs the token and outbound internet access (which Lambda has by default unless you've placed it in a VPC with no NAT gateway).
+
+The `NodejsFunction` construct bundles TypeScript and dependencies automatically, so the `@lobsterkit/lobstermail` import just works without a manual packaging step.
+
+---
+
+<FAQ>
+  <FAQItem question="Do I need an AWS SES account to use LobsterMail with Bedrock?">
+    No. LobsterMail handles email delivery and receipt entirely through its own infrastructure. Your Lambda doesn't need SES access, and you don't need a verified domain or sender identity in SES.
+  </FAQItem>
+
+  <FAQItem question="Where should I store the LobsterMail API token in a Lambda function?">
+    Store it as a Lambda environment variable (`LOBSTERMAIL_TOKEN`). For higher security, put it in AWS Systems Manager Parameter Store as a SecureString and retrieve it at cold start — but the environment variable approach is fine for most setups.
+  </FAQItem>
+
+  <FAQItem question="Can the Bedrock agent keep the same inbox address across multiple sessions?">
+    Yes, but you need to persist the address yourself. Store it in DynamoDB keyed to a stable agent identifier, then pass it back into the session context at the start of each conversation. The inbox lives on LobsterMail's side indefinitely.
+  </FAQItem>
+
+  <FAQItem question="What does LobsterMail's injection protection actually do?">
+    Every email returned by `receive()` includes a risk score and metadata flagging suspicious content. If an attacker tries to hijack your agent by embedding instructions in an email body, the score helps you filter or quarantine it before it reaches the agent's reasoning context.
+  </FAQItem>
+
+  <FAQItem question="Can I use a custom domain instead of @lobstermail.ai?">
+    Yes. Custom domains are available on paid plans. Your agent's inbox would be something like `agent@yourdomain.com`. See the [custom domains guide](/docs/getting-started) for setup steps.
+  </FAQItem>
+
+  <FAQItem question="What's the difference between createInbox and createSmartInbox?">
+    `createInbox()` gives you a random address like `lobster-x7k2@lobstermail.ai`. `createSmartInbox({ name: 'My Agent' })` tries to generate a readable address from the name — `my-agent@lobstermail.ai` — and handles collisions automatically by trying variations. Use `createSmartInbox` when the address will be shared with humans.
+  </FAQItem>
+
+  <FAQItem question="Is there a limit on how many emails my Lambda can retrieve per receive() call?">
+    `receive()` returns emails since the last poll by default. You can pass pagination options to limit the batch size. For high-volume scenarios, consider [webhooks](/blog/webhooks-vs-polling-email) instead of polling to avoid Lambda timeout issues.
+  </FAQItem>
+
+  <FAQItem question="Does this work with Bedrock inline agents or just full agents?">
+    The Lambda function itself works the same either way — it's just a function that handles action group invocations. Whether you're using inline agents (defined in code) or console-configured agents, the action group wiring is identical.
+  </FAQItem>
+
+  <FAQItem question="How do I test the action group before connecting it to the full agent?">
+    Invoke the Lambda directly from the console or CLI with a mock Bedrock event. The event shape is `{ actionGroup, function, parameters: [{ name, value }] }`. Confirm the response has `messageVersion: '1.0'` and the right `functionResponse` structure before attaching it to the agent.
+  </FAQItem>
+
+  <FAQItem question="What happens if the LobsterMail API is unavailable?">
+    The SDK throws an error, which your handler catches and returns as `{ error: "..." }` in the response body. The Bedrock agent sees the error message and can decide how to proceed — retry, skip, or surface it to the user. Build retry logic into the Lambda for production use.
+  </FAQItem>
+
+  <FAQItem question="Can multiple Bedrock agents share one LobsterMail account?">
+    Yes. One account can hold multiple inboxes, each owned by a different agent. The free tier gives you one inbox; the Builder plan at $9/month supports up to 10. Each agent should use a distinct inbox address to avoid cross-contamination of messages.
+  </FAQItem>
+
+  <FAQItem question="Does the email show as coming from @lobstermail.ai, or can I set a display name?">
+    Outbound emails send from your provisioned `@lobstermail.ai` address. You can set a display name in the `from` field (e.g., `"Acme Bot" <agent@lobstermail.ai>`). Custom domain support lets you send from your own domain on paid plans.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
