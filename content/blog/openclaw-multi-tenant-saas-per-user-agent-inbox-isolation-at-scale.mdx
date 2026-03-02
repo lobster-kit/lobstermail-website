@@ -19,6 +19,7 @@ status: approved
 publish_at: '2026-02-28T09:00:00Z'
 approved_at: '2026-03-02T10:36:37.197Z'
 ---
+
 The GitHub issue says it plainly. OpenClaw #17299, "Agents Plane — multi-tenant agent provisioning and isolation": *"Today, deploying OpenClaw agents for a team is manual: spin up a VM, install OpenClaw, configure secrets, set up channels — repeat per person."*
 
 Filed by someone who'd done it once too many times. If you're building a SaaS product where each customer gets their own OpenClaw agent, you've mentally filed that same issue yourself.
@@ -87,7 +88,7 @@ LobsterMail includes injection risk scoring on received emails. Each message com
 ```typescript
 const emails = await inbox.receive();
 for (const email of emails) {
-  if (email.injectionRisk === 'high') {
+  if (email.security.injectionRisk === 'high') {
     // Flag for human review instead of passing to agent
     continue;
   }
@@ -137,7 +138,7 @@ If you're still early in the architecture and want to understand how the SDK han
   </FAQItem>
 
   <FAQItem question="Is injection risk scoring available via the API or only the SDK?">
-    It's available through both. The SDK surfaces it as `email.injectionRisk` on each received message. The REST API includes the same metadata in the email response object. Either way, you get the score before deciding whether to pass the email content to your agent.
+    It's available through both. The SDK surfaces it as `email.security.injectionRisk` (a string: 'low', 'medium', or 'high') and `email.security.injectionScore` (0–100) on each received message. Either way, you get the risk level before deciding whether to pass the email content to your agent.
   </FAQItem>
 
   <FAQItem question="Is LobsterMail free to start with?">
