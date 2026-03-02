@@ -4,7 +4,7 @@ description: >-
   CrewAI Flows' @router decorator supports conditional branching. Here's how to
   wire an email checkpoint into that pattern so your agent pauses, asks a human,
   and routes based on the reply.
-date: '2026-02-25'
+date: '2026-03-02'
 tags:
   - crewai
   - email
@@ -13,42 +13,42 @@ tags:
   - human-in-the-loop
 image: >-
   /blog/crewai-flows-email-checkpoint-adding-human-approval-gates-with-lobstermail.png
-author: LobsterMail Team
+author: Ian Bussières
 agent: agent-3-content
 channel: blog
 type: blog-post
-status: approved
-publish_at: '2026-02-25T12:00:00Z'
-approved_at: '2026-03-02T10:36:37.191Z'
+status: draft
+publish_at: '2026-03-02T12:00:00Z'
 ---
+CrewAI Flows introduced the `@router` decorator so flows can branch conditionally. You write a function that returns a string, and the flow routes to whichever `@listen` method matches that string. Most tutorials show it choosing between two internal crews. The pattern gets genuinely useful, though, when one of those routes means "pause and ask a human before continuing."
 
-CrewAI added the `@router` decorator so flows can branch conditionally. You write a function that returns a string, and the flow routes to whichever `@listen` method matches. Most tutorials show it choosing between two internal crews. The pattern gets genuinely useful, though, when one of those routes means "pause and ask a human."
+The stock approach for human-in-the-loop in CrewAI is blocking on a function call or polling a queue. That works in development, where the person approving is the same person running the script. In production, approvers are in meetings. They're in different time zones. They're not staring at a terminal. A blocking `input()` call or a Slack message to a channel nobody watches isn't a real approval gate. It's a suggestion.
 
-The stock approach for human-in-the-loop in CrewAI is polling a queue or blocking on a function call. That's fine in development. In production, where approvers are in meetings, in different time zones, or just not watching a terminal, it breaks down. You need a channel that meets humans where they already are.
+Email is the channel that actually reaches people. Every approver already has it. It works from a phone at 11pm. No platform account, no bot installation, no webhook setup on their end. Your agent sends a message, a human reads it on whatever device is nearest, replies with one word, and the flow continues.
 
-Email is that channel. Every approver has it. It works from a phone at 11pm. No platform account, no bot installation, no webhook setup on their end. Your agent sends a message, a human replies, the flow continues.
-
-Here's how to build a CrewAI flows email checkpoint with human in loop using LobsterMail.
+Here's how to build a CrewAI Flows email checkpoint using LobsterMail.
 
 ## The pattern
 
 A CrewAI Flow with an email checkpoint has three moving parts:
 
-1. A crew generates output that needs review — a draft, a contract, a financial summary, anything that shouldn't auto-ship without a human seeing it
+1. A crew generates output that needs review (a draft, a contract, a financial summary, anything that shouldn't auto-ship without a human seeing it)
 2. A `@router` function provisions a LobsterMail inbox, emails the approver, then polls for their reply
-3. Based on the reply, the flow routes to the appropriate next crew
+3. Based on the reply content, the flow routes to the appropriate next crew
 
-The inbox is ephemeral. You create it for this specific request, poll until you get a response (or hit a timeout), then move on. No inbox management overhead.
+The inbox is ephemeral. You create it for this specific approval request, poll until you get a response or hit a timeout, then move on. No inbox management overhead. No leftover addresses collecting spam six months later. Each approval cycle is self-contained.
+
+This matters more than it sounds. When you reuse a single inbox across approval requests, a late reply to last Tuesday's request can accidentally trigger today's flow. Ephemeral inboxes eliminate that category of bug entirely.
 
 ## Setting up LobsterMail from Python
 
-LobsterMail's primary SDK is TypeScript, but the REST API works from any language. For Python, call it directly with `requests`:
+LobsterMail's native SDK is TypeScript, but the REST API works from any language. For Python, call it directly with `requests`:
 
 ```bash
 pip install requests
 ```
 
-Grab an API token from [lobstermail.ai](/) — the free tier covers 1,000 emails a month, which is plenty for approval flows. Then set up a small helper module:
+Grab an API token from [lobstermail.ai](/) and set up a small helper module. The free tier covers 1,000 emails a month, which is more than enough for approval flows:
 
 ```python
 # lobstermail_client.py
@@ -96,9 +96,11 @@ class LobsterMailClient:
         return "timed_out"
 ```
 
-The reply parsing is intentionally loose. Real-world approvers don't follow formatting instructions. If the word "approve" appears anywhere in the reply, it counts.
+The reply parsing is intentionally loose. Real-world approvers don't follow formatting instructions. They write "Looks good, approved" or "approved, ship it" or just "yes." If the word "approve" appears anywhere in the reply, it counts. You can tighten this later with regex or structured reply templates, but start loose. You'll get more approvals through the gate.
 
 ## The full flow
+
+Here's a complete CrewAI Flow that generates a content draft, emails it to an approver, and routes based on their response:
 
 ```python
 # approval_flow.py
@@ -132,7 +134,7 @@ class ContentApprovalFlow(Flow):
 
     @router(generate_draft)
     def email_checkpoint(self, draft: str):
-        # Fresh inbox per request — no cross-contamination from old replies
+        # Fresh inbox per request, no cross-contamination from old replies
         inbox = lm.create_inbox("approval-bot")
         inbox_id = inbox["id"]
         inbox_addr = inbox["address"]
@@ -155,17 +157,17 @@ This inbox expires in 24 hours.
 
     @listen("approved")
     def publish(self):
-        print("Approved — publishing now")
+        print("Approved, publishing now")
         # publishing crew here
 
     @listen("rejected")
     def revise(self):
-        print("Rejected — sending back for revision")
+        print("Rejected, sending back for revision")
         self.generate_draft()  # restart the loop
 
     @listen("timed_out")
     def handle_timeout(self):
-        print("No response in 24 hours — escalating")
+        print("No response in 24 hours, escalating")
         # escalation logic here
 
 
@@ -173,41 +175,46 @@ if __name__ == "__main__":
     ContentApprovalFlow().kickoff()
 ```
 
+The `@router` decorator is doing the heavy lifting. It receives the output from `generate_draft`, runs the email checkpoint logic, and returns one of three strings. CrewAI matches that string against your `@listen` decorators and executes the corresponding method. No if-else chains. No manual state tracking.
+
 ## What to watch for
 
-**The `@router` return value must match exactly.** If `poll_reply` returns `"approved"`, you need `@listen("approved")` — not `@listen("approve")`. A mismatch silently drops the route, which is one of those bugs that takes 45 minutes to find.
+**The `@router` return value must match exactly.** If `poll_reply` returns `"approved"`, you need `@listen("approved")`, not `@listen("approve")`. A mismatch silently drops the route and the flow just stops. No error, no warning. It's one of those bugs that takes 45 minutes to find because nothing appears to be broken.
 
-**The ephemeral inbox keeps things clean.** Each approval request gets its own `@lobstermail.ai` address, so a reply to last week's request can't accidentally trigger today's flow. If you want to reuse addresses across runs, you'll need to filter by timestamp — easier to just create a fresh inbox each time.
+**Ephemeral inboxes keep things clean.** Each approval request gets its own `@lobstermail.ai` address. If you want to reuse addresses across runs, you'll need to filter incoming mail by timestamp or subject line. Easier to just create a fresh inbox each time.
 
-**`poll_reply` defaults to 24 hours.** Adjust `timeout` to match your actual SLA. Content approvals might need an hour. Legal review might need 72. The 30-second polling interval is a reasonable default; drop it to 10 seconds if you need faster response for low-stakes decisions.
+**Tune the timeout to your actual SLA.** Content approvals might need an hour. Legal review might need 72 hours. The 30-second polling interval is a reasonable default; drop it to 10 seconds if you need faster response for low-stakes decisions, or raise it to 60 seconds if you're running dozens of concurrent approval flows and want to keep API calls down.
+
+**Watch for email threading.** Some email clients group messages by subject line. If your approval emails all share the same subject ("Agent approval request"), the approver might see them stacked in a single thread and reply to the wrong one. Include a unique identifier in the subject, like a task ID or timestamp, so each request stands on its own in the inbox.
 
 <Callout type="tip">
-  LobsterMail emails include injection risk scoring. If you're having a downstream crew process the approval email's body text, check the `security.injectionRisk` field before passing it along. An approver's email client can forward spam into a thread.
+  LobsterMail emails include injection risk scoring. If a downstream crew processes the approval email's body text, check the `security.injectionRisk` field before passing it along. An approver's email client can forward spam into a thread, and you don't want that content piped directly into an LLM prompt.
 </Callout>
 
 ## When this pattern fits
 
-Email checkpoints are the right choice when:
+Email checkpoints work well when:
 
-- Approvers are non-technical and not on Slack or Discord
-- You need an audit trail (email exchanges are timestamped records, useful for compliance)
+- Approvers are non-technical and won't log into Slack or a custom dashboard
+- You need a timestamped audit trail (email exchanges are records, useful for compliance)
 - Different approval steps go to different people at different organizations
+- The approval can wait minutes or hours without blocking other work
 
-They're less suited for sub-second decisions, high-frequency approvals where polling overhead adds up, or internal teams where Slack is already the coordination layer.
+They're less suited for sub-second decisions, high-frequency approvals where polling overhead adds up, or teams where everyone already lives in Slack and a bot message would get faster responses.
 
-For a deeper look at how agents use email alongside other communication channels, see [the agent communication stack](/blog/agent-communication-stack). If you're building agent-to-service flows where email is the signup mechanism, [what agents actually do with email](/blog/what-agents-do-with-email) covers those patterns.
+For teams already running CrewAI multi-agent setups, giving each agent its own inbox prevents the shared-address problems we covered in [task-specific inbox isolation](/blog/crewai-task-specific-inbox-isolation-with-lobstermail). And for a broader look at how agents use email alongside other communication channels, see [the agent communication stack](/blog/agent-communication-stack). If you're building agent-to-service flows where email is the signup mechanism, [what agents actually do with email](/blog/what-agents-do-with-email) covers those patterns.
 
 <FAQ>
   <FAQItem question="Does LobsterMail have a Python SDK?">
-    Not yet — the native SDK is TypeScript (`@lobsterkit/lobstermail`). From Python, call the REST API directly with `requests` as shown above. The API surface is small enough that a thin wrapper takes about 30 lines.
+    Not yet. The native SDK is TypeScript (`@lobsterkit/lobstermail`). From Python, call the REST API directly with `requests` as shown above. The API surface is small enough that a thin wrapper takes about 30 lines.
   </FAQItem>
 
   <FAQItem question="What happens if the approver never replies?">
-    The `poll_reply` function returns `"timed_out"` after the timeout period (default 24 hours). Wire a `@listen("timed_out")` handler to escalate, re-send the request, or auto-approve — depending on your flow's requirements.
+    The `poll_reply` function returns `"timed_out"` after the timeout period (default 24 hours). Wire a `@listen("timed_out")` handler to escalate, re-send the request, or auto-approve depending on your flow's requirements.
   </FAQItem>
 
   <FAQItem question="Can I use a custom domain for the approval inbox?">
-    Yes. LobsterMail supports custom domains, so your approval requests can come from `approvals@yourcompany.com` instead of `@lobstermail.ai`. See the [docs](/docs/custom-domains) for setup instructions.
+    Yes. LobsterMail supports custom domains, so your approval requests can come from `approvals@yourcompany.com` instead of a `@lobstermail.ai` address. See the [docs](/docs/custom-domains) for setup instructions.
   </FAQItem>
 
   <FAQItem question="Does the polling block other CrewAI flows from running?">
@@ -215,35 +222,35 @@ For a deeper look at how agents use email alongside other communication channels
   </FAQItem>
 
   <FAQItem question="Can I use this pattern with LangGraph or other Python agent frameworks?">
-    The LobsterMail REST API works from any Python code. The `@router` decorator is CrewAI-specific, but the inbox provisioning and polling logic is plain Python — drop it into LangGraph conditional edges or any other branching mechanism.
+    The LobsterMail REST API works from any Python code. The `@router` decorator is CrewAI-specific, but the inbox provisioning and polling logic is plain Python. Drop it into LangGraph conditional edges or any other branching mechanism.
   </FAQItem>
 
   <FAQItem question="How much does running approval flows cost on LobsterMail?">
-    The free tier covers 1,000 emails per month. Each approval cycle sends one email (the request) and receives one (the reply), so you get up to 500 approval cycles per month free. The Builder plan at $9/mo bumps that significantly if you need more volume.
+    The free tier covers 1,000 emails per month. Each approval cycle sends one email and receives one reply, so you get up to 500 approval cycles per month at no cost. The Builder plan at $9/mo increases that limit significantly.
   </FAQItem>
 
   <FAQItem question="How do I handle multi-party approvals where two people both need to sign off?">
-    Create a separate inbox per approver, send both emails simultaneously, then collect both responses before routing. You'll need a small state machine tracking which approvals have come in. A simple dict in `self.state` works fine for two approvers.
+    Create a separate inbox per approver, send both emails at the same time, then collect both responses before routing. You'll need a small state machine tracking which approvals have come in. A simple dict in `self.state` works fine for two or three approvers.
   </FAQItem>
 
   <FAQItem question="Can I embed an approve/reject link in the email instead of asking for a text reply?">
-    You'd need a small web endpoint to receive those clicks and write the decision somewhere your flow can read it — a Redis key, a database row, or a LobsterMail inbox. Text replies are simpler to implement and work even when the approver opens email on a device that doesn't handle link clicks well.
+    You'd need a small web endpoint to receive those clicks and write the decision somewhere your flow can read it (a Redis key, a database row, or another LobsterMail inbox). Text replies are simpler to implement and work even when the approver opens email on a device that doesn't handle link clicks well.
   </FAQItem>
 
-  <FAQItem question="Is there a webhook option so I'm not polling every 30 seconds?">
+  <FAQItem question="Is there a webhook option so I don't have to poll every 30 seconds?">
     LobsterMail supports webhooks for real-time delivery. Set a webhook on the inbox and write a small endpoint that updates your flow state. That said, for approval flows that run once and wait, polling is simpler and has no infrastructure dependencies.
   </FAQItem>
 
-  <FAQItem question="What CrewAI version introduced @router?">
-    The `@router` decorator was introduced as part of CrewAI Flows in v0.80. Check `crewai --version` before starting — anything below that and you won't have the `crewai.flow.flow` module at all.
+  <FAQItem question="What CrewAI version introduced the @router decorator?">
+    The `@router` decorator was introduced as part of CrewAI Flows in v0.80. Run `crewai --version` before starting. Anything below that and you won't have the `crewai.flow.flow` module at all.
   </FAQItem>
 
   <FAQItem question="Can I restart the flow from the rejection handler instead of calling generate_draft() directly?">
-    Yes — calling `self.generate_draft()` directly works but bypasses normal flow state management. For cleaner loop handling, emit a signal and listen on it, or use a retry counter in `self.state` to cap revision cycles and avoid infinite loops.
+    Calling `self.generate_draft()` directly works but bypasses normal flow state management. For cleaner loop handling, emit a signal and listen on it, or use a retry counter in `self.state` to cap revision cycles and avoid infinite loops.
   </FAQItem>
 
   <FAQItem question="Is LobsterMail free to start?">
-    Yes. No credit card required. Your agent provisions its own inbox with no human signup step — install the SDK (or hit the API), and you're sending and receiving in seconds. See [pricing](/#pricing) for limits.
+    Yes. No credit card required. Your agent provisions its own inbox with no human signup step. Hit the API and you're sending and receiving in seconds. See [pricing](/#pricing) for tier details.
   </FAQItem>
 </FAQ>
 
