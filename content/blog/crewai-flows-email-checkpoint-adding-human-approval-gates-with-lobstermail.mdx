@@ -21,6 +21,7 @@ status: approved
 publish_at: '2026-02-25T12:00:00Z'
 approved_at: '2026-03-02T10:36:37.191Z'
 ---
+
 CrewAI added the `@router` decorator so flows can branch conditionally. You write a function that returns a string, and the flow routes to whichever `@listen` method matches. Most tutorials show it choosing between two internal crews. The pattern gets genuinely useful, though, when one of those routes means "pause and ask a human."
 
 The stock approach for human-in-the-loop in CrewAI is polling a queue or blocking on a function call. That's fine in development. In production, where approvers are in meetings, in different time zones, or just not watching a terminal, it breaks down. You need a channel that meets humans where they already are.
@@ -181,7 +182,7 @@ if __name__ == "__main__":
 **`poll_reply` defaults to 24 hours.** Adjust `timeout` to match your actual SLA. Content approvals might need an hour. Legal review might need 72. The 30-second polling interval is a reasonable default; drop it to 10 seconds if you need faster response for low-stakes decisions.
 
 <Callout type="tip">
-  LobsterMail emails include injection risk scoring. If you're having a downstream crew process the approval email's body text, check the `injectionRisk` field before passing it along. An approver's email client can forward spam into a thread.
+  LobsterMail emails include injection risk scoring. If you're having a downstream crew process the approval email's body text, check the `security.injectionRisk` field before passing it along. An approver's email client can forward spam into a thread.
 </Callout>
 
 ## When this pattern fits
