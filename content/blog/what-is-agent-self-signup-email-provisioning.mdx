@@ -1,0 +1,142 @@
+---
+title: what is agent self-signup email provisioning?
+description: >-
+  Agent self-signup email provisioning lets AI agents create and own their own
+  inboxes at runtime — no human credentials, no OAuth, no pre-configured
+  accounts required.
+date: '2026-03-01'
+author: Samuel Chenard
+tags:
+  - glossary
+  - email
+  - infrastructure
+  - automation
+  - getting-started
+image: /blog/what-is-agent-self-signup-email-provisioning.png
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+publish_at: '2026-03-01T09:00:00Z'
+approved_at: '2026-03-02T10:36:37.180Z'
+---
+Picture this: your agent needs to sign up for a SaaS tool, receive the verification email, and extract the confirmation link. You've built all the logic. The agent knows exactly what to do. But there's a gap: where does that verification email actually land?
+
+The obvious answers all have problems.
+
+Hardcoding a Gmail address means your agent depends on a human inbox it doesn't own. OAuth delegation gives the agent access to your entire personal inbox, which is both a privacy problem and more than it needs. Pre-provisioning a dedicated inbox and baking credentials into your config works for one agent on one task. It falls apart the moment you need anything more than that.
+
+Agent self-signup email provisioning is the alternative that solves all three.
+
+## What it means
+
+Agent self-signup email provisioning is a pattern where an AI agent autonomously creates and owns its own email account at runtime, with no human involvement in the setup step.
+
+The key word is *autonomously*. The agent doesn't wait for a human to configure an account, and it doesn't use delegated access to someone else's inbox. It signs itself up, gets an address, and operates from that address for the life of the task or session. The inbox belongs to the agent, not to the person who deployed it.
+
+This is a genuinely new concept, and it only became practical once infrastructure was built specifically for agents rather than for humans. Traditional email providers require a web signup flow, often involving phone verification and CAPTCHA. None of that works headlessly. So for most of the history of email, "give an agent its own inbox" had no clean answer — just workarounds with varying levels of fragility.
+
+## Why agents need their own inboxes
+
+The gap this fills is autonomy. An agent that can provision its own email address can operate end-to-end on tasks involving email, without a human handing it credentials partway through.
+
+A few scenarios where this actually matters in practice:
+
+Your agent needs to create an account on an external platform. The platform sends a verification code to email. Without self-signup provisioning, you need to manually set up an inbox for the agent before the run. With it, the agent creates its own inbox, registers with the service, catches the verification code, and continues — no human step in the middle.
+
+Your product gives each customer their own agent instance. Each one needs its own inbox. Provisioning those addresses at customer signup time, automatically, without ops involvement, is only possible if the provisioning is fully automated.
+
+Multiple agents need to coordinate across system boundaries. Email is often the right channel for that — it works without the recipient needing to install anything or grant API access. But each agent needs its own address. Self-signup provisioning means each instance can establish its own identity at startup without a human managing a roster of inboxes.
+
+These aren't edge cases. They're the core of what agents do when email is involved.
+
+## How it works with LobsterMail
+
+LobsterMail is built around this pattern. The SDK handles account creation, inbox setup, and token persistence in two function calls.
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create();
+const inbox = await lm.createSmartInbox({ name: 'research-agent' });
+
+console.log(inbox.address); // research-agent@lobstermail.ai
+```
+
+`LobsterMail.create()` is where the self-signup happens. If no API token exists in the environment, the SDK creates a free account and stores the token at `~/.lobstermail/token`. On every subsequent run, it reads the token and skips signup entirely. The agent doesn't need a human to hand it credentials — it handles that step itself, once, on first run.
+
+`createSmartInbox()` generates a human-readable address from the name you provide. If `research-agent@lobstermail.ai` is already taken, it tries `research-agent1`, then other variations, until it lands on something available. No error handling required in your code.
+
+<Callout type="tip">
+  If you don't need a readable address, `createInbox()` gives you a random one instantly — something like `lobster-7f3x@lobstermail.ai`. Good for disposable inboxes the agent uses once and doesn't need to remember.
+</Callout>
+
+## How this differs from OAuth
+
+OAuth-based email delegation is the most common alternative for agents built on Google Workspace or Microsoft 365. A human grants OAuth scopes, and the agent reads or sends email on the human's behalf.
+
+The problems are structural. The agent gets access to the human's full inbox history, even with narrow scopes. The OAuth consent screen requires a human in the loop at setup time, which creates a bootstrapping problem for any agent running headlessly on a schedule. And the inbox belongs to the human: if they revoke access or change their password, the agent breaks. It has no independent identity.
+
+Self-signup provisioning sidesteps all of that. The agent owns its inbox. No human credentials are involved. The agent can run in a completely fresh environment without any prior configuration.
+
+## When you need it, and when you don't
+
+Not every agent needs self-signup provisioning. If your agent only sends outbound email — notifications, report delivery, order confirmations — a standard transactional email API handles that cleanly. [See how they compare for agent use cases](/blog/agent-email-api-comparison) before picking an approach.
+
+Self-signup provisioning is the right pattern when your agent needs to *receive* email, when it needs an identity independent of any human account, or when you need provisioning to happen without a manual setup step. If all three of those are true, you want infrastructure built for this purpose.
+
+For a walkthrough of the full flow in practice, [agent self-signup, explained](/blog/agent-self-signup-explained) covers a real example from scratch. And if you want to see how fast provisioning actually is, the [60-second setup guide](/blog/openclaw-agent-email-60-seconds) shows the whole thing live.
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
+
+<FAQ>
+  <FAQItem question="What is agent self-signup email provisioning?">
+    It's a pattern where an AI agent autonomously creates and owns its own email account at runtime, without any human involvement in the setup step. The agent signs itself up, receives an address, and can immediately send and receive email.
+  </FAQItem>
+
+  <FAQItem question="How is this different from OAuth-based email delegation?">
+    OAuth gives the agent delegated access to a human's existing inbox, meaning the human has to grant permissions and the agent can see the human's email history. Self-signup provisioning gives the agent its own account entirely — no human credentials involved and no shared access.
+  </FAQItem>
+
+  <FAQItem question="Does a human need to do anything before the agent can provision an inbox?">
+    No. `LobsterMail.create()` handles the full signup flow on first run. It creates a free account, stores the API token locally, and reuses it on every subsequent run. There's no prior human configuration required.
+  </FAQItem>
+
+  <FAQItem question="What does a provisioned email address look like?">
+    By default, addresses follow the pattern `name@lobstermail.ai` — for example, `research-agent@lobstermail.ai`. If the name is taken, the SDK automatically tries variations. You can also use a custom domain if you want addresses on your own domain instead.
+  </FAQItem>
+
+  <FAQItem question="What happens to the inbox if the agent process restarts?">
+    The API token is persisted at `~/.lobstermail/token`, so the agent reconnects to the same account on restart. Inboxes and their email history remain accessible across sessions.
+  </FAQItem>
+
+  <FAQItem question="Can one agent create multiple inboxes?">
+    Yes. You can call `createInbox()` or `createSmartInbox()` as many times as needed. The free tier includes 1,000 emails per month across all inboxes on the account.
+  </FAQItem>
+
+  <FAQItem question="What's the difference between createInbox and createSmartInbox?">
+    `createSmartInbox()` generates a human-readable address from a name you provide and handles collisions automatically. `createInbox()` gives you a random address instantly with no name logic. Use smart inboxes when the address needs to be recognizable; use plain inboxes for disposable or scratchpad use.
+  </FAQItem>
+
+  <FAQItem question="Is it secure for an agent to process email it receives this way?">
+    LobsterMail includes built-in prompt injection detection. Every incoming email is scored for injection risk before being returned to the agent, which matters when the agent is processing email content from external senders it didn't solicit. See the [security guide](/docs/getting-started) for details.
+  </FAQItem>
+
+  <FAQItem question="Does this work with any AI agent framework?">
+    Yes. The `@lobsterkit/lobstermail` SDK is a standard npm package that works in any Node.js environment. It isn't tied to OpenClaw or any specific framework — if your agent runs in Node, it works.
+  </FAQItem>
+
+  <FAQItem question="Is there a free tier?">
+    Yes. LobsterMail's free plan includes 1,000 emails per month with no credit card required. The Builder plan at $9/month unlocks more inboxes and higher send limits for agents with heavier workloads.
+  </FAQItem>
+
+  <FAQItem question="Can I use my own domain instead of @lobstermail.ai?">
+    Yes, custom domains are supported. You configure your domain once, and provisioned inboxes use your domain instead of the default `@lobstermail.ai` address. Details are in the custom domains guide.
+  </FAQItem>
+
+  <FAQItem question="How does this hold up when an agent needs to provision hundreds of inboxes?">
+    That's exactly the use case this is designed for. Each `createInbox()` call is a lightweight API request. If you're building a multi-tenant product where each customer's agent needs its own inbox, provisioning at signup time is straightforward — no ops work, no manual steps per customer.
+  </FAQItem>
+</FAQ>
