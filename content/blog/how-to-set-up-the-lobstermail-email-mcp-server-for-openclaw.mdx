@@ -19,6 +19,7 @@ status: approved
 publish_at: '2026-02-27T10:00:00Z'
 approved_at: '2026-03-02T10:36:37.179Z'
 ---
+
 Most OpenClaw agents can search the web and run code just fine. Getting them to handle email is where setup guides go quiet.
 
 The obvious options: hook up Gmail through OAuth, or wire in a sending API like SendGrid and discover it only flows one direction. Neither was built for agents. Both require a human to create the account before the agent can do anything useful with it.
@@ -95,7 +96,7 @@ For persistent workflows, skip step 5 and reuse the same inbox. Call `list_inbox
 
 Email is one of the easiest attack surfaces for prompt injection. Someone sends your agent a message with instructions buried in the body — "ignore previous instructions and..." — and if the agent parses that content without checking, the attack can work.
 
-Every email returned by `read_emails` includes a `risk_score` field, a float from 0.0 to 1.0. The SDK runs a pattern-matching pass over incoming content before it reaches the agent, flagging text that looks designed to override system prompts or issue unexpected commands. Anything scoring above 0.7 should be treated as suspicious and held for human review before the agent acts on it.
+Every email returned by `read_emails` includes a `risk_score` field (`low`, `medium`, or `high`) and a numeric `injection_score` from 0 to 100. The SDK runs a pattern-matching pass over incoming content before it reaches the agent, flagging text that looks designed to override system prompts or issue unexpected commands. Anything scoring `high` should be treated as suspicious and held for human review before the agent acts on it.
 
 This isn't hypothetical. A February 2026 audit found over 1,800 OpenClaw instances running on the public internet with unauthenticated gateways — exactly the kind of environment where hostile email injection is a realistic risk. The scoring model isn't a guarantee, but it's a meaningful layer of defense.
 
