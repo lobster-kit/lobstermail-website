@@ -1,0 +1,160 @@
+---
+title: 'every ClawHub email skill ranked: what actually works for autonomous agents'
+description: >-
+  We scored every major ClawHub email skill on autonomy, receive support,
+  injection safety, and pricing. Here's how they actually compare.
+date: '2026-02-25'
+tags:
+  - openclaw
+  - benchmark
+  - email
+  - infrastructure
+  - guides
+image: /blog/clawhub-email-skill-comparison-ranked.png
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+author: LobsterMail Team
+publish_at: '2026-02-25T10:00:00Z'
+approved_at: '2026-03-02T10:36:37.163Z'
+---
+In February 2026, security researchers at Koi Security audited 2,857 ClawHub skills and found 341 malicious ones. The coordinated campaign — which they named "ClawHavoc" — used names like "smart-email-assistant" and "calendar-sync-pro." Skills that looked completely normal. Later reporting pushed the confirmed total past 1,100.
+
+Email skills are a high-value target. Your agent uses them for verification codes, password resets, outreach, coordination with external systems. That's exactly why there are so many on ClawHub, and exactly why picking the wrong one is a real problem.
+
+So I went through the major ClawHub email skills and ranked each one on what actually matters for autonomous agents — not install counts, not marketing copy, the specific criteria that determine whether a skill works the way agents need email to work.
+
+## What I scored them on
+
+Most email benchmarks measure deliverability rates and SMTP throughput. Useful for newsletters. For autonomous agents, the questions are different:
+
+- **Autonomy** — Can the agent provision its own address without a human doing anything first?
+- **Receive support** — Can the agent read incoming mail, not just send it?
+- **Security** — Does the skill include prompt injection protection?
+- **Setup friction** — How many discrete steps from install to first working email?
+- **Pricing floor** — What does the free or low-cost tier actually include?
+
+An email skill that can only send, requires a human to create an account first, and has no injection protection isn't really an agent email skill. It's a webhook wrapper with a ClawHub listing.
+
+## The ClawHub email skill comparison ranked
+
+### 1. LobsterMail — best overall for autonomous agents
+
+**ClawHub:** [lobstermail-agent-email](https://clawhub.ai/samuelchenardlovesboards/lobstermail-agent-email)
+
+| Criterion | Score |
+|---|---|
+| Autonomy | ✅ Full — agent provisions its own inbox |
+| Receive support | ✅ Yes |
+| Injection protection | ✅ Built-in risk scoring on every message |
+| Setup steps | 2 (install skill, call `createSmartInbox()`) |
+| Free tier | 1,000 emails/month, no credit card |
+
+This is the only skill I found where the agent handles the full lifecycle on its own. There's no "step 1: go create a human account." The agent calls one function and gets back a working `@lobstermail.ai` address. The address is human-readable too — `my-agent@lobstermail.ai` instead of something like `xk7b-942a@...` — with automatic collision handling if the name is taken.
+
+Receive support isn't table stakes. A lot of email skills skip it entirely. LobsterMail has it, with real-time delivery and filtering built in.
+
+The injection protection matters more than it sounds. Email is one of the highest-risk vectors for prompt injection: a bad actor sends a crafted message that your agent reads and then executes something it shouldn't. LobsterMail returns a risk score with every incoming email so the agent can decide how much to trust the content before acting on it.
+
+Free tier covers 1,000 emails/month with no credit card. The $9/month Builder tier adds up to 10 inboxes and 500 sends/day.
+
+The r/AI_Agents thread on best ClawHub skills put it plainly: *"this one's different — it's for giving agents their own email addresses."* That's the real distinction from everything else in this category.
+
+### 2. AgentMail — functional, but a pricing gap and human setup required
+
+AgentMail is a real product with receive support and a reasonably clean API. It works. The main friction is the tier structure: free plan, then a jump to $20/month with nothing in between. For a solo developer testing agent automation, that $20 wall is where a lot of people stop.
+
+Setup also requires a human account creation step. You create the inbox, copy the API key, and pass it as a config variable. Fine for static deployments. Awkward for agents that need to spawn inboxes dynamically at runtime, which is when email capability actually matters most.
+
+Injection protection isn't built in by default.
+
+### 3. SMTP wrapper skills — useful if you already have a provider
+
+There are several generic SMTP wrapper skills on ClawHub. They do what they say: point them at Mailgun, Postmark, or your own server and they handle the API calls. If you already have an upstream SMTP provider, these are fine for that specific use case.
+
+The problem for agents is that every one of them requires a human to set up the upstream provider account first. The skill can't provision anything. You're manually creating accounts, generating API keys, wiring up config variables. The agent never touches the provisioning step, which defeats a big part of the point of giving your agent email capability at all.
+
+Most of these are send-only. No receive support.
+
+### 4. Gmail OAuth skills — wrong tool for autonomous agents
+
+Gmail OAuth skills keep appearing in "best email skills" roundups because Gmail is familiar. For autonomous agents they're almost always the wrong choice.
+
+OAuth requires browser-based human authentication. An agent can't complete Google's consent screens without a human clicking through them. You end up with a token tied to a personal Google account that expires and requires re-authentication. Some skills try to work around this with refresh token rotation — which is complexity you're adding to avoid a problem that purpose-built agent email services don't have.
+
+## What the ClawHavoc audit tells you about skill selection
+
+The 341 malicious skills Koi Security identified weren't random. They clustered in high-value categories: email, calendar, file access. Skills positioned to exfiltrate data or execute actions on behalf of the agent.
+
+Before installing any email skill, three things to check:
+
+1. **Publisher verification** — Is the publisher verified on ClawHub? Unverified isn't automatically malicious, but it's a data point.
+2. **Permission scope** — What does the skill actually request? An email skill asking for file system or browser access is asking for more than it needs.
+3. **Receive handling** — If a skill processes your agent's incoming inbox, the documentation should be explicit about how it stores or handles that content. Vague answers here are worth treating as a flag.
+
+LobsterMail's ClawHub skill is published under a verified publisher account and scoped only to email operations.
+
+## The bottom line
+
+If you want your agent to handle the full email flow autonomously — provisionits own address, send, receive, and filter for injection risk — LobsterMail is the one skill in this ClawHub email skill comparison that actually does all of that without a human in the loop. Install it, call `createSmartInbox()`, and your agent has a working inbox.
+
+If you have an existing SMTP provider you want to keep, the wrapper skills handle that case. But you'll be doing the provisioning yourself.
+
+Gmail OAuth is the wrong answer unless you have a specific reason to need a Gmail address, and even then the re-auth overhead gets old fast.
+
+For more on the decision: [how do I get an email for my OpenClaw agent](/blog/how-do-i-get-an-email-for-my-openclaw) covers the high-level framework, and [OpenClaw email options compared](/blog/openclaw-email-options-compared) goes deeper on the LobsterMail vs. AgentMail tradeoffs. If you want to see how setup steps compare across the broader email API category, the [agent email API benchmark](/blog/openclaw-email-skills-compared) has the full numbers.
+
+---
+
+*Give your agent its own inbox. [Get started with LobsterMail](/) — it's free.*
+
+<FAQ>
+  <FAQItem question="What is the best ClawHub email skill for autonomous agents?">
+    LobsterMail's `lobstermail-agent-email` skill is the only one where the agent fully self-provisions — no human account setup, no API key copying. For agents that need to create inboxes at runtime, that autonomy is the deciding factor.
+  </FAQItem>
+
+  <FAQItem question="Is LobsterMail's ClawHub skill free to install?">
+    Yes. The skill is free to install, and LobsterMail's free tier includes 1,000 emails/month with no credit card required. The $9/month Builder tier adds up to 10 inboxes and 500 sends per day.
+  </FAQItem>
+
+  <FAQItem question="What is the ClawHavoc campaign?">
+    ClawHavoc was a coordinated attack campaign of malicious ClawHub skills discovered by Koi Security in February 2026. Over 1,100 skills were eventually confirmed as malicious, many of them targeting email and calendar categories with plausible-sounding names like "smart-email-assistant."
+  </FAQItem>
+
+  <FAQItem question="Can my OpenClaw agent receive emails, not just send them?">
+    It depends on the skill. LobsterMail supports both sending and receiving, with real-time delivery and filtering. Most generic SMTP wrapper skills are send-only. Always check receive support before installing.
+  </FAQItem>
+
+  <FAQItem question="Why shouldn't I use Gmail OAuth for my OpenClaw agent?">
+    Gmail OAuth requires browser-based human authentication that an agent can't complete on its own. Tokens expire and need re-authorization, and the setup is tied to a personal Google account that wasn't designed for agent use.
+  </FAQItem>
+
+  <FAQItem question="What is prompt injection in email and how does LobsterMail handle it?">
+    Prompt injection is when a malicious actor sends a crafted email designed to manipulate your agent — embedding hidden instructions in the message body. LobsterMail returns a risk score with every incoming email so the agent can decide how much to trust the content before acting on it.
+  </FAQItem>
+
+  <FAQItem question="How many steps does it take to set up LobsterMail with OpenClaw?">
+    Two steps: install the skill from ClawHub, then have your agent call `createSmartInbox()`. The SDK handles account creation automatically on the first call. No human account setup required.
+  </FAQItem>
+
+  <FAQItem question="What email address format does LobsterMail generate?">
+    Human-readable addresses like `my-agent@lobstermail.ai`, derived from the name you pass to `createSmartInbox()`. If that name is taken, the SDK automatically tries variations. For random addresses, `createInbox()` returns something like `lobster-xxxx@lobstermail.ai`.
+  </FAQItem>
+
+  <FAQItem question="What is the difference between LobsterMail and AgentMail on ClawHub?">
+    Both support sending and receiving. The main differences: LobsterMail has a $9/month Builder tier that AgentMail lacks (AgentMail goes free → $20 with nothing in between), and LobsterMail agents self-provision while AgentMail requires human account setup. See [OpenClaw email options compared](/blog/openclaw-email-options-compared) for a full breakdown.
+  </FAQItem>
+
+  <FAQItem question="How do I verify a ClawHub skill is safe before installing it?">
+    Check that the publisher is verified on ClawHub, review the permission scope (an email skill shouldn't need file system or browser access), and look for clear documentation on how the skill handles data. Skills in the email category are historically high-value targets for malicious actors.
+  </FAQItem>
+
+  <FAQItem question="Can I use a custom domain with LobsterMail instead of @lobstermail.ai?">
+    Yes. Custom domains are supported so your agent can send and receive from an address on your own domain. The [getting started guide](/docs/getting-started) covers the setup.
+  </FAQItem>
+
+  <FAQItem question="Where do I find LobsterMail on ClawHub?">
+    The skill is at [clawhub.ai/samuelchenardlovesboards/lobstermail-agent-email](https://clawhub.ai/samuelchenardlovesboards/lobstermail-agent-email) under a verified publisher account. Install count and reviews are visible on the listing page.
+  </FAQItem>
+</FAQ>
