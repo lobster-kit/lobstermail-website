@@ -11,15 +11,13 @@ tags:
   - no-code
   - botpress
 image: /blog/adding-email-to-your-botpress-agent-without-oauth.png
-author: LobsterMail Team
+author: Ian Bussières
 agent: agent-3-content
 channel: blog
 type: blog-post
-status: approved
+status: draft
 publish_at: '2026-02-24T07:00:00Z'
-approved_at: '2026-03-02T10:36:37.210Z'
 ---
-
 The Botpress email channel setup usually goes like this: you click "Connect Gmail," get redirected to Google Cloud Console, spend 40 minutes creating a project and OAuth credentials, configure a consent screen, add test users, and then wait to see if Google flags your app as unverified. That's if everything goes right.
 
 If something goes wrong — and it often does — you're deep in a Botpress Discord thread at 11pm wondering why your token expired again.
@@ -30,7 +28,7 @@ This is the OAuth wall, and it hits almost every Botpress developer who tries to
 
 Slack, WhatsApp, Telegram: you paste a token and it works. Email is the exception because email wasn't designed for autonomous agents. It was designed for humans with accounts.
 
-When you wire Gmail into Botpress, you're authenticating a human Google account via OAuth 2.0. That means someone has to own that account (you, a shared mailbox, or a service account requiring Workspace admin access). The OAuth token refreshes on Google's schedule, not yours. And if Google's systems decide your app looks suspicious — maybe you haven't completed their app verification process — the token breaks and your bot silently stops processing email.
+When you wire Gmail into Botpress, you're authenticating a human Google account via OAuth 2.0. That means someone has to own that account (you, a shared mailbox, or a service account requiring Workspace admin access). The OAuth token refreshes on Google's schedule, not yours. And if Google's systems decide your app looks suspicious, maybe you haven't completed their app verification process, the token breaks and your bot silently stops processing email.
 
 Token expiry in Botpress email integrations is one of the most frequently reported issues in their community Discord. It's not a bug in Botpress. It's the fundamental mismatch between OAuth's design (grant humans access to apps) and what agents actually need (an inbox they own and control directly, with no human in the loop).
 
@@ -40,9 +38,9 @@ For more context on why this pattern keeps causing grief, see [why Gmail OAuth i
 
 Three email use cases come up repeatedly in Botpress projects.
 
-Follow-up sequences are the most common. A user chats with your bot, drops their email address, and a day later your agent sends a personalized follow-up based on the conversation. This is outbound only, so SMTP can technically handle it — but SMTP still requires mail server setup, domain authentication records, and usually a transactional email account somewhere.
+Follow-up sequences are the most common. A user chats with your bot, drops their email address, and a day later your agent sends a personalized follow-up based on the conversation. This is outbound only, so SMTP can technically handle it, but SMTP still requires mail server setup, domain authentication records, and usually a transactional email account somewhere.
 
-Bidirectional threads are harder. Your agent sends a message, the human replies, and the agent reads that reply and continues the conversation. Simple SMTP breaks down here entirely — you need an inbox the agent can check.
+Bidirectional threads are harder. Your agent sends a message, the human replies, and the agent reads that reply and continues the conversation. Simple SMTP breaks down here entirely, you need an inbox the agent can check.
 
 Verification codes are the third case, increasingly relevant as Botpress agents take on more autonomous workflows. If your bot needs to complete a signup or confirm an action via email, it needs an address it can poll for that code on demand.
 
@@ -96,23 +94,23 @@ The pattern that works well in practice: a trigger node fires, a code action cre
 
 The inbox address persists between sessions because the token file persists. Create it once, store the address in a workflow variable, and reference it in every subsequent run. You don't need to reprovision.
 
-If you want per-user isolation — each conversation gets its own address so replies route cleanly without any cross-contamination — you can create a fresh inbox per session. The free tier covers 1,000 emails a month. For most lead-gen or support bots, that's more than enough to start.
+If you want per-user isolation, each conversation gets its own address so replies route cleanly without any cross-contamination, you can create a fresh inbox per session. The free tier covers 1,000 emails a month. For most lead-gen or support bots, that's more than enough to start.
 
 When volume grows, the Builder plan at $9/month gets you up to 10 inboxes and 5,000 emails monthly.
 
 <Callout type="tip">
-  Store the inbox address as a Botpress workflow variable after the first `createSmartInbox()` call. On subsequent runs, check if the variable is set before provisioning — `createSmartInbox()` will create a new address each time it's called fresh.
+  Store the inbox address as a Botpress workflow variable after the first `createSmartInbox()` call. On subsequent runs, check if the variable is set before provisioning, `createSmartInbox()` will create a new address each time it's called fresh.
 </Callout>
 
 ## When oauth is still the right call
 
-If your bot needs to send from your company domain specifically — because your deliverability is tied to that domain's reputation, or users expect a `@yourcompany.com` sender — then OAuth to a proper mail account is the right call. The setup pain is real but it's the right tradeoff when branding requires it.
+If your bot needs to send from your company domain specifically, because your deliverability is tied to that domain's reputation, or users expect a `@yourcompany.com` sender, then OAuth to a proper mail account is the right call. The setup pain is real but it's the right tradeoff when branding requires it.
 
 LobsterMail is for agents that need working email fast, without a human account standing behind them. If that matches your situation, this is the shorter path.
 
 ---
 
-*Give your agent its own inbox. [Get started with LobsterMail](/) — it's free.*
+*Give your agent its own inbox. [Get started with LobsterMail](/), it's free.*
 
 <FAQ>
   <FAQItem question="Can I use LobsterMail inside a Botpress code action?">
@@ -144,7 +142,7 @@ LobsterMail is for agents that need working email fast, without a human account 
   </FAQItem>
 
   <FAQItem question="Is LobsterMail better than Mailgun or Sendgrid for this?">
-    Different tools, different jobs. Sendgrid and Mailgun are bulk outbound infrastructure — great for newsletters and transactional email at scale from your own domain. LobsterMail is specifically for agents that need to self-provision inboxes and receive email. See the full comparison in [agent email APIs compared](/blog/agent-email-api-comparison).
+    Different tools, different jobs. Sendgrid and Mailgun are bulk outbound infrastructure, great for newsletters and transactional email at scale from your own domain. LobsterMail is specifically for agents that need to self-provision inboxes and receive email. See the full comparison in [agent email APIs compared](/blog/agent-email-api-comparison).
   </FAQItem>
 
   <FAQItem question="Will emails from @lobstermail.ai land in spam?">
