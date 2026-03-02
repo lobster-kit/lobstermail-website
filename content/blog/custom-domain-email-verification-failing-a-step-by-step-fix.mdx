@@ -12,9 +12,13 @@ tags:
   - guides
   - infrastructure
 image: /blog/custom-domain-email-verification-failing-a-step-by-step-fix.png
-author: LobsterMail Team
+author: Ian Bussières
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: draft
+publish_at: '2026-03-06T21:00:00Z'
 ---
-
 You added the TXT record. You waited. You clicked verify. It failed.
 
 This is one of the most frustrating states to be in when setting up agent email infrastructure. The DNS change looks right, the record is there when you dig for it, but the verification endpoint keeps returning an error. The good news: it's almost always one of a handful of specific issues. The bad news is that most setup guides don't mention any of them.
@@ -25,7 +29,7 @@ If you're building an agent that needs email as part of a broader automation, [t
 
 ## Start here: check actual propagation
 
-This sounds obvious but skipping it wastes an hour. DNS changes don't apply instantly. The industry standard is "up to 48 hours," but in practice most changes propagate within 15–30 minutes for providers like Cloudflare, Route 53, and Porkbun. Registrar-managed DNS — GoDaddy, Namecheap, that kind of thing — runs slow. Expect 4–6 hours minimum.
+This sounds obvious but skipping it wastes an hour. DNS changes don't apply instantly. The industry standard is "up to 48 hours," but in practice most changes propagate within 15–30 minutes for providers like Cloudflare, Route 53, and Porkbun. Registrar-managed DNS — GoDaddy, Namecheap, that kind of thing, runs slow. Expect 4–6 hours minimum.
 
 Before debugging anything, run this from your terminal:
 
@@ -41,17 +45,17 @@ One thing that catches people: if you had a different TXT record at the same nam
 
 If propagation isn't the issue, the record value is likely malformed in one of a few ways.
 
-Quoted strings first. Some DNS providers require TXT record values to be wrapped in double quotes. Others strip them automatically. Others want them wrapped in the API but not in the web UI. Enter the LobsterMail verification value exactly as it appears in the dashboard — don't add quotes if the input field is plaintext, and don't strip them if the field explicitly expects quoted values. When the instructions don't specify, enter without quotes and let the provider handle escaping.
+Quoted strings first. Some DNS providers require TXT record values to be wrapped in double quotes. Others strip them automatically. Others want them wrapped in the API but not in the web UI. Enter the LobsterMail verification value exactly as it appears in the dashboard, don't add quotes if the input field is plaintext, and don't strip them if the field explicitly expects quoted values. When the instructions don't specify, enter without quotes and let the provider handle escaping.
 
 Subdomain placement is where I see the most mistakes. If you're verifying `mail.yourdomain.com`, the TXT record should be placed at `mail`, not at `mail.yourdomain.com`. DNS control panels automatically append the root domain. When you enter `mail.yourdomain.com` as the record name, the actual record ends up at `mail.yourdomain.com.yourdomain.com`, which is not a real host and will never verify. Enter just the subdomain label.
 
-Multiple TXT records at the same DNS name are technically valid — you can stack them and DNS handles it correctly. The problem is that some providers silently overwrite existing TXT records instead of adding a new entry. If you added the LobsterMail verification record and your SPF record disappeared, that's what happened. Go add both records back and confirm they both appear when you run `dig`. If only one shows up, your provider is overwriting. Some providers let you combine multiple values into a single TXT record entry; that's a valid workaround.
+Multiple TXT records at the same DNS name are technically valid, you can stack them and DNS handles it correctly. The problem is that some providers silently overwrite existing TXT records instead of adding a new entry. If you added the LobsterMail verification record and your SPF record disappeared, that's what happened. Go add both records back and confirm they both appear when you run `dig`. If only one shows up, your provider is overwriting. Some providers let you combine multiple values into a single TXT record entry; that's a valid workaround.
 
 ## SPF conflicts
 
 SPF is where setups start fighting with each other in non-obvious ways.
 
-The SPF spec allows a maximum of 10 DNS lookups per validation check. Once you include `sendgrid.net`, `mailgun.org`, `_spf.google.com`, Workspace, and a few others, you can burn through 10 fast. Adding LobsterMail's SPF mechanism might tip you over — and when you exceed the limit, validating servers return a `PermError`, which looks identical to a misconfiguration.
+The SPF spec allows a maximum of 10 DNS lookups per validation check. Once you include `sendgrid.net`, `mailgun.org`, `_spf.google.com`, Workspace, and a few others, you can burn through 10 fast. Adding LobsterMail's SPF mechanism might tip you over, and when you exceed the limit, validating servers return a `PermError`, which looks identical to a misconfiguration.
 
 Check your current SPF with:
 
@@ -61,13 +65,13 @@ dig TXT yourdomain.com | grep "v=spf1"
 
 Count the `include:` directives. Each one typically costs 1–3 lookups depending on what's nested inside it. [dmarcian's SPF surveyor](https://dmarcian.com/spf-survey/) counts the full tree for you and shows exactly where the excess is. If you're over 10, you need to flatten your SPF chain by replacing some `include:` references with their constituent IP ranges.
 
-Also: you should have exactly one `v=spf1` record. Multiple SPF records at the same name are technically invalid. Email providers handle this inconsistently — some reject everything, some use the first record, some use the last. If `dig` returns two `v=spf1` lines, merge them into one.
+Also: you should have exactly one `v=spf1` record. Multiple SPF records at the same name are technically invalid. Email providers handle this inconsistently, some reject everything, some use the first record, some use the last. If `dig` returns two `v=spf1` lines, merge them into one.
 
 ## DKIM record issues
 
 DKIM records are longer and more fragile than standard TXT records, and a few things break them specifically.
 
-The record name for DKIM looks like `lobstermail._domainkey.yourdomain.com` — the exact selector will be shown in your LobsterMail dashboard. That underscore in `_domainkey` is required by the spec. A small number of DNS providers don't allow underscores in record names. If your provider rejects it, contact their support team. This is a documented limitation and most providers have a workaround or a dedicated DKIM record field that handles the underscore correctly.
+The record name for DKIM looks like `lobstermail._domainkey.yourdomain.com`, the exact selector will be shown in your LobsterMail dashboard. That underscore in `_domainkey` is required by the spec. A small number of DNS providers don't allow underscores in record names. If your provider rejects it, contact their support team. This is a documented limitation and most providers have a workaround or a dedicated DKIM record field that handles the underscore correctly.
 
 DKIM values are long. The full public key can run 300+ characters. Some DNS control panels silently truncate long TXT values, particularly older cPanel-based shared hosting environments. After saving the record, read it back with dig and compare the character count against what's in your dashboard:
 
@@ -75,13 +79,13 @@ DKIM values are long. The full public key can run 300+ characters. Some DNS cont
 dig TXT lobstermail._domainkey.yourdomain.com
 ```
 
-If the value returned by dig is shorter than the value in the dashboard, it got truncated on save. The fix depends on your provider — some let you split the value into multiple quoted chunks in a single record entry, which is valid per RFC 4408 and most DKIM validators handle it fine.
+If the value returned by dig is shorter than the value in the dashboard, it got truncated on save. The fix depends on your provider, some let you split the value into multiple quoted chunks in a single record entry, which is valid per RFC 4408 and most DKIM validators handle it fine.
 
 ## Platform-specific quirks
 
 A few specific platforms bite people consistently.
 
-Cloudflare's orange cloud proxy mode rewrites headers and intercepts traffic in ways that break SPF alignment and DKIM signatures. Every DNS record associated with your sending domain — the MX record, the verification TXT, the DKIM record — should be set to "DNS only" (gray cloud). This doesn't affect how your site is proxied, only the DNS resolution for those specific records.
+Cloudflare's orange cloud proxy mode rewrites headers and intercepts traffic in ways that break SPF alignment and DKIM signatures. Every DNS record associated with your sending domain, the MX record, the verification TXT, the DKIM record, should be set to "DNS only" (gray cloud). This doesn't affect how your site is proxied, only the DNS resolution for those specific records.
 
 Route 53 handles TXT records correctly but expects values to be double-quoted when entered through the web console. If you paste a value without quotes in the Route 53 interface, it gets saved incorrectly and `dig` returns it wrong. Always wrap TXT values in double quotes when using the Route 53 console. The CLI and Terraform handle this differently and generally don't need the quotes.
 
@@ -91,7 +95,7 @@ If your domain's DNS is managed through Vercel or Netlify's nameservers: both pl
 
 ## After making a fix: re-trigger verification
 
-After correcting a DNS record, you need to explicitly re-trigger the verification check. Most systems cache the last result — just waiting won't do anything.
+After correcting a DNS record, you need to explicitly re-trigger the verification check. Most systems cache the last result, just waiting won't do anything.
 
 In the LobsterMail dashboard, there's a "Verify again" button on the custom domain setup screen. Use it after you've confirmed the corrected record is visible in `dig`. If you prefer the API:
 
@@ -108,7 +112,7 @@ A few less common causes worth ruling out before giving up.
 
 Run the check from a different network. Corporate DNS resolvers and some ISPs cache aggressively. Your work laptop might be returning cached results while the change has already propagated globally. Check from a mobile hotspot or use a tool like dnschecker.org that queries from multiple geographic locations simultaneously.
 
-Check for a broken DNSSEC signature. DNSSEC validation failures cause the entire domain's DNS to return errors for any resolver that validates signatures. When DNSSEC breaks, it breaks everything — not just email. It's rare but catastrophic. [Verisign's DNSSEC debugger](https://dnssec-debugger.verisignlabs.com/) will tell you immediately whether your domain has a DNSSEC issue.
+Check for a broken DNSSEC signature. DNSSEC validation failures cause the entire domain's DNS to return errors for any resolver that validates signatures. When DNSSEC breaks, it breaks everything, not just email. It's rare but catastrophic. [Verisign's DNSSEC debugger](https://dnssec-debugger.verisignlabs.com/) will tell you immediately whether your domain has a DNSSEC issue.
 
 Confirm you're verifying the right hostname. If your sending address is `agent@mail.yourdomain.com`, you're verifying `mail.yourdomain.com`, not `yourdomain.com`. The verification TXT record, SPF record, and DKIM record all need to be placed at the exact hostname you're setting up as the sending domain.
 
@@ -118,7 +122,7 @@ Confirm you're verifying the right hostname. If your sending address is `agent@m
 
 ## When you're unblocked
 
-Once the domain is verified, your agent gets a persistent inbox under a domain it controls. Emails sent from a verified custom domain go out with proper SPF alignment and DKIM signatures, which matters for deliverability — especially as your agent's send volume grows. The shared `@lobstermail.ai` domain is fine for verification codes and internal automation, but outbound emails representing your company or a customer-facing agent persona land differently when they come from a domain you own.
+Once the domain is verified, your agent gets a persistent inbox under a domain it controls. Emails sent from a verified custom domain go out with proper SPF alignment and DKIM signatures, which matters for deliverability, especially as your agent's send volume grows. The shared `@lobstermail.ai` domain is fine for verification codes and internal automation, but outbound emails representing your company or a customer-facing agent persona land differently when they come from a domain you own.
 
 Getting through this verification gate is the last piece of infrastructure setup. After this, provisioning inboxes is one function call:
 
@@ -129,7 +133,7 @@ console.log(inbox.address); // my-agent@yourdomain.com
 
 ---
 
-*Give your agent its own email address on your domain. [Get started with LobsterMail](/) — it's free.*
+*Give your agent its own email address on your domain. [Get started with LobsterMail](/), it's free.*
 
 <FAQ>
   <FAQItem question="How long should I wait before deciding my DNS change didn't work?">
@@ -140,8 +144,8 @@ console.log(inbox.address); // my-agent@yourdomain.com
     Yes, multiple TXT records at the same hostname are valid DNS. The problem is some providers overwrite existing entries instead of appending new ones. After adding a new TXT record, run `dig TXT yourdomain.com` and confirm all expected records appear.
   </FAQItem>
 
-  <FAQItem question="My DKIM record value looks different in dig output than in the dashboard — is that a problem?">
-    Not necessarily. Long TXT values are split into 255-character chunks by DNS, so `dig` shows them as multiple quoted strings. That's normal. What's a problem is truncation — if the total character count doesn't match the dashboard value, the record got cut off during save and needs to be re-entered.
+  <FAQItem question="My DKIM record value looks different in dig output than in the dashboard, is that a problem?">
+    Not necessarily. Long TXT values are split into 255-character chunks by DNS, so `dig` shows them as multiple quoted strings. That's normal. What's a problem is truncation, if the total character count doesn't match the dashboard value, the record got cut off during save and needs to be re-entered.
   </FAQItem>
 
   <FAQItem question="Does Cloudflare's proxy mode break email verification?">
@@ -149,7 +153,7 @@ console.log(inbox.address); // my-agent@yourdomain.com
   </FAQItem>
 
   <FAQItem question="I fixed the DNS record but verification still fails immediately. What's wrong?">
-    Most verification systems cache the last failure result. You need to explicitly re-trigger the check — use the "Verify again" button in the LobsterMail dashboard or call the verify API endpoint. Also confirm global propagation is complete using dnschecker.org, not just your local `dig` output, which might return cached results.
+    Most verification systems cache the last failure result. You need to explicitly re-trigger the check, use the "Verify again" button in the LobsterMail dashboard or call the verify API endpoint. Also confirm global propagation is complete using dnschecker.org, not just your local `dig` output, which might return cached results.
   </FAQItem>
 
   <FAQItem question="What happens if I exceed 10 SPF lookups?">
@@ -157,7 +161,7 @@ console.log(inbox.address); // my-agent@yourdomain.com
   </FAQItem>
 
   <FAQItem question="Can I verify a subdomain instead of my root domain?">
-    Yes, and it's often a cleaner setup — your root domain's existing email records stay untouched. All records for the sending domain (MX, verification TXT, SPF, DKIM) go on the subdomain, not the root. Make sure you're entering the subdomain label only (e.g., `mail`) as the record name, not the full hostname.
+    Yes, and it's often a cleaner setup, your root domain's existing email records stay untouched. All records for the sending domain (MX, verification TXT, SPF, DKIM) go on the subdomain, not the root. Make sure you're entering the subdomain label only (e.g., `mail`) as the record name, not the full hostname.
   </FAQItem>
 
   <FAQItem question="Is LobsterMail verification required to receive email, or only to send?">
@@ -169,14 +173,14 @@ console.log(inbox.address); // my-agent@yourdomain.com
   </FAQItem>
 
   <FAQItem question="My DNS is managed by Vercel or Netlify. Should I move it?">
-    If you're having trouble with advanced DNS record types, migrating DNS management to Cloudflare (free) while keeping your hosting on Vercel or Netlify is a clean solution. Hosting and DNS are independent — your site stays where it is, you just change the nameservers on your domain registrar to point to Cloudflare.
+    If you're having trouble with advanced DNS record types, migrating DNS management to Cloudflare (free) while keeping your hosting on Vercel or Netlify is a clean solution. Hosting and DNS are independent, your site stays where it is, you just change the nameservers on your domain registrar to point to Cloudflare.
   </FAQItem>
 
   <FAQItem question="Can I use LobsterMail without a custom domain?">
-    Yes. The shared `@lobstermail.ai` domain works for most agent tasks — catching verification codes, service signups, agent-to-agent communication. A custom domain is worth setting up when sender identity and deliverability matter: outbound emails representing your company, customer-facing agents, or any workflow where the recipient reads the From address.
+    Yes. The shared `@lobstermail.ai` domain works for most agent tasks, catching verification codes, service signups, agent-to-agent communication. A custom domain is worth setting up when sender identity and deliverability matter: outbound emails representing your company, customer-facing agents, or any workflow where the recipient reads the From address.
   </FAQItem>
 
   <FAQItem question="Where do I get support if I'm still stuck after trying everything here?">
-    The [LobsterMail docs](/docs/getting-started) have the current support channel. Bring the output of `dig TXT yourdomain.com`, your DKIM record dig output, and the exact error message from the dashboard — that's enough for us to pinpoint the issue quickly.
+    The [LobsterMail docs](/docs/getting-started) have the current support channel. Bring the output of `dig TXT yourdomain.com`, your DKIM record dig output, and the exact error message from the dashboard, that's enough for us to pinpoint the issue quickly.
   </FAQItem>
 </FAQ>
