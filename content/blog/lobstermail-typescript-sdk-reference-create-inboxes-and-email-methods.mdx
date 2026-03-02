@@ -1,0 +1,377 @@
+---
+title: 'lobstermail typescript sdk reference: create(), inboxes, and email methods'
+description: >-
+  Complete TypeScript SDK reference for LobsterMail. Covers
+  LobsterMail.create(), createSmartInbox(), waitForEmail(), safeBodyForLLM(),
+  and more.
+date: '2026-02-28'
+tags:
+  - guides
+  - getting-started
+  - infrastructure
+image: >-
+  /blog/lobstermail-typescript-sdk-reference-create-inboxes-and-email-methods.png
+author: LobsterMail Team
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+publish_at: '2026-02-28T17:00:00Z'
+approved_at: '2026-03-02T10:36:37.169Z'
+---
+You found this page because you're wiring up email for an AI agent and you want to know exactly which function does what. Good. That's what this is.
+
+This is a complete reference for the LobsterMail TypeScript SDK. I'll cover every method you'll actually use, what the parameters do, and why the defaults are what they are. If you want the narrative on why agent email works differently from transactional email APIs, the [agent email API comparison](/blog/agent-email-api-comparison) post covers that ground. This one is a reference.
+
+## Installation
+
+```bash
+npm install @lobsterkit/lobstermail
+```
+
+The package is ESM-compatible and ships TypeScript types. No separate `@types/` package needed.
+
+---
+
+## LobsterMail.create()
+
+The entry point for everything. `LobsterMail.create()` returns an authenticated client instance. What makes it interesting is what happens when no API token exists: it signs up for a free account automatically and persists the token so the agent doesn't have to repeat this step.
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create();
+```
+
+What happens under the hood:
+
+1. The SDK checks for a token at `~/.lobstermail/token` (or the path in `LOBSTERMAIL_TOKEN_PATH` env var)
+2. If found, it uses that token
+3. If not found, it registers a new free account and writes the token to disk
+
+This is the "agent hatches its own inbox" pattern. The agent runs once, creates its account, and every subsequent run picks up where it left off. No human has to open a browser, verify an email address, or paste in a key.
+
+```typescript
+const lm = await LobsterMail.create({
+  token: process.env.LOBSTERMAIL_API_KEY, // explicit token, skips auto-signup
+  tokenPath: '/custom/path/token',        // override default token storage path
+  baseUrl: 'https://api.lobstermail.ai',  // default; override for testing
+});
+```
+
+If you're deploying to a server where `~/.lobstermail/` isn't writable, pass an explicit `token` from an environment variable. The auto-signup path is mainly useful for local development, one-off scripts, and agents running on machines you control.
+
+Tokens follow the format `lm_sk_test_*` for sandbox environments and `lm_sk_live_*` for production. The SDK validates the format on initialization and surfaces a clear error if you mix them.
+
+---
+
+## createSmartInbox()
+
+Creates a human-readable email inbox. Pass a name and the SDK figures out the address.
+
+```typescript
+const inbox = await lm.createSmartInbox({ name: 'My Agent' });
+console.log(inbox.address); // my-agent@lobstermail.ai
+```
+
+"Smart" refers to collision handling. If `my-agent@lobstermail.ai` is taken, the SDK tries `my-agent1`, `my-agent2`, `m-agent`, and other variations automatically. You pass a name; you get back a working address. The exact slug is in `inbox.address`.
+
+```typescript
+await lm.createSmartInbox({
+  name: string,           // required — human name for the inbox
+  ttl?: number,           // seconds until inbox expires; omit for persistent
+  tags?: string[],        // optional metadata for filtering later
+});
+```
+
+Return value:
+
+```typescript
+{
+  id: string;            // inbox UUID
+  address: string;       // full email address, e.g. my-agent@lobstermail.ai
+  name: string;          // the name you passed in
+  createdAt: string;     // ISO timestamp
+  expiresAt?: string;    // only present if you set a TTL
+}
+```
+
+Use TTLs for temporary inboxes in one-shot workflows. Your agent creates an inbox, catches the verification email within 10 minutes, and the inbox disappears. No cleanup call needed.
+
+---
+
+## createInbox()
+
+When you don't need a readable address, `createInbox()` gives you a random slug:
+
+```typescript
+const inbox = await lm.createInbox();
+console.log(inbox.address); // lobster-k4j9x@lobstermail.ai
+```
+
+Same return shape as `createSmartInbox()`. Use this for throwaway inboxes where the address itself doesn't matter.
+
+---
+
+## receive()
+
+Polls for emails delivered to an inbox.
+
+```typescript
+const emails = await inbox.receive();
+```
+
+Returns an array of email objects, newest first. Empty array if nothing has arrived yet.
+
+```typescript
+await inbox.receive({
+  limit?: number,         // default: 50
+  since?: string,         // ISO timestamp — only return emails after this date
+  unreadOnly?: boolean,   // default: false
+});
+```
+
+Each email object looks like this:
+
+```typescript
+{
+  id: string;
+  from: string;
+  to: string;
+  subject: string;
+  preview: string;        // first ~200 characters, plain text
+  body: string;           // full body, may contain HTML
+  bodyText: string;       // plain text version
+  receivedAt: string;     // ISO timestamp
+  read: boolean;
+  security: {
+    injectionRisk: 'low' | 'medium' | 'high';
+    injectionScore: number;    // 0–100
+    flaggedPatterns: string[]; // what triggered the score
+  };
+}
+```
+
+The `security` field is on every email. Even if you don't act on it immediately, it's there. More on that in the `safeBodyForLLM()` section.
+
+---
+
+## waitForEmail()
+
+Waits for a matching email to arrive, with polling and a configurable timeout. This is the method that makes verification code flows clean.
+
+```typescript
+const email = await inbox.waitForEmail({
+  subject: /verification/i,
+  timeout: 30_000,   // milliseconds; default: 60_000
+  interval: 2_000,   // polling interval; default: 3_000
+});
+```
+
+Throws if nothing arrives within the timeout. Wrap it if the downstream service is slow:
+
+```typescript
+try {
+  const email = await inbox.waitForEmail({
+    from: 'noreply@someservice.com',
+    timeout: 45_000,
+  });
+  // extract verification code from email.bodyText
+} catch (err) {
+  // timeout — handle however your agent handles failures
+}
+```
+
+Match options:
+
+```typescript
+{
+  subject?: string | RegExp;
+  from?: string | RegExp;
+  bodyContains?: string;
+  timeout?: number;       // default: 60_000
+  interval?: number;      // default: 3_000
+}
+```
+
+Without something like this, you'd be writing your own polling loop with sleep intervals and edge case handling. See [how the agent self-signup flow works](/blog/agent-self-signup-explained) for a full walkthrough of the pattern. If you're weighing this against a webhook setup, the [webhooks vs polling post](/blog/webhooks-vs-polling-email) breaks down the tradeoffs honestly.
+
+---
+
+## safeBodyForLLM()
+
+Returns a sanitized version of an email body, safe to pass directly into an LLM prompt.
+
+```typescript
+const safeBody = inbox.safeBodyForLLM(email);
+```
+
+Email bodies are untrusted input. Anyone can send your agent an email, and nothing stops them from embedding prompt injection attempts in the body. "Ignore all previous instructions" in a nicely formatted invoice is a real attack vector. `safeBodyForLLM()` strips injection patterns, escapes control sequences, and — if `security.injectionRisk` is `'high'` — returns a truncated summary with a warning marker instead of the full body.
+
+```typescript
+const emails = await inbox.receive();
+
+for (const email of emails) {
+  const safeBody = inbox.safeBodyForLLM(email);
+
+  // pass safeBody to your LLM, not email.body
+  const response = await llm.chat([
+    { role: 'user', content: `Summarize this email: ${safeBody}` }
+  ]);
+}
+```
+
+If you're passing email content to an LLM without this, you're trusting strangers on the internet to behave. That's a choice, but it should be a deliberate one rather than an accident.
+
+---
+
+## Sending email
+
+```typescript
+await inbox.send({
+  to: 'someone@example.com',
+  subject: 'Hello from my agent',
+  text: 'Plain text body',
+  html: '<p>HTML body</p>',  // optional
+});
+```
+
+Send from any inbox you've provisioned. The free tier supports sending up to 1,000 emails/month. The Builder plan ($9/month) increases that to 5,000/month with up to 500/day.
+
+---
+
+## Listing and managing inboxes
+
+```typescript
+// List all inboxes on this account
+const inboxes = await lm.listInboxes();
+
+// Get a specific inbox by ID
+const inbox = await lm.getInbox(inboxId);
+
+// Delete an inbox
+await lm.deleteInbox(inboxId);
+```
+
+---
+
+## Error handling
+
+The SDK throws typed errors. All errors extend `LobsterMailError`:
+
+```typescript
+import {
+  LobsterMailError,
+  AuthError,
+  InboxNotFoundError,
+  RateLimitError,
+} from '@lobsterkit/lobstermail';
+
+try {
+  const inbox = await lm.createSmartInbox({ name: 'My Agent' });
+} catch (err) {
+  if (err instanceof AuthError) {
+    // token is invalid or expired
+  } else if (err instanceof RateLimitError) {
+    // hit send or creation limits; err.retryAfter is a Unix ms timestamp
+  } else if (err instanceof LobsterMailError) {
+    // catch-all for SDK errors
+  }
+}
+```
+
+`RateLimitError` includes a `retryAfter` timestamp so agents can back off gracefully rather than hammering the API.
+
+---
+
+## A complete agent pattern
+
+Putting it together: an agent that provisions its own inbox, waits for a verification email, and extracts a code.
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+async function getVerificationCode(triggerSignup: (address: string) => Promise<void>) {
+  const lm = await LobsterMail.create();
+
+  // 10-minute inbox — disappears automatically after the flow
+  const inbox = await lm.createSmartInbox({
+    name: 'Signup Agent',
+    ttl: 600,
+  });
+
+  // trigger whatever signup flow sends the verification email
+  await triggerSignup(inbox.address);
+
+  const email = await inbox.waitForEmail({
+    subject: /verification|confirm/i,
+    timeout: 60_000,
+  });
+
+  // safe to pass to an LLM or parse directly
+  const safeBody = inbox.safeBodyForLLM(email);
+  const codeMatch = safeBody.match(/\b\d{6}\b/);
+
+  return codeMatch?.[0] ?? null;
+}
+```
+
+The inbox expires after 10 minutes. No cleanup call needed. The agent handles the whole thing.
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
+
+<FAQ>
+  <FAQItem question="Do I need to create a LobsterMail account before using the SDK?">
+    No. If you call `LobsterMail.create()` without a token, the SDK signs up for a free account automatically and stores the token locally. Your agent bootstraps itself on the first run.
+  </FAQItem>
+
+  <FAQItem question="Where does the SDK store the API token?">
+    By default at `~/.lobstermail/token`. Override this with the `tokenPath` option, or skip local storage entirely by passing an explicit `token` from an environment variable or secrets manager.
+  </FAQItem>
+
+  <FAQItem question="What's the difference between createSmartInbox() and createInbox()?">
+    `createSmartInbox()` generates a human-readable address from a name you provide (e.g. `my-agent@lobstermail.ai`) with automatic collision handling. `createInbox()` gives you a random slug like `lobster-k4j9x@lobstermail.ai`. Use smart inboxes when the address matters; random inboxes for throwaway flows.
+  </FAQItem>
+
+  <FAQItem question="What happens when waitForEmail() times out?">
+    It throws an error. Wrap it in a try/catch and handle the failure however your agent handles it — retry, log, or fail gracefully. The `timeout` option defaults to 60 seconds.
+  </FAQItem>
+
+  <FAQItem question="Is safeBodyForLLM() required, or just recommended?">
+    It's not enforced by the SDK, but skipping it means you're passing untrusted email content directly to your LLM. Prompt injection via email is a real attack. `safeBodyForLLM()` strips known patterns and flags high-risk content before it reaches your model.
+  </FAQItem>
+
+  <FAQItem question="How do I know if an email contains a prompt injection attempt?">
+    Every email object includes a `security.injectionRisk` field (`low`, `medium`, or `high`) and an `injectionScore` from 0 to 100. The `flaggedPatterns` array lists what triggered the score. `safeBodyForLLM()` uses all of this internally.
+  </FAQItem>
+
+  <FAQItem question="Can I use the SDK in a serverless environment like AWS Lambda?">
+    Yes. Pass an explicit `token` to `LobsterMail.create()` rather than relying on the local token file, since Lambda functions don't have a persistent home directory. Store the token in an environment variable or AWS Secrets Manager.
+  </FAQItem>
+
+  <FAQItem question="What's the free tier send limit?">
+    1,000 emails per month on the free plan. The Builder plan ($9/month) increases that to 5,000 emails/month with a 500/day send cap. See the [pricing section](/#pricing) for the full breakdown.
+  </FAQItem>
+
+  <FAQItem question="Can I use LobsterMail with a custom domain?">
+    Yes, on paid plans. Your agents can then receive email at `agent@yourcompany.com` instead of `@lobstermail.ai`. See the [custom domains guide](/docs/custom-domains) for setup.
+  </FAQItem>
+
+  <FAQItem question="Does the SDK support real-time email delivery, or is it always polling?">
+    `waitForEmail()` uses polling, which handles most agent workflows cleanly. For high-volume or latency-sensitive cases, LobsterMail also supports webhooks that push delivery in real time. The [webhooks vs polling post](/blog/webhooks-vs-polling-email) covers when each approach makes sense.
+  </FAQItem>
+
+  <FAQItem question="What Node.js version does the SDK require?">
+    Node.js 18 or later. The SDK uses native `fetch` and ESM imports, both available from Node 18 onward.
+  </FAQItem>
+
+  <FAQItem question="Can multiple agents share one LobsterMail account?">
+    Yes. One account holds multiple inboxes — each agent or workflow gets its own inbox, all billed under the same account. Useful when one team member manages the LobsterMail account but several agents use it.
+  </FAQItem>
+
+  <FAQItem question="How do I handle inbox TTLs for flows that might take longer than expected?">
+    Either omit the TTL to create a persistent inbox and delete it manually afterward, or set a generous TTL with buffer time. There's no way to extend a TTL after creation, so err on the side of longer if the downstream service can be slow.
+  </FAQItem>
+</FAQ>
