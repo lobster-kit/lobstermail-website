@@ -20,6 +20,7 @@ status: approved
 publish_at: '2026-02-24T17:00:00Z'
 approved_at: '2026-03-02T10:36:37.181Z'
 ---
+
 Here's a scenario that's more common than it should be. An agent processes incoming support requests via email. One afternoon, a message arrives with this body:
 
 ```text
@@ -56,15 +57,15 @@ LobsterMail treats every inbound email as untrusted input — because it is. Bef
 5. Authority impersonation tactics
 6. Command chaining structures
 
-The result is a `security` object attached to every email, with a numeric score from `0.0` (clean) to `1.0` (high-confidence attack), plus a `flags` array identifying what was detected:
+The result is a `security` object attached to every email, with a risk level (`low`, `medium`, `high`), a numeric score from `0` to `100`, and a `flaggedPatterns` array identifying what was detected:
 
 ```typescript
 const email = await inbox.waitForEmail();
 
-console.log(email.security.score);   // 0.83
+console.log(email.security.injectionScore);   // 0.83
 console.log(email.security.flags);   // ['prompt_injection', 'spoofed_sender']
-console.log(email.security.spf);     // 'fail'
-console.log(email.security.dkim);    // 'fail'
+console.log(email.security.injectionRisk); // 'high'
+console.log(email.security.flaggedPatterns); // ['spoofed_sender', 'role_hijacking']
 ```
 
 For quick checks without writing your own threshold logic, `isInjectionRisk` does the heavy lifting:
@@ -122,9 +123,9 @@ Worth noting on pricing: AgentMail's lowest paid tier starts at $20/month. Lobst
 Combining all three layers — scoring, flags, and safe content:
 
 ```typescript
-import { LobsterMail } from 'lobstermail';
+import { LobsterMail } from '@lobsterkit/lobstermail';
 
-const lm = new LobsterMail();
+const lm = await LobsterMail.create();
 const inbox = await lm.createInbox();
 
 inbox.on('email', async (email) => {
@@ -136,7 +137,7 @@ inbox.on('email', async (email) => {
 
   // For borderline scores, proceed but log the metadata
   const metadata = {
-    injectionScore: email.security.score,
+    injectionScore: email.security.injectionScore,
     flags: email.security.flags,
     spf: email.security.spf,
   };
@@ -165,7 +166,7 @@ If prompt injection via email is a real risk in your deployment — and if your 
   </FAQItem>
 
   <FAQItem question="What is the injection risk score and what threshold triggers isInjectionRisk?">
-    The score runs from `0.0` (clean) to `1.0` (high-confidence attack). The `isInjectionRisk` boolean is `true` when the score exceeds `0.5`. You can also read the raw score directly and apply your own threshold for finer control over borderline cases.
+    The `injectionScore` ranges from `0` (clean) to `100` (high-confidence attack). The `injectionRisk` string is `'high'` when the score exceeds `70`. You can read the raw score directly and apply your own threshold for finer control over borderline cases.
   </FAQItem>
 
   <FAQItem question="What does safeBodyForLLM() actually do to the content?">
@@ -185,11 +186,11 @@ If prompt injection via email is a real risk in your deployment — and if your 
   </FAQItem>
 
   <FAQItem question="How do I handle emails with a borderline injection score without discarding them?">
-    Read `email.security.score` and make a judgment call. For scores between `0.3` and `0.5`, a reasonable approach is to log the metadata, proceed with `safeBodyForLLM()` rather than the raw body, and flag the output for human review if the response will have consequences. The [OpenClaw agent email security guide](/blog/openclaw-agent-email-security) has a worked example with a full logging pattern.
+    Read `email.security.injectionScore` and make a judgment call. For scores between `30` and `50`, a reasonable approach is to log the metadata, proceed with `safeBodyForLLM()` rather than the raw body, and flag the output for human review if the response will have consequences. The [OpenClaw agent email security guide](/blog/openclaw-agent-email-security) has a worked example with a full logging pattern.
   </FAQItem>
 
   <FAQItem question="What happens when SPF, DKIM, or DMARC fail on an inbound email?">
-    A `spoofed_sender` flag is added to `email.security.flags`, and the individual authentication results are available as `email.security.spf`, `email.security.dkim`, and `email.security.dmarc`. A spoofed sender typically also elevates the overall injection score. Whether you discard or process the email is your decision.
+    Spoofed senders are detected as part of the injection scan. The `flaggedPatterns` array will include `spoofed_sender`, and the overall `injectionScore` will be elevated. Whether you discard or process the email is your decision. Whether you discard or process the email is your decision.
   </FAQItem>
 
   <FAQItem question="Is prompt injection via email a real-world attack or mostly theoretical?">
