@@ -18,6 +18,7 @@ status: approved
 publish_at: '2026-02-27T17:00:00Z'
 approved_at: '2026-03-02T10:36:37.202Z'
 ---
+
 Something breaks in your webhook handler. You don't know if it's the HMAC verification, the payload parsing, or something in between. Your agent is silently dropping emails. The only way to reproduce it is to send another email, wait, check logs, realize you're missing a header, and start over.
 
 There's a better loop.
@@ -54,9 +55,9 @@ Then open `http://localhost:4040` in a browser tab. That's ngrok's web inspector
 Point LobsterMail at your ngrok URL. The path is whatever your handler listens on:
 
 ```typescript
-import LobsterMail from 'lobstermail';
+import { LobsterMail } from '@lobsterkit/lobstermail';
 
-const lm = new LobsterMail();
+const lm = await LobsterMail.create();
 
 const webhook = await lm.createWebhook({
   url: 'https://abc123.ngrok-free.app/hooks/lobstermail',
