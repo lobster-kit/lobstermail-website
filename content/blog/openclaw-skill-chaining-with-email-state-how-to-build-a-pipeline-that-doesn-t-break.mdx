@@ -21,6 +21,7 @@ status: approved
 publish_at: '2026-03-01T12:00:00Z'
 approved_at: '2026-03-02T10:36:37.214Z'
 ---
+
 If you've chained more than three OpenClaw skills together, you've hit the state problem. Skill A does its work, produces output, and needs to hand something meaningful to Skill B. The options aren't great.
 
 You can write to a temp file and hope the next skill runs on the same machine. You can stuff state into an environment variable and watch it truncate at 8KB. You can introduce a database — which now means your pipeline depends on external infrastructure that needs to be provisioned, migrated, and monitored separately.
