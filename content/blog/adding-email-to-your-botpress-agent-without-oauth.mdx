@@ -1,0 +1,164 @@
+---
+title: adding email to your botpress agent without oauth
+description: >-
+  Botpress email setup usually hits an OAuth wall. Here's how to give your agent
+  a working inbox in minutes, no Google account required.
+date: '2026-02-24'
+tags:
+  - email
+  - guides
+  - automation
+  - no-code
+  - botpress
+image: /blog/adding-email-to-your-botpress-agent-without-oauth.png
+author: LobsterMail Team
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+publish_at: '2026-02-24T07:00:00Z'
+approved_at: '2026-03-02T10:36:37.210Z'
+---
+The Botpress email channel setup usually goes like this: you click "Connect Gmail," get redirected to Google Cloud Console, spend 40 minutes creating a project and OAuth credentials, configure a consent screen, add test users, and then wait to see if Google flags your app as unverified. That's if everything goes right.
+
+If something goes wrong — and it often does — you're deep in a Botpress Discord thread at 11pm wondering why your token expired again.
+
+This is the OAuth wall, and it hits almost every Botpress developer who tries to add email to an agent. There's a way around it.
+
+## Why email is harder than every other botpress channel
+
+Slack, WhatsApp, Telegram: you paste a token and it works. Email is the exception because email wasn't designed for autonomous agents. It was designed for humans with accounts.
+
+When you wire Gmail into Botpress, you're authenticating a human Google account via OAuth 2.0. That means someone has to own that account (you, a shared mailbox, or a service account requiring Workspace admin access). The OAuth token refreshes on Google's schedule, not yours. And if Google's systems decide your app looks suspicious — maybe you haven't completed their app verification process — the token breaks and your bot silently stops processing email.
+
+Token expiry in Botpress email integrations is one of the most frequently reported issues in their community Discord. It's not a bug in Botpress. It's the fundamental mismatch between OAuth's design (grant humans access to apps) and what agents actually need (an inbox they own and control directly, with no human in the loop).
+
+For more context on why this pattern keeps causing grief, see [why Gmail OAuth is painful for agents](/blog/oauth-gmail-agents-painful) and [why your agent shouldn't use Gmail at all](/blog/why-agent-shouldnt-use-gmail).
+
+## What your agent actually needs from email
+
+Three email use cases come up repeatedly in Botpress projects.
+
+Follow-up sequences are the most common. A user chats with your bot, drops their email address, and a day later your agent sends a personalized follow-up based on the conversation. This is outbound only, so SMTP can technically handle it — but SMTP still requires mail server setup, domain authentication records, and usually a transactional email account somewhere.
+
+Bidirectional threads are harder. Your agent sends a message, the human replies, and the agent reads that reply and continues the conversation. Simple SMTP breaks down here entirely — you need an inbox the agent can check.
+
+Verification codes are the third case, increasingly relevant as Botpress agents take on more autonomous workflows. If your bot needs to complete a signup or confirm an action via email, it needs an address it can poll for that code on demand.
+
+LobsterMail handles all three. No OAuth, no mail server, no human account standing behind it.
+
+## Giving your botpress agent its own inbox
+
+Install the SDK:
+
+```bash
+npm install @lobsterkit/lobstermail
+```
+
+In a Botpress code action node, your agent hatches its own inbox:
+
+```javascript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create();
+const inbox = await lm.createSmartInbox({ name: 'My Botpress Agent' });
+
+console.log(inbox.address); // my-botpress-agent@lobstermail.ai
+```
+
+`LobsterMail.create()` handles account provisioning on the first run. There's no dashboard to visit, no credentials to configure. The SDK creates a free account, saves an API token locally, and reuses it on every subsequent run. Your agent goes from zero to a working `@lobstermail.ai` inbox in seconds.
+
+Receiving is one call:
+
+```javascript
+const emails = await inbox.receive();
+for (const email of emails) {
+  console.log(email.subject, email.preview);
+}
+```
+
+Sending uses the same object:
+
+```javascript
+await inbox.send({
+  to: 'lead@example.com',
+  subject: 'Following up from our chat',
+  text: 'Hey, just wanted to circle back on what you mentioned...',
+});
+```
+
+No SMTP configuration. Replies come back to the same inbox address automatically.
+
+## Wiring it into a botpress flow
+
+The pattern that works well in practice: a trigger node fires, a code action creates (or reloads) the agent's inbox, your conversation logic runs, another code action sends the follow-up, and a later code action polls for replies.
+
+The inbox address persists between sessions because the token file persists. Create it once, store the address in a workflow variable, and reference it in every subsequent run. You don't need to reprovision.
+
+If you want per-user isolation — each conversation gets its own address so replies route cleanly without any cross-contamination — you can create a fresh inbox per session. The free tier covers 1,000 emails a month. For most lead-gen or support bots, that's more than enough to start.
+
+When volume grows, the Builder plan at $9/month gets you up to 10 inboxes and 5,000 emails monthly.
+
+<Callout type="tip">
+  Store the inbox address as a Botpress workflow variable after the first `createSmartInbox()` call. On subsequent runs, check if the variable is set before provisioning — `createSmartInbox()` will create a new address each time it's called fresh.
+</Callout>
+
+## When oauth is still the right call
+
+If your bot needs to send from your company domain specifically — because your deliverability is tied to that domain's reputation, or users expect a `@yourcompany.com` sender — then OAuth to a proper mail account is the right call. The setup pain is real but it's the right tradeoff when branding requires it.
+
+LobsterMail is for agents that need working email fast, without a human account standing behind them. If that matches your situation, this is the shorter path.
+
+---
+
+*Give your agent its own inbox. [Get started with LobsterMail](/) — it's free.*
+
+<FAQ>
+  <FAQItem question="Can I use LobsterMail inside a Botpress code action?">
+    Yes. Botpress code actions support npm packages, so you can `import` the `@lobsterkit/lobstermail` SDK directly. Any Botpress flow that reaches a code action node can provision an inbox, send email, or poll for replies.
+  </FAQItem>
+
+  <FAQItem question="Does the inbox address stay the same between Botpress runs?">
+    Yes, as long as the token file persists. On first run, the SDK creates a free account and saves a token at `~/.lobstermail/token`. Every run after that reuses the same account and any inboxes you've created.
+  </FAQItem>
+
+  <FAQItem question="What happens if I redeploy or reset my Botpress environment?">
+    If the token file is lost, `LobsterMail.create()` provisions a new free account. To avoid this, store the API token as a Botpress environment variable and pass it explicitly to the SDK so it survives redeployments.
+  </FAQItem>
+
+  <FAQItem question="Is LobsterMail actually free?">
+    The free tier is $0/month, no credit card required. It includes 1,000 emails a month and covers most development and low-volume production use cases. The Builder plan at $9/month adds up to 10 inboxes and 5,000 emails monthly.
+  </FAQItem>
+
+  <FAQItem question="What are the daily sending limits?">
+    The free tier is limited to 1,000 emails per month total. The Builder plan at $9/month allows up to 500 emails per day and 5,000 per month. See the [pricing page](/) for current tier details.
+  </FAQItem>
+
+  <FAQItem question="Can I use a custom domain instead of @lobstermail.ai?">
+    Custom domain support is on the roadmap. Right now, all inboxes use `@lobstermail.ai`. Check the [docs](/docs/getting-started) for the latest on custom domain availability.
+  </FAQItem>
+
+  <FAQItem question="How do I handle replies in a Botpress flow?">
+    After your agent sends an email, use a Botpress wait node to pause the flow, then trigger a code action on a schedule or webhook to call `inbox.receive()`. Filter returned emails by `inReplyTo` or subject to match the thread.
+  </FAQItem>
+
+  <FAQItem question="Is LobsterMail better than Mailgun or Sendgrid for this?">
+    Different tools, different jobs. Sendgrid and Mailgun are bulk outbound infrastructure — great for newsletters and transactional email at scale from your own domain. LobsterMail is specifically for agents that need to self-provision inboxes and receive email. See the full comparison in [agent email APIs compared](/blog/agent-email-api-comparison).
+  </FAQItem>
+
+  <FAQItem question="Will emails from @lobstermail.ai land in spam?">
+    LobsterMail addresses are on authenticated, warmed infrastructure with proper SPF and DKIM records. Deliverability for one-to-one follow-up email is generally solid. For bulk outbound to large lists, a dedicated sending domain will always perform better.
+  </FAQItem>
+
+  <FAQItem question="Can I create a separate inbox for each user conversation?">
+    Yes. Call `createSmartInbox()` once per conversation and store the resulting address in a Botpress session variable. Each inbox is isolated, so replies to one user don't mix with another. Just watch your monthly email quota if you're running high conversation volume.
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail support real-time email delivery instead of polling?">
+    Yes, webhooks are available so you don't have to poll. See the [webhooks guide](/docs/getting-started) for setup details. In Botpress, you'd configure a webhook URL pointing to a Botpress trigger endpoint.
+  </FAQItem>
+
+  <FAQItem question="What if my Botpress agent needs to read a verification code from an email?">
+    Poll `inbox.receive()` after the signup action. Each returned email includes `subject`, `preview`, and full body content. Parse the verification code from the body with a simple regex, then continue your flow. The [agent quickstart guide](/docs/getting-started) walks through exactly this pattern.
+  </FAQItem>
+</FAQ>
