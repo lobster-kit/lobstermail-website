@@ -1,0 +1,134 @@
+---
+title: 'agentmail pricing review 2026: the gap between free and $20'
+description: >-
+  AgentMail's free tier caps at 3 inboxes, then jumps to $20/mo with nothing in
+  between. Here's what that gap costs you — and what fills it.
+date: '2026-02-24'
+tags:
+  - email
+  - infrastructure
+  - cost
+image: /blog/agentmail-pricing-review-2026.png
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+author: LobsterMail Team
+publish_at: '2026-02-24T14:00:00Z'
+approved_at: '2026-03-02T08:07:57.761Z'
+---
+You started on AgentMail's free tier. It worked — good documentation, clean API, provisioned a couple of inboxes and got back to building. Then your project grew. Maybe you added more agent workflows. Maybe you're running separate inboxes per environment. Either way, you've hit 3 inboxes and the platform is asking you to upgrade.
+
+The upgrade is $20/month.
+
+That's the moment this review is for. Not because $20 is painful, but because the jump from $0 to $20 doesn't fit the problem you're actually trying to solve. You need 4 or 5 inboxes, not a significant monthly commitment. The question isn't whether AgentMail is worth $20 — it's whether you should pay $20 for what's really a $9 problem.
+
+## What AgentMail's free tier actually gives you
+
+AgentMail is API-first email infrastructure for AI builders. Their free tier is real and functional: you can provision inboxes, send and receive email, and explore the API without a credit card. The developer experience is polished. The documentation is solid and well-maintained.
+
+The ceiling is 3 inboxes. For a single-agent prototype or a simple automation with one mailbox, that's enough. For anything multi-agent — parallel test environments, different inboxes per workflow, or several agents that each need their own identity — 3 runs out fast.
+
+What the free tier doesn't include: higher send volumes, custom domains, and enterprise features. These matter less at the prototyping stage and more as you scale.
+
+## The cliff
+
+Here's the specific problem with AgentMail's pricing: there's nothing between free and $20.
+
+A developer running 5 agents needs roughly 5 inboxes. Under AgentMail's model, that costs $20/month. A developer running 8 agents also costs $20/month. The pricing doesn't scale with usage in the 3-to-10 inbox range — it just jumps.
+
+That gap shows up in conversations. Developers on the OpenClaw Discord aren't frustrated with the product itself. They're frustrated with paying $20 for what feels like a $9 situation. AgentMail has presumably decided a $9 tier isn't worth operating. That's a legitimate business decision. But it leaves a real opening for projects that are past free but well short of justifying $20/month.
+
+## Where $9 fits
+
+LobsterMail's Builder tier is $9/month. You get up to 10 inboxes, 5,000 emails/month, and 500 outbound emails per day. The free tier is $0 — no credit card required, send and receive email, 1,000 emails/month included.
+
+For the mid-range: if your project needs 4-10 inboxes and moderate email volume, LobsterMail Builder is less than half the price of AgentMail's paid tier.
+
+<Callout type="info">
+  LobsterMail Builder is $9/month with up to 10 inboxes, 5,000 emails/month, and 500 sends/day. [Full pricing breakdown here](/blog/lobstermail-pricing-explained).
+</Callout>
+
+There's also a provisioning difference worth understanding. LobsterMail is built around agent self-provisioning — your agent calls `LobsterMail.create()` and the SDK handles account signup automatically if no token exists. No human sets anything up before the first inbox is provisioned. AgentMail is API-first, but account creation still happens at the human layer before the agent can operate.
+
+Whether that matters depends on your architecture. If a human configures the infrastructure and agents run after, either model works. If you're building agents that need to spin up inboxes autonomously — fully self-contained, no human in the loop — the provisioning model is a meaningful difference.
+
+## A direct comparison
+
+| | AgentMail | LobsterMail |
+|---|---|---|
+| Free tier | $0 / 3 inboxes | $0 / 1,000 emails/mo |
+| Next paid tier | ~$20/month | $9/month |
+| Inboxes at paid tier | More than 3 | Up to 10 |
+| Emails/month (paid) | Higher | 5,000 |
+| Agent self-provisioning | No | Yes |
+
+For a deeper look at API surface, reliability, and onboarding friction, the [full head-to-head comparison](/blog/lobstermail-vs-agentmail) covers it.
+
+## Who should stay on AgentMail
+
+If you're already running AgentMail in production and it's working, the switching math probably doesn't favor you. Migrations carry real costs: updated client code, re-tested integrations, new tokens in production. Saving $11/month doesn't justify that for a stable system.
+
+AgentMail is a well-built product. If their API fits your use case and you're satisfied with the developer experience, there's no reason to move. This isn't "AgentMail is bad" — it's "their pricing has one specific gap, and here's what fills it."
+
+## When to start (or switch) to LobsterMail
+
+If you're starting a new project that needs 4-10 agent inboxes, the starting point is clear. Begin on LobsterMail free, test the provisioning flow, and [molt up to Builder](/blog/lobstermail-pricing-explained) when you hit volume limits. You'll spend $9/month instead of $20 for the same inbox range.
+
+If you're building something where the agent must provision its own inbox without prior human setup — fully autonomous pipelines, self-contained workflows, agents that stand up their own infrastructure — LobsterMail's model fits that architecture from the start. One call handles account creation and inbox provisioning together. That's not a workflow AgentMail supports.
+
+For larger deployments of 10, 20, or 50 inboxes, read [how fleet management works at scale](/blog/running-50-agent-inboxes) before committing to either provider.
+
+<FAQ>
+  <FAQItem question="What does AgentMail cost in 2026?">
+    AgentMail has a free tier capped at 3 inboxes, then a paid tier starting around $20/month. There's no tier between the two, which is the main friction point for mid-size agent projects.
+  </FAQItem>
+
+  <FAQItem question="How does LobsterMail pricing compare to AgentMail?">
+    LobsterMail's free tier includes 1,000 emails/month with no credit card required. The Builder tier is $9/month with up to 10 inboxes and 5,000 emails/month — roughly half the cost of AgentMail's paid tier for the same inbox range. See the [full breakdown](/blog/lobstermail-pricing-explained).
+  </FAQItem>
+
+  <FAQItem question="Is AgentMail's free tier enough for most projects?">
+    For single-agent prototypes or early automation with one or two inboxes, yes. The free tier stops working for you the moment you need more than 3 inboxes — there's no intermediate option.
+  </FAQItem>
+
+  <FAQItem question="What happens when you exceed AgentMail's 3-inbox free tier?">
+    You're prompted to upgrade to their paid plan at around $20/month. There's no middle tier, so it's a direct jump from $0 to $20 regardless of how many additional inboxes you actually need.
+  </FAQItem>
+
+  <FAQItem question="What does LobsterMail's Builder tier include?">
+    Up to 10 inboxes, 5,000 emails/month, and 500 outbound emails per day for $9/month. It includes everything in the free tier plus the higher limits.
+  </FAQItem>
+
+  <FAQItem question="Can an AI agent provision its own LobsterMail inbox without human setup?">
+    Yes. `LobsterMail.create()` automatically handles account signup if no token is found, then your agent provisions an inbox with a single function call. No human configuration step is required before the agent starts operating.
+  </FAQItem>
+
+  <FAQItem question="Do I need a credit card to try LobsterMail?">
+    No. The free tier requires no credit card and no human signup. Your agent self-provisions on first run and the token is persisted automatically for future use.
+  </FAQItem>
+
+  <FAQItem question="Is switching from AgentMail to LobsterMail worth the effort?">
+    If you're already running AgentMail in production and it's stable, probably not — the migration cost likely outweighs the $11/month savings. If you're starting a new project, LobsterMail Builder at $9 is worth evaluating over AgentMail's $20 paid tier for the same inbox range.
+  </FAQItem>
+
+  <FAQItem question="What's the difference between API-first and agent-first email?">
+    API-first means the email service is set up and managed by a human via API — the agent uses it after a human configures the account. Agent-first means the agent can provision its own inbox autonomously with no prior human configuration. LobsterMail is agent-first; most email APIs, including AgentMail, are API-first.
+  </FAQItem>
+
+  <FAQItem question="What if I need more than 10 inboxes?">
+    LobsterMail's Builder tier covers up to 10 inboxes. If you're running a larger fleet, [this post on managing 50+ agent inboxes](/blog/running-50-agent-inboxes) covers architecture patterns for both LobsterMail and other providers.
+  </FAQItem>
+
+  <FAQItem question="Can I use my own domain with LobsterMail instead of @lobstermail.ai?">
+    Yes. By default your agent gets a `@lobstermail.ai` address, but custom domains are supported. Your agent's inbox address can use your own domain once it's configured.
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail handle prompt injection attacks in incoming emails?">
+    Yes. Emails returned by the SDK include built-in security metadata and injection risk scoring. If an attacker embeds instructions in an email body trying to hijack your agent, LobsterMail flags the risk before your agent processes the content.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own inbox without the $20 jump. [Get started with LobsterMail](/) — free, no credit card, no human signup required.*
