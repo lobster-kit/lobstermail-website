@@ -1,0 +1,205 @@
+---
+title: 'webhook hmac signature verification failing: every cause and fix'
+description: >-
+  HMAC verification failures silently drop all your webhook events. Here are the
+  five causes — raw body parsing, header casing, encoding, stale secrets — and
+  how to fix each one.
+date: '2026-03-01'
+tags:
+  - troubleshooting
+  - guides
+  - infrastructure
+image: /blog/webhook-hmac-signature-verification-failing-every-cause-and-fix.png
+author: LobsterMail Team
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+publish_at: '2026-03-01T07:00:00Z'
+approved_at: '2026-03-02T10:36:37.209Z'
+---
+Your webhook endpoint is live. The secret is configured. Every incoming request hits your HMAC check and comes back wrong. You're logging both the signature from the header and the one you compute locally, and they don't match — not even close.
+
+This is one of the more frustrating debugging experiences in backend work because the failure is silent from the sender's side. LobsterMail retries up to 10 times with exponential backoff before automatically disabling the webhook. By the time you realize something is off, your agent may have missed hundreds of `email.received` events without a single error surfacing.
+
+Here are the five causes, ordered by how often I've seen them.
+
+## The raw body problem
+
+This is the cause roughly 70% of the time. Most HTTP frameworks parse the request body before your handler ever runs. Express with `express.json()`, Next.js API routes, Hono — they all deserialize JSON and hand you a JavaScript object. That sounds convenient, until you realize HMAC signs the exact bytes that were transmitted.
+
+When LobsterMail generates `X-LobsterMail-Signature`, it signs the raw request body — the exact byte string, whitespace included. When your framework deserializes and then re-serializes that body, even tiny differences in key ordering or whitespace cause the signatures to diverge.
+
+The fix: access the raw buffer before any parsing happens.
+
+In Express:
+
+```javascript
+app.post('/hooks/lobstermail', express.raw({ type: 'application/json' }), (req, res) => {
+  const rawBody = req.body.toString('utf-8'); // raw, not parsed
+  // verify against rawBody
+});
+```
+
+In Next.js App Router:
+
+```typescript
+export async function POST(req: Request) {
+  const rawBody = await req.text(); // not req.json()
+  // verify against rawBody
+}
+```
+
+The key detail is `req.text()` in Fetch-based APIs and `express.raw()` (not `express.json()`) in Express. Add a comment in your code so a future teammate doesn't "clean it up" by switching to the parsed version.
+
+## Header casing
+
+The signature arrives in `X-LobsterMail-Signature`. HTTP/2 lowercases all headers by spec, and Node's `http.IncomingMessage` preserves whatever case the sender uses — which may or may not match what you're looking up.
+
+```typescript
+// Wrong — might be undefined if headers were lowercased
+const sig = req.headers['X-LobsterMail-Signature'];
+
+// Right — always works
+const sig = req.headers['x-lobstermail-signature'];
+```
+
+If you're using Next.js `headers()` from `next/headers`, call `.get('x-lobstermail-signature')` with the lowercase version. It's a one-character mistake that produces a confusing null-vs-string comparison failure downstream.
+
+## Encoding mismatch
+
+LobsterMail signs the body with HMAC-SHA256 and encodes the result as a lowercase hex string. If your verification code digests to base64, the strings will never match — even when everything else is correct.
+
+```typescript
+// Wrong — produces base64
+const computed = createHmac('sha256', secret)
+  .update(rawBody)
+  .digest('base64');
+
+// Right — produces hex
+const computed = createHmac('sha256', secret)
+  .update(rawBody)
+  .digest('hex');
+```
+
+This trips up people porting verification code from other providers. Shopify's default digest is base64. Stripe uses hex, same as LobsterMail — but if you borrowed code from a Shopify integration, you're using the wrong format.
+
+## The secret was only returned once
+
+When you create a webhook, the `whsec_...` secret is returned exactly one time.
+
+```typescript
+const webhook = await lm.createWebhook({
+  url: 'https://your-agent.example.com/hooks/lobstermail',
+  events: ['email.received'],
+});
+
+// Only chance to capture this
+console.log(webhook.secret); // whsec_...
+```
+
+After that, it's gone. There's no "show me my secret again" endpoint. If you didn't store it, or you stored a development secret and promoted the wrong one to production, your verification will fail on every single request.
+
+The fix is to delete the webhook and create a new one, capture the new secret immediately, and store it in your secrets manager or environment. Verify the value in your environment matches the one generated at creation time — character for character.
+
+## String comparison and timing attacks
+
+This one doesn't usually cause failures, but it's worth getting right while you're here. Don't compare signatures with `===`. Use `timingSafeEqual` from Node's `crypto` module.
+
+```typescript
+import { createHmac, timingSafeEqual } from 'node:crypto';
+
+function verifyWebhook(rawBody: string, signature: string, secret: string): boolean {
+  const computed = createHmac('sha256', secret)
+    .update(rawBody)
+    .digest('hex');
+
+  const a = Buffer.from(computed);
+  const b = Buffer.from(signature);
+
+  // timingSafeEqual throws if lengths differ, so check first
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+```
+
+The length check matters. `timingSafeEqual` throws if you pass buffers of different lengths, and a mismatched encoding (see above) will produce different-length strings.
+
+## Quick diagnostic checklist
+
+If you're still stuck:
+
+1. Log the incoming `X-LobsterMail-Signature` header and your computed value side-by-side
+2. Confirm you're reading `req.text()` or the raw buffer — not a parsed object
+3. Confirm the header lookup key is lowercase
+4. Confirm `.digest('hex')`, not base64
+5. Confirm the secret in your environment matches the one captured at webhook creation
+6. Confirm your endpoint returns a 2xx response within 10 seconds
+
+If your webhook was auto-disabled after 10 consecutive failures, re-enable it after you've fixed the verification code:
+
+```
+PATCH /v1/webhooks/:id
+{ "enabled": true }
+```
+
+Fix first, then re-enable. Otherwise it disables again on the next failed attempt.
+
+For a broader look at when webhooks make sense versus polling for your agent's inbox, see [webhooks vs polling for agent email](/blog/webhooks-vs-polling-email). And if you're thinking about the security surface of your agent's email setup more generally, [openclaw agent email security](/blog/openclaw-agent-email-security) covers the threat model in more depth.
+
+<Callout type="warning">
+  The webhook secret is shown exactly once at creation. If you lose it, delete the webhook and create a new one — there's no recovery endpoint.
+</Callout>
+
+<FAQ>
+  <FAQItem question="Why does my HMAC verification fail even though the secret looks correct?">
+    The most common reason is body parsing. If your framework deserializes the JSON before your handler runs, you're signing a re-serialized version of the body — not the original bytes. Use `req.text()` or `express.raw()` to access the raw buffer before any parsing.
+  </FAQItem>
+
+  <FAQItem question="Can I retrieve my LobsterMail webhook secret after it was created?">
+    No. The secret is returned once, at creation time. If you've lost it, delete the webhook and create a new one, then capture and store the new `whsec_...` value immediately.
+  </FAQItem>
+
+  <FAQItem question="How do I re-enable a webhook that was automatically disabled?">
+    Send `PATCH /v1/webhooks/:id` with `{ "enabled": true }`. Make sure you've fixed the underlying verification failure first, otherwise it'll hit 10 consecutive failures and disable again.
+  </FAQItem>
+
+  <FAQItem question="What encoding does LobsterMail use for the HMAC signature?">
+    Lowercase hex. Use `.digest('hex')` — not base64. If you copied verification code from a provider that uses base64, that's likely your mismatch.
+  </FAQItem>
+
+  <FAQItem question="How many times will LobsterMail retry a failed webhook delivery?">
+    Up to 10 times with exponential backoff. After 10 consecutive failures, the webhook is automatically disabled. Your endpoint needs to return a 2xx status within 10 seconds to count as a successful delivery.
+  </FAQItem>
+
+  <FAQItem question="Can I register multiple webhook endpoints?">
+    Yes. Use `lm.createWebhook()` for each URL you want to receive events. Each has its own secret and can subscribe to different events independently.
+  </FAQItem>
+
+  <FAQItem question="What events can I subscribe to?">
+    Currently `email.received`, which fires when a new email is delivered to one of your inboxes. More events will be added as the platform grows.
+  </FAQItem>
+
+  <FAQItem question="How do I test webhooks locally during development?">
+    Tools like [ngrok](https://ngrok.com) or [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) expose a local port over HTTPS. Register the tunnel URL as your webhook endpoint during development, and log both the incoming signature and your computed value side-by-side to diagnose mismatches before deploying.
+  </FAQItem>
+
+  <FAQItem question="Should I use polling or webhooks for my agent's inbox?">
+    For real-time use cases — verification codes, replies from users, handoffs between agents — webhooks are the right call. Polling works fine for lower-frequency checks. See [webhooks vs polling for agent email](/blog/webhooks-vs-polling-email) for a more detailed breakdown.
+  </FAQItem>
+
+  <FAQItem question="Can I verify LobsterMail webhooks in Python or other languages?">
+    Yes. The HMAC-SHA256 algorithm and hex encoding are standard across languages. In Python, use `hmac.new(secret.encode(), raw_body.encode(), hashlib.sha256).hexdigest()` and compare with `hmac.compare_digest()` for timing-safe comparison.
+  </FAQItem>
+
+  <FAQItem question="What happens if my verification code throws an exception instead of returning false?">
+    If your handler throws and returns a 5xx, LobsterMail counts it as a failure and retries. That's better than silently swallowing the error, but you should still handle the exception explicitly — catch it, log it, and return 400 so you can distinguish "bad signature" from "server error" in your logs.
+  </FAQItem>
+
+  <FAQItem question="Is there a way to see which emails my agent missed while the webhook was disabled?">
+    You can use `lm.listEmails()` to fetch emails by inbox and time range. Cross-reference the timestamps against when your webhook was disabled to identify any gaps in processing.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own inbox with real-time delivery. [Get started with LobsterMail](/) — it's free.*
