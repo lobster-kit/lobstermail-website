@@ -1,0 +1,181 @@
+---
+title: crewai task-specific inbox isolation with lobstermail
+description: >-
+  Give each CrewAI agent its own inbox at task creation. Here's why shared
+  inboxes break multi-agent crews and how to fix it with per-task email
+  isolation.
+date: '2026-02-25'
+tags:
+  - crewai
+  - email
+  - infrastructure
+  - guides
+  - automation
+image: /blog/crewai-task-specific-inbox-isolation-with-lobstermail.png
+author: LobsterMail Team
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+publish_at: '2026-02-25T14:00:00Z'
+approved_at: '2026-03-02T10:36:37.216Z'
+---
+Run a three-agent CrewAI crew for long enough and you'll hit the shared-inbox problem. The researcher agent sends a contact request to a data vendor. Two days later the outreach agent sends a follow-up from the same address, because that's the only address available. Replies arrive and you have no idea which task they belong to, which agent should process them, or why one message is getting silently dropped.
+
+CrewAI isn't at fault here. The framework handles role separation well. The shared inbox is an infrastructure decision made early — one account, one address, keep it simple — that stops working the moment two agents start sending email in parallel.
+
+## Where role separation breaks down
+
+CrewAI's design pushes you toward clean agent boundaries. Your researcher researches, your writer writes, your QA agent checks output. Context passing, task sequencing, tool routing — the framework handles all of it. Done carefully, it scales further than most people expect.
+
+Email collapses that model the moment two agents share a single address.
+
+Picture a crew that monitors vendor relationships: a researcher tracks pricing updates, an outreach agent handles renewals, and a summarizer writes status reports for the humans. All three occasionally send and receive email. With a shared inbox:
+
+- A pricing reply arrives and gets processed by whichever agent polls next
+- The outreach agent replies to a thread that was meant for the researcher
+- You lose the ability to trace which task generated which email thread
+- Debugging a failed pipeline means reading through 300 mixed emails to reconstruct what happened
+
+The problem compounds over time. By week three of a long-running crew, the inbox is a pile of merged conversations with no clear ownership.
+
+Task-specific inbox isolation solves this. Each agent gets its own `@lobstermail.ai` address provisioned at crew startup. Replies arrive in a specific inbox that only that agent watches. The role separation you designed at the task level holds at the communication layer too.
+
+## Setting up per-task inboxes
+
+With LobsterMail, provisioning an inbox is a single API call that returns an address. No DNS configuration, no human signup step. Your crew initialization script handles it.
+
+Here's what startup looks like with three isolated inboxes:
+
+```python
+import os
+import httpx
+from crewai import Agent, Task, Crew
+
+LOBSTERMAIL_TOKEN = os.environ["LOBSTERMAIL_TOKEN"]
+
+def hatch_inbox(role_name: str) -> str:
+    """Provision a named LobsterMail inbox and return the email address."""
+    r = httpx.post(
+        "https://api.lobstermail.ai/v1/inboxes",
+        json={"name": role_name},
+        headers={"Authorization": f"Bearer {LOBSTERMAIL_TOKEN}"},
+    )
+    r.raise_for_status()
+    return r.json()["address"]
+
+# Each role gets its own address at startup
+researcher_email = hatch_inbox("crew-researcher")
+outreach_email   = hatch_inbox("crew-outreach")
+summarizer_email = hatch_inbox("crew-summarizer")
+
+# crew-researcher@lobstermail.ai
+# crew-outreach@lobstermail.ai
+# crew-summarizer@lobstermail.ai
+```
+
+Each agent then receives its address as part of its configuration. The cleanest pattern is injecting it into the agent's `backstory` field so the model knows which inbox to use when constructing email tool calls:
+
+```python
+researcher = Agent(
+    role="Vendor Researcher",
+    goal="Track pricing changes from key vendors",
+    backstory=(
+        f"You communicate via {researcher_email}. "
+        "Only read and send from that inbox. Never use another address."
+    ),
+    tools=[receive_email, send_email],
+    verbose=True,
+)
+
+outreach = Agent(
+    role="Vendor Outreach",
+    goal="Negotiate renewals and flag pricing anomalies",
+    backstory=(
+        f"Your dedicated email address is {outreach_email}. "
+        "Use only this address for all vendor communication."
+    ),
+    tools=[receive_email, send_email],
+    verbose=True,
+)
+```
+
+Your `receive_email` and `send_email` tools are thin wrappers around the LobsterMail API, each scoped to the address injected into that agent's context. The scoping makes cross-contamination structurally impossible — the tool call is authenticated to a specific inbox, not a shared account.
+
+<Callout type="tip">
+  Name your inboxes with a consistent prefix — `crew-`, `task-`, or your project name. `crew-researcher@lobstermail.ai` is much easier to filter in logs and dashboards than `lobster-x7k2@lobstermail.ai` at 2am.
+</Callout>
+
+## What debugging looks like with isolation
+
+Before: something breaks in your email pipeline overnight. You open the shared inbox and there are 200 emails spanning three agent roles and four days of work. You manually trace conversation threads to reconstruct what happened. This takes a while.
+
+After: the outreach agent failed. You open the outreach inbox. Twenty emails, all from outreach work. The researcher's inbox is separate and untouched. You find the problem in under five minutes.
+
+That's the operational payoff, independent of correctness. When a specific task fails, you look at the specific inbox for that task. Nothing else to filter through.
+
+Inbox isolation also matters for parallel execution. CrewAI's `Process.parallel` mode runs multiple agents simultaneously, and without isolated inboxes, two agents polling the same address will race — processing some emails twice and silently dropping others. Per-task inboxes remove the race condition entirely. Parallel tasks just work.
+
+## A few things worth doing before you ship
+
+Log the inbox addresses in your task output at crew initialization. When you're debugging a run from last Tuesday, you want to look up exactly which address was active for each role.
+
+Decide whether inboxes should persist across runs. For long-running crews where vendor contacts might reply to existing threads, you want the same `crew-researcher@lobstermail.ai` address across restarts. LobsterMail's smart inbox function returns the existing address for the same name rather than creating a new one, so reuse is automatic. For short-lived or ephemeral tasks, a fresh random address per run keeps your data cleaner.
+
+Set a timeout on your email polling loops. If a reply never arrives, you want the task to surface as a failure rather than hang indefinitely. Crews that block on email without a timeout are hard to diagnose when things go quiet.
+
+For more on managing email at scale across many agent tasks, see [running 50 agent inboxes](/blog/running-50-agent-inboxes).
+
+---
+
+*Your agents can provision their own inboxes. [Get started with LobsterMail](/) — it's free.*
+
+<FAQ>
+  <FAQItem question="What is CrewAI task-specific inbox isolation?">
+    It's the practice of giving each agent in a CrewAI crew its own dedicated email address rather than sharing one inbox across the whole crew. Each agent can only see and send from its assigned address, keeping email traffic isolated by role and task.
+  </FAQItem>
+
+  <FAQItem question="Why does sharing a single inbox break multi-agent crews?">
+    With a shared inbox, replies meant for one agent can be picked up by another during polling. You also lose the ability to trace which task generated which email thread, and debugging requires filtering through all agents' traffic mixed together.
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail have a Python SDK for CrewAI integration?">
+    LobsterMail's primary SDK is the `@lobsterkit/lobstermail` npm package for Node.js and TypeScript environments. Python-based crews like CrewAI can call the REST API directly using `httpx` or `requests` — the pattern is the same, just over HTTP rather than through the SDK wrapper.
+  </FAQItem>
+
+  <FAQItem question="How much does it cost to run multiple LobsterMail inboxes?">
+    The free plan covers one inbox and 1,000 emails per month. The Builder plan at $9/month supports up to 10 inboxes, which is enough for most crew configurations. See [pricing](/) for current details.
+  </FAQItem>
+
+  <FAQItem question="Will the same inbox address be reused if I restart my crew?">
+    If you provision with the same name (`crew-researcher`), LobsterMail's smart inbox function returns the existing address rather than creating a new one. Long-running crews can maintain consistent addresses across restarts, so vendor contacts can reply to existing threads without interruption.
+  </FAQItem>
+
+  <FAQItem question="Why does inbox isolation matter specifically for parallel tasks?">
+    When two agents run in parallel and share one inbox, they race to poll it — processing some emails twice and dropping others unpredictably. With separate inboxes, each agent polls its own address independently and the race condition doesn't exist.
+  </FAQItem>
+
+  <FAQItem question="How do I pass the inbox address to a CrewAI agent?">
+    The most straightforward approach is injecting it into the agent's `backstory` field so the model knows which address to use when calling email tools. You can also pass it directly as a parameter to your tool functions at initialization time.
+  </FAQItem>
+
+  <FAQItem question="Is there a limit on how many inboxes I can create?">
+    The free plan supports one inbox. The Builder plan allows up to 10, which covers most crew configurations. If you're running larger-scale agent deployments, [running 50 agent inboxes](/blog/running-50-agent-inboxes) covers what that looks like in practice.
+  </FAQItem>
+
+  <FAQItem question="How does my receive tool know which inbox to poll?">
+    Your email receive tool should be scoped to the inbox address injected into that agent's context at initialization. The LobsterMail API returns emails for a specific inbox, along with built-in security metadata including injection risk scoring. See the [getting started guide](/docs/getting-started) for full details on polling and pagination.
+  </FAQItem>
+
+  <FAQItem question="Does this pattern work with other multi-agent frameworks?">
+    Yes. The same inbox-per-agent pattern applies to LangGraph, AutoGen, custom orchestration layers, or any framework where distinct roles handle distinct tasks. See also [agent email APIs compared](/blog/agent-email-api-comparison) for a broader look at how email infrastructure fits into agent architectures.
+  </FAQItem>
+
+  <FAQItem question="What's the difference between a named inbox and a random one?">
+    Named inboxes (`crew-researcher@lobstermail.ai`) are human-readable, persistent across runs when you use the same name, and much easier to track in logs. Random inboxes (`lobster-x7k2@lobstermail.ai`) are useful for ephemeral tasks where you want a fresh address each run and don't need the thread to persist.
+  </FAQItem>
+
+  <FAQItem question="How do I get started with LobsterMail for my CrewAI project?">
+    For Node.js environments, install with `npm install @lobsterkit/lobstermail`. For Python-based crews, call the REST API directly. The [getting started guide](/docs/getting-started) walks through the full setup in a few minutes, and the free plan requires no credit card. See also [the CrewAI agent email guide](/blog/crewai-agent-email) for a broader walkthrough of the integration.
+  </FAQItem>
+</FAQ>
