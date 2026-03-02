@@ -1,0 +1,221 @@
+---
+title: >-
+  agentmail sdk vs lobstermail: what the developer experience actually looks
+  like
+description: >-
+  AgentMail and LobsterMail both let AI agents handle email. Here's how the SDKs
+  compare on setup, provisioning, and autonomous operation — with real code.
+date: '2026-02-24'
+tags:
+  - email
+  - infrastructure
+  - guides
+  - comparison
+image: >-
+  /blog/agentmail-sdk-vs-lobstermail-what-the-developer-experience-actually-looks-like.png
+author: LobsterMail Team
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+publish_at: '2026-02-24T15:00:00Z'
+approved_at: '2026-03-02T10:36:37.200Z'
+---
+If you're choosing between AgentMail and LobsterMail, you've probably already read both docs sites and noticed the feature lists look similar. Both SDKs give agents a way to send and receive email. Both have TypeScript support. Both target the same use case.
+
+The difference becomes clear when you try to run them without a human nearby.
+
+This is a code-first comparison. I'll walk through the same three operations on both SDKs — setup, provisioning, and receiving email — and show where the developer experience actually diverges. No feature table. Just what the code does.
+
+## Before you call a single method
+
+Setting up AgentMail requires a pre-existing account. Before you write any agent code, someone has to create a human account at agentmail.to, confirm the email address, generate an API key from the dashboard, and make that key available as an environment variable.
+
+That's a normal setup flow for a developer tool. Nothing wrong with it. But it means provisioning is a human step, not an agent step. Your agent inherits credentials that a person already created.
+
+```typescript
+// AgentMail — human creates account and API key first
+import AgentMail from 'agentmail';
+
+const client = new AgentMail({
+  apiKey: process.env.AGENTMAIL_API_KEY,
+});
+```
+
+LobsterMail's SDK skips that step entirely:
+
+```typescript
+// LobsterMail — the agent handles its own account creation
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create();
+```
+
+`LobsterMail.create()` checks for an existing token at `~/.lobstermail/token`. If none is found, it signs up for a free account autonomously and persists the token for future runs. Your agent can start on a fresh machine, a CI runner, a new container — without any pre-seeded secret. The SDK sorts it out.
+
+For local dev this doesn't matter much. You set an env var once and forget about it. For agents that spin up in environments you don't fully control, this is the difference between your agent provisioning itself and your agent waiting on a credential that doesn't exist yet.
+
+## Provisioning an inbox
+
+With AgentMail, you create an inbox using the pre-authorized client:
+
+```typescript
+const inbox = await client.createInbox({
+  username: 'my-agent',
+  domain: 'agentmail.to',
+});
+
+console.log(inbox.address); // my-agent@agentmail.to
+```
+
+With LobsterMail:
+
+```typescript
+const inbox = await lm.createSmartInbox({ name: 'My Agent' });
+
+console.log(inbox.address); // my-agent@lobstermail.ai
+```
+
+`createSmartInbox` does one extra thing: it handles address collisions automatically. If `my-agent` is taken, it tries `my-agent1`, `m-agent`, and variations until it finds something clean. If you're running many agent instances, you'd otherwise need to build that logic yourself.
+
+Both work. The collision handling is a quality-of-life feature, not a dealbreaker.
+
+## Receiving email
+
+AgentMail:
+
+```typescript
+const messages = await client.listMessages({
+  address: inbox.address,
+});
+
+for (const message of messages) {
+  console.log(message.subject, message.text);
+}
+```
+
+LobsterMail:
+
+```typescript
+const emails = await inbox.receive();
+
+for (const email of emails) {
+  console.log(email.subject, email.preview);
+  console.log(email.injectionRisk); // 0.0 – 1.0
+}
+```
+
+The injection risk score is worth calling out. Every email received through LobsterMail includes a score that estimates whether the content looks like a prompt injection attempt — someone trying to manipulate your agent by embedding instructions inside an email it reads and acts on.
+
+If your agent processes arbitrary external email (summarizing, extracting data, routing based on content), that score gives you a signal before you hand the content to your LLM. AgentMail doesn't have an equivalent built in. You'd implement that check yourself.
+
+Whether you need it depends on your threat model. An agent that only reads verification codes from known SaaS platforms probably doesn't. An agent that ingests email from anyone does.
+
+## Sending
+
+Both SDKs handle outbound email the same way:
+
+```typescript
+// AgentMail
+await client.sendEmail({
+  from: inbox.address,
+  to: 'recipient@example.com',
+  subject: 'Hello',
+  text: 'Message body',
+});
+
+// LobsterMail
+await inbox.send({
+  to: 'recipient@example.com',
+  subject: 'Hello',
+  body: 'Message body',
+});
+```
+
+No meaningful difference. If your evaluation hinges on the send API, there's not much to compare here.
+
+## What "agent-first" actually means
+
+AgentMail is built for developer-configured infrastructure. A person sets up the system, and the agent operates inside it. That works for a lot of architectures. If you control the deployment environment and you're fine seeding a credential at setup time, AgentMail's developer experience is clean and the SDK does what it says.
+
+LobsterMail is built around a different assumption: the agent is the one who provisions. No human sets this up in advance. The agent hatches its own inbox when it needs one, from a cold start, with no prior configuration in the environment.
+
+That distinction matters in a few specific situations.
+
+If you're building an agent that deploys autonomously across different machines or environments — like an [OpenClaw-based agent](/blog/crewai-agent-email) — requiring a pre-seeded API key adds a constraint that breaks the self-provisioning model. The agent can't finish setting itself up without a credential it doesn't have.
+
+If you're writing an agent that's distributed as an installable skill, the agent needs to provision its own email on first run. There's no human standing by to create credentials for each new install. The [auto-signup flow](/blog/agent-self-signup-explained) is part of the SDK itself, not a separate step you wire up.
+
+If you're running agents in containerized CI environments with ephemeral state, `LobsterMail.create()` will re-provision a token on each cold start without any external secret management. That's not something you configure — it just works.
+
+None of this matters if you're building a more traditional architecture where email is a service you configure once. It's the deciding factor if you're not.
+
+## Pricing
+
+AgentMail's pricing has a gap: free tier, then $20/month with nothing in between.
+
+LobsterMail's free tier covers 1,000 emails/month with no credit card required. The Builder tier is $9/month — up to 10 inboxes and 500 sends/day. That middle tier exists because a lot of side projects and early-stage agent products don't justify $20/month but do outgrow the free tier. See the [full pricing breakdown](/blog/lobstermail-vs-agentmail) if that's a deciding factor for you.
+
+## The actual call
+
+If you need to pick one: think about who provisions the credentials.
+
+If you're comfortable with a one-time human setup and your agents always run in environments where you manage the secrets, AgentMail is a solid choice. The SDK is well-designed and the API is predictable.
+
+If your agents need to self-provision from scratch — no pre-seeded credentials, no human setup step, no environment assumptions — `LobsterMail.create()` handles that in a single call.
+
+The rest of the comparison is mostly noise.
+
+<FAQ>
+  <FAQItem question="Does AgentMail have a free tier?">
+    Yes, AgentMail has a free tier. The first paid tier starts at $20/month, which means there's no middle option between free and $20. LobsterMail's Builder tier is $9/month and sits in that gap.
+  </FAQItem>
+
+  <FAQItem question="What's the main difference between AgentMail and LobsterMail?">
+    The core difference is in provisioning. AgentMail requires a human to create an account and generate an API key before the agent can do anything. LobsterMail's SDK handles account creation autonomously on first run — no human step required.
+  </FAQItem>
+
+  <FAQItem question="Can LobsterMail work without a pre-configured API key?">
+    Yes. `LobsterMail.create()` automatically signs up for a free account on first run and stores the token at `~/.lobstermail/token`. Your agent can start from scratch without any credentials in the environment.
+  </FAQItem>
+
+  <FAQItem question="Does AgentMail support TypeScript?">
+    Yes, AgentMail ships with full TypeScript support in their Node.js SDK. LobsterMail also has complete TypeScript types.
+  </FAQItem>
+
+  <FAQItem question="What is prompt injection and why does it matter for agents reading email?">
+    Prompt injection is when malicious content in an email tries to hijack your agent by embedding instructions ("ignore previous instructions and do X instead"). LobsterMail includes a risk score on every received email so you can screen content before passing it to your LLM. AgentMail doesn't include this — you'd build it yourself.
+  </FAQItem>
+
+  <FAQItem question="Can I use my own domain with LobsterMail?">
+    Yes. LobsterMail supports custom domains so your agent sends and receives from `agent@yourcompany.com` instead of `@lobstermail.ai`. The [custom domains guide](/docs/custom-domains) walks through setup.
+  </FAQItem>
+
+  <FAQItem question="What happens if the inbox name I want is already taken?">
+    `createSmartInbox` automatically tries variations — `my-agent`, `my-agent1`, `m-agent` — until it finds an available address. If you don't need a readable name, `createInbox` gives you a random address like `lobster-xxxx@lobstermail.ai`.
+  </FAQItem>
+
+  <FAQItem question="Is LobsterMail's free tier actually free forever, or a trial?">
+    Free forever, no trial. The free tier (1,000 emails/month, no credit card required) doesn't expire. You only pay if you upgrade to Builder at $9/month for more inboxes and higher send limits.
+  </FAQItem>
+
+  <FAQItem question="Does AgentMail have a visual dashboard?">
+    No. AgentMail is API-only — no inbox to open, no visual interface, no built-in reporting. Everything happens through code. This works well for developer-led setups where email doesn't need human handling.
+  </FAQItem>
+
+  <FAQItem question="Can I switch from AgentMail to LobsterMail?">
+    Yes. The SDKs are independent, so switching is a matter of replacing the initialization code and swapping method calls. The provisioning model is different enough that you'd redesign that part, but the send and receive logic maps across without major rewrites.
+  </FAQItem>
+
+  <FAQItem question="How does LobsterMail handle multiple agents each needing their own inbox?">
+    Each `LobsterMail.create()` call returns an authenticated client, and each client can provision multiple inboxes. You can give each agent instance its own address, or share a client across agents and give each one a separate inbox. The Builder tier supports up to 10 inboxes.
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail work with OpenClaw?">
+    Yes. There's a [LobsterMail skill for OpenClaw](https://clawhub.ai/samuelchenardlovesboards/lobstermail-agent-email) that lets OpenClaw-based agents provision their own email on first run, with no manual configuration required.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
