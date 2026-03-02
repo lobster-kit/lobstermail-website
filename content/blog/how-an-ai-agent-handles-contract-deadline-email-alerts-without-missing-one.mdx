@@ -12,15 +12,13 @@ tags:
   - guides
 image: >-
   /blog/how-an-ai-agent-handles-contract-deadline-email-alerts-without-missing-one.png
-author: LobsterMail Team
+author: Samuel Chenard
 agent: agent-3-content
 channel: blog
 type: blog-post
-status: approved
+status: draft
 publish_at: '2026-02-26T12:00:00Z'
-approved_at: '2026-03-02T10:36:37.211Z'
 ---
-
 A vendor sends a renewal notice on a Tuesday. It lands in your personal inbox between a Slack digest and a newsletter you forgot you subscribed to. You mark it as "deal with later." Three weeks go by. The auto-renewal triggers. You're locked in for another year on software your team stopped using in September.
 
 Not a hypothetical. Auto-renewals cost US companies an estimated $62 billion per year, mostly because tracking contract deadlines inside a personal inbox is a genuinely terrible system and everyone just accepts it.
@@ -35,11 +33,11 @@ There's a middle path.
 
 The thing that makes AI agent contract deadline email alerts actually work isn't the AI model. It's isolation.
 
-When contract alerts arrive in your personal inbox, they compete with everything else. The agent that monitors your contracts needs its own address — something like `contracts@lobstermail.ai` — that receives nothing but contract-related communications. Nothing else goes there.
+When contract alerts arrive in your personal inbox, they compete with everything else. The agent that monitors your contracts needs its own address, something like `contracts@lobstermail.ai`, that receives nothing but contract-related communications. Nothing else goes there.
 
 With LobsterMail, your agent provisions that inbox itself. No human setup, no IT ticket, no OAuth. The agent calls `createSmartInbox()`, gets a clean address, and starts receiving. What lands there stays completely separate from your personal email.
 
-This matters for a specific reason: an agent reading a shared inbox gets confused. Promotional emails start looking like vendor communications. A flooded inbox means missed notices. Isolation makes the extraction step more accurate and gives you a cleaner audit trail. If a vendor later claims they sent a renewal warning, you either have it in the inbox or you don't — no ambiguity, no searching through three months of personal email history.
+This matters for a specific reason: an agent reading a shared inbox gets confused. Promotional emails start looking like vendor communications. A flooded inbox means missed notices. Isolation makes the extraction step more accurate and gives you a cleaner audit trail. If a vendor later claims they sent a renewal warning, you either have it in the inbox or you don't, no ambiguity, no searching through three months of personal email history.
 
 The security angle is worth thinking about too. [Shared inboxes carry risks](/blog/security-risks-sharing-inbox) that a dedicated agent inbox sidesteps entirely.
 
@@ -96,7 +94,7 @@ Email body: ${email.preview}`
 setInterval(checkContractDeadlines, 60 * 60 * 1000);
 ```
 
-The agent self-provisions on first run — no account creation step from you. The SDK handles signup automatically and persists the token for future runs. If you want to understand exactly how that works, [the agent self-signup guide](/blog/agent-self-signup-explained) walks through the full flow.
+The agent self-provisions on first run, no account creation step from you. The SDK handles signup automatically and persists the token for future runs. If you want to understand exactly how that works, [the agent self-signup guide](/blog/agent-self-signup-explained) walks through the full flow.
 
 Give the address the agent generates to your vendors, lawyers, and freelancers. Use it as the primary contact address on new agreements going forward. Everything contract-related flows there, and nothing else does.
 
@@ -105,7 +103,7 @@ Give the address the agent generates to your vendors, lawyers, and freelancers. 
 Once contract emails land in an isolated inbox, the agent starts picking up things that reliably slip through a noisy personal email:
 
 - Auto-renewal notices (typically sent 30-60 days before the window opens)
-- Payment terms in vendor agreements — net-30, net-60, milestone-based schedules
+- Payment terms in vendor agreements, net-30, net-60, milestone-based schedules
 - Deliverable windows in freelancer contracts
 - NDA and licensing expirations
 - Amendments that quietly shift a due date mid-engagement
@@ -114,17 +112,17 @@ The difference from calendar reminders is that the agent reads new information a
 
 ## What to do with the alerts
 
-The example above sends an email to your team when urgency is high. In practice you'll probably want to route alerts to wherever your team actually pays attention — a Slack channel, a Linear issue, a project management board. The agent doesn't care how you receive the output. It extracts structured data from incoming email; where that data goes is your call.
+The example above sends an email to your team when urgency is high. In practice you'll probably want to route alerts to wherever your team actually pays attention, a Slack channel, a Linear issue, a project management board. The agent doesn't care how you receive the output. It extracts structured data from incoming email; where that data goes is your call.
 
 Triaging by urgency is worth setting up deliberately. An NDA expiring in six months doesn't need the same channel as a payment deadline 48 hours out. You define what urgency means in the prompt, which means you're not locked into some platform's idea of what counts as critical.
 
-One practice that pays off later: archive a timestamp alongside every email the agent processes. If there's ever a dispute about whether a renewal notice was received and when, you want a record that doesn't depend on searching through your inbox history. The agent's dedicated inbox is already a cleaner record than personal email — a simple log file makes it airtight.
+One practice that pays off later: archive a timestamp alongside every email the agent processes. If there's ever a dispute about whether a renewal notice was received and when, you want a record that doesn't depend on searching through your inbox history. The agent's dedicated inbox is already a cleaner record than personal email, a simple log file makes it airtight.
 
 ## Where this breaks down
 
-I'll be honest about the limits. Extraction quality depends on how the email is written. A structured SaaS renewal notice parses cleanly. A contract buried inside a PDF attachment in a three-paragraph email from a lawyer requires more work — you'd need to pull and parse the attachment before extraction, which is a separate step not covered here.
+I'll be honest about the limits. Extraction quality depends on how the email is written. A structured SaaS renewal notice parses cleanly. A contract buried inside a PDF attachment in a three-paragraph email from a lawyer requires more work, you'd need to pull and parse the attachment before extraction, which is a separate step not covered here.
 
-It also won't replace purpose-built CLM software if you're managing contracts at real scale. Dozens of active agreements with complex obligation tracking, escalation workflows, and approval chains — that's where CLM earns its cost. This approach is for the gap in between: more complexity than a shared calendar handles, not enough to justify enterprise tooling.
+It also won't replace purpose-built CLM software if you're managing contracts at real scale. Dozens of active agreements with complex obligation tracking, escalation workflows, and approval chains, that's where CLM earns its cost. This approach is for the gap in between: more complexity than a shared calendar handles, not enough to justify enterprise tooling.
 
 For small teams managing under 20 active agreements, an agent with a dedicated inbox handles the core deadline-tracking problem for $0. That's a reasonable trade-off for most of the people who need it.
 
@@ -134,7 +132,7 @@ Forward your next contract email to a fresh LobsterMail address before you build
 
 ---
 
-*Give your agent its own inbox. [Get started with LobsterMail](/) — it's free.*
+*Give your agent its own inbox. [Get started with LobsterMail](/), it's free.*
 
 <FAQ>
   <FAQItem question="What is an AI agent contract deadline email alert?">
@@ -150,7 +148,7 @@ Forward your next contract email to a fresh LobsterMail address before you build
   </FAQItem>
 
   <FAQItem question="Does this work with any AI model?">
-    The extraction step in the example uses Claude, but you can swap in any model with a chat completion API — GPT-4o, Gemini, or a local model. LobsterMail handles the email infrastructure; the model choice is entirely yours.
+    The extraction step in the example uses Claude, but you can swap in any model with a chat completion API, GPT-4o, Gemini, or a local model. LobsterMail handles the email infrastructure; the model choice is entirely yours.
   </FAQItem>
 
   <FAQItem question="What if the contract is in a PDF attachment rather than the email body?">
@@ -158,7 +156,7 @@ Forward your next contract email to a fresh LobsterMail address before you build
   </FAQItem>
 
   <FAQItem question="How is this different from CLM software?">
-    CLM platforms are purpose-built for contract lifecycle management — dashboards, obligation tracking, approval workflows, e-signature integrations. This approach is a lightweight alternative for teams that don't need all that but want better deadline coverage than a personal inbox provides. For under 20 active contracts, an agent with a dedicated inbox handles most of the problem.
+    CLM platforms are purpose-built for contract lifecycle management, dashboards, obligation tracking, approval workflows, e-signature integrations. This approach is a lightweight alternative for teams that don't need all that but want better deadline coverage than a personal inbox provides. For under 20 active contracts, an agent with a dedicated inbox handles most of the problem.
   </FAQItem>
 
   <FAQItem question="Can the agent send alerts to Slack instead of email?">
@@ -166,7 +164,7 @@ Forward your next contract email to a fresh LobsterMail address before you build
   </FAQItem>
 
   <FAQItem question="Why not just use calendar reminders for contract deadlines?">
-    Calendar reminders are static — you set them manually and they fire at a fixed time. If a vendor amends the contract or moves the renewal window, your calendar doesn't know. An agent polling a live inbox reads new information as it arrives, including changes that happen after the original agreement was signed.
+    Calendar reminders are static, you set them manually and they fire at a fixed time. If a vendor amends the contract or moves the renewal window, your calendar doesn't know. An agent polling a live inbox reads new information as it arrives, including changes that happen after the original agreement was signed.
   </FAQItem>
 
   <FAQItem question="Is the contract content secure in LobsterMail?">
@@ -174,7 +172,7 @@ Forward your next contract email to a fresh LobsterMail address before you build
   </FAQItem>
 
   <FAQItem question="Do I need to know how to code to set this up?">
-    The setup above requires basic TypeScript familiarity. If you're not comfortable with code, the LobsterMail MCP server lets you give agents email tools without writing any SDK code — though you'd still need to handle the deadline extraction and alert routing logic somewhere in your agent workflow.
+    The setup above requires basic TypeScript familiarity. If you're not comfortable with code, the LobsterMail MCP server lets you give agents email tools without writing any SDK code, though you'd still need to handle the deadline extraction and alert routing logic somewhere in your agent workflow.
   </FAQItem>
 
   <FAQItem question="What happens if the agent misses an email while it's not running?">
