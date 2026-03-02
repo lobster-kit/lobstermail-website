@@ -10,15 +10,13 @@ tags:
   - guides
   - email
 image: /blog/debugging-webhook-delivery-failures-in-production-agent-workflows.png
-author: LobsterMail Team
+author: Ian Bussières
 agent: agent-3-content
 channel: blog
 type: blog-post
-status: approved
+status: draft
 publish_at: '2026-02-25T15:00:00Z'
-approved_at: '2026-03-02T10:36:37.177Z'
 ---
-
 Your agent has been ignoring emails for four hours. Not failing loudly — just quiet. No errors in your application logs. No alerts. The agent looks healthy from the outside, but it hasn't processed a single incoming message since yesterday afternoon.
 
 The culprit is almost always a webhook delivery failure. The frustrating part is that it doesn't announce itself. The agent just stops reacting, and you find out when a user complains — or when you check the dashboard and notice zero events processed.
@@ -42,7 +40,7 @@ const webhooks = await lm.listWebhooks();
 console.log(webhooks.map(w => ({ id: w.id, enabled: w.enabled })));
 ```
 
-If `enabled` is `false`, the webhook exhausted its retries. Before you re-enable it, figure out why it failed — otherwise you'll disable it again within hours. Re-enabling looks like this:
+If `enabled` is `false`, the webhook exhausted its retries. Before you re-enable it, figure out why it failed, otherwise you'll disable it again within hours. Re-enabling looks like this:
 
 ```
 PATCH /v1/webhooks/:id
@@ -69,7 +67,7 @@ Get your endpoint responding correctly before touching the webhook configuration
 }
 ```
 
-A 5xx response means a server error in your handler. A 4xx means check your routing, authentication middleware, or body parsing configuration. If the request hangs and never returns, you have a timeout problem — and that's more common than people expect.
+A 5xx response means a server error in your handler. A 4xx means check your routing, authentication middleware, or body parsing configuration. If the request hangs and never returns, you have a timeout problem, and that's more common than people expect.
 
 The 10-second timeout is a hard limit. If your handler calls a database, an LLM, or any downstream API, you need to acknowledge the request immediately and process asynchronously:
 
@@ -78,7 +76,7 @@ app.post('/hooks/lobstermail', async (req, res) => {
   // Verify signature first, then acknowledge immediately
   res.status(200).json({ ok: true });
 
-  // Processing happens in the background — don't await here
+  // Processing happens in the background, don't await here
   processEmailEvent(req.body).catch(console.error);
 });
 ```
@@ -89,7 +87,7 @@ The response has to go out before any slow work begins. Awaiting the processing 
 
 Signature verification failures are the sneakiest class of webhook errors. Your code looks correct. The secret is right. The header is present. Still invalid.
 
-The issue is almost always body parsing. HMAC-SHA256 is computed over the exact raw bytes that came over the wire. If your framework parses the JSON body before you get to it, you're signing a re-serialized object — and even a single whitespace difference breaks the signature.
+The issue is almost always body parsing. HMAC-SHA256 is computed over the exact raw bytes that came over the wire. If your framework parses the JSON body before you get to it, you're signing a re-serialized object, and even a single whitespace difference breaks the signature.
 
 ```typescript
 import { createHmac } from 'node:crypto';
@@ -105,13 +103,13 @@ function verifyWebhook(body: string, signature: string, secret: string): boolean
 In Express, you need the raw buffer, not the parsed object:
 
 ```typescript
-// This fails — body is already JSON-parsed by the global middleware
+// This fails, body is already JSON-parsed by the global middleware
 app.use(express.json());
 app.post('/hooks/lobstermail', (req, res) => {
   verifyWebhook(JSON.stringify(req.body), sig, secret); // ❌ re-serialized
 });
 
-// This works — raw body captured before any parsing
+// This works, raw body captured before any parsing
 app.post('/hooks/lobstermail',
   express.raw({ type: 'application/json' }),
   (req, res) => {
@@ -121,14 +119,14 @@ app.post('/hooks/lobstermail',
 ```
 
 <Callout type="warning">
-  The webhook secret is only returned once — at creation time. If you didn't save it when you created the webhook, you'll need to delete it and create a new one. Store it in your secrets manager immediately, not in a `.env` file that might get overwritten.
+  The webhook secret is only returned once, at creation time. If you didn't save it when you created the webhook, you'll need to delete it and create a new one. Store it in your secrets manager immediately, not in a `.env` file that might get overwritten.
 </Callout>
 
 ## Step 4: Status code edge cases
 
-LobsterMail counts anything non-2xx as a failure. `200` works. `201` works. I've seen handlers return `204 No Content` under the assumption it's a valid success — it is HTTP-correct, but when in doubt, return `200 { "ok": true }`. It's unambiguous and easy to grep for in logs.
+LobsterMail counts anything non-2xx as a failure. `200` works. `201` works. I've seen handlers return `204 No Content` under the assumption it's a valid success, it is HTTP-correct, but when in doubt, return `200 { "ok": true }`. It's unambiguous and easy to grep for in logs.
 
-Also watch for middleware rewriting your status codes on its way out. Authentication layers returning `401` on malformed requests, rate limiters returning `429`, load balancers returning `502` during a rolling deploy — all of these register as failures on LobsterMail's side, even if your handler logic ran fine.
+Also watch for middleware rewriting your status codes on its way out. Authentication layers returning `401` on malformed requests, rate limiters returning `429`, load balancers returning `502` during a rolling deploy, all of these register as failures on LobsterMail's side, even if your handler logic ran fine.
 
 If you're seeing failures you can't reproduce locally, suspect the infrastructure between LobsterMail and your handler before assuming the handler itself is broken.
 
@@ -136,17 +134,17 @@ If you're seeing failures you can't reproduce locally, suspect the infrastructur
 
 Once the immediate failure is resolved, the handler architecture is what determines whether this happens again.
 
-Keep the handler stateless and fast. Its only job: verify the signature, enqueue the job, return 200. All processing happens in a worker. This pattern makes the handler nearly indestructible — it can't time out, it can't fail because a downstream service is slow, and it can't block under load.
+Keep the handler stateless and fast. Its only job: verify the signature, enqueue the job, return 200. All processing happens in a worker. This pattern makes the handler nearly indestructible, it can't time out, it can't fail because a downstream service is slow, and it can't block under load.
 
 Set an alert on webhook re-enable events. If you're manually re-enabling the same webhook more than once, you have a systemic reliability problem, not a one-off incident. Retry exhaustion is a symptom, not the root cause.
 
 Test handler changes in a sandbox before deploying to production. The [agent email sandbox testing guide](/blog/testing-agent-email-sandbox) covers how to set up an isolated test environment for exactly this kind of work.
 
-For more on the architectural tradeoffs between webhooks and polling — including cases where polling is genuinely the better choice — see [webhooks vs polling for agent email](/blog/webhooks-vs-polling-email).
+For more on the architectural tradeoffs between webhooks and polling, including cases where polling is genuinely the better choice, see [webhooks vs polling for agent email](/blog/webhooks-vs-polling-email).
 
 ---
 
-*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
+*Give your agent its own email. [Get started with LobsterMail](/), it's free.*
 
 <FAQ>
   <FAQItem question="How do I know if my LobsterMail webhook was automatically disabled?">
@@ -154,7 +152,7 @@ For more on the architectural tradeoffs between webhooks and polling — includi
   </FAQItem>
 
   <FAQItem question="Can I recover emails that arrived while my webhook was disabled?">
-    Yes. Your inboxes continued receiving email even while the webhook was disabled — the messages are stored and accessible. You can fetch them via the API and process them manually, or trigger reprocessing from your own queue once the webhook is back online.
+    Yes. Your inboxes continued receiving email even while the webhook was disabled, the messages are stored and accessible. You can fetch them via the API and process them manually, or trigger reprocessing from your own queue once the webhook is back online.
   </FAQItem>
 
   <FAQItem question="Why does LobsterMail disable the webhook instead of just pausing retries?">
@@ -166,11 +164,11 @@ For more on the architectural tradeoffs between webhooks and polling — includi
   </FAQItem>
 
   <FAQItem question="My HMAC signature verification keeps failing even though my secret is correct. What's wrong?">
-    Almost certainly a body parsing issue. You're likely signing a re-serialized JSON object instead of the original raw bytes. See the raw body section above — use `express.raw()` or your framework's equivalent to capture the body before any JSON parsing happens.
+    Almost certainly a body parsing issue. You're likely signing a re-serialized JSON object instead of the original raw bytes. See the raw body section above, use `express.raw()` or your framework's equivalent to capture the body before any JSON parsing happens.
   </FAQItem>
 
   <FAQItem question="What HTTP status codes does LobsterMail treat as successful delivery?">
-    Any 2xx status code. `200` and `201` are the most common. Avoid `204` unless you've confirmed it's handled correctly — when in doubt, return `200` with a simple JSON body like `{ "ok": true }`.
+    Any 2xx status code. `200` and `201` are the most common. Avoid `204` unless you've confirmed it's handled correctly, when in doubt, return `200` with a simple JSON body like `{ "ok": true }`.
   </FAQItem>
 
   <FAQItem question="What happens to my webhook secret if I lose it?">
@@ -186,7 +184,7 @@ For more on the architectural tradeoffs between webhooks and polling — includi
   </FAQItem>
 
   <FAQItem question="Should I still verify signatures in a development environment?">
-    Yes. It's much easier to catch signature verification bugs in development — where you control the test payloads — than to discover them in production after a webhook has been auto-disabled. Treat signature verification as non-optional from day one.
+    Yes. It's much easier to catch signature verification bugs in development, where you control the test payloads, than to discover them in production after a webhook has been auto-disabled. Treat signature verification as non-optional from day one.
   </FAQItem>
 
   <FAQItem question="What's the right way to handle duplicate webhook deliveries?">
@@ -194,6 +192,6 @@ For more on the architectural tradeoffs between webhooks and polling — includi
   </FAQItem>
 
   <FAQItem question="My handler returns 200 but deliveries still show as failed in LobsterMail. Why?">
-    Check whether middleware between LobsterMail and your handler is overriding the response. Proxies, API gateways, and auth layers can rewrite status codes before the response leaves your infrastructure. Also confirm your handler is actually sending the response before the 10-second timeout — if processing takes too long, the connection closes regardless of what status you intended to return.
+    Check whether middleware between LobsterMail and your handler is overriding the response. Proxies, API gateways, and auth layers can rewrite status codes before the response leaves your infrastructure. Also confirm your handler is actually sending the response before the 10-second timeout, if processing takes too long, the connection closes regardless of what status you intended to return.
   </FAQItem>
 </FAQ>
