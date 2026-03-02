@@ -15,11 +15,9 @@ image: /blog/automating-email-handoffs-for-openclaw-computer-use-agents.png
 agent: agent-3-content
 channel: blog
 type: blog-post
-status: approved
+status: draft
 publish_at: '2026-02-25T07:00:00Z'
-approved_at: '2026-03-02T10:36:37.188Z'
 ---
-
 OpenClaw's computer use mode is genuinely impressive for autonomous browser work. Navigating, filling forms, extracting data, clicking through multi-step flows — it handles all of this without you watching. But there's a specific moment where nearly every unattended session grinds to a halt: the email verification step.
 
 Your agent fills out a SaaS signup form, submits it, and the site sends a confirmation code to the address in the form. The browser session waits. If nobody is watching, it just keeps waiting — because the agent doesn't control any inbox, and there's no tool in its default toolkit that says "go get the code."
@@ -30,7 +28,7 @@ The fix is to give the agent its own inbox before the session starts. LobsterMai
 
 ## What computer use actually looks like
 
-OpenClaw's computer use capability gives the agent direct control over your desktop. It reads the screen, reasons about what's there, and acts — clicking buttons, typing text, navigating between pages. This is meaningfully different from brittle selector-based browser automation. When a site's layout changes, a selector breaks. When an agent reads the interface, it adapts.
+OpenClaw's computer use capability gives the agent direct control over your desktop. It reads the screen, reasons about what's there, and acts, clicking buttons, typing text, navigating between pages. This is meaningfully different from brittle selector-based browser automation. When a site's layout changes, a selector breaks. When an agent reads the interface, it adapts.
 
 Run `openclaw agent --message "Sign up for Linear and return the workspace URL" --thinking high` and the agent navigates to Linear, fills out the form with reasonable defaults, and submits. Then it reaches the email confirmation screen and has nowhere to go. There's no callable tool for "wait for a code from an inbox." The session hangs or surfaces an error and stops.
 
@@ -44,7 +42,7 @@ Install the LobsterMail SDK:
 npm install @lobsterkit/lobstermail
 ```
 
-On first run, `LobsterMail.create()` automatically signs up for a free account and saves the token locally. Your agent never visits a signup page or manually configures credentials — the SDK handles that step the same way it handles everything else here: autonomously.
+On first run, `LobsterMail.create()` automatically signs up for a free account and saves the token locally. Your agent never visits a signup page or manually configures credentials, the SDK handles that step the same way it handles everything else here: autonomously.
 
 ```typescript
 import { LobsterMail } from '@lobsterkit/lobstermail';
@@ -109,7 +107,7 @@ await openclaw.agent({
 The agent fills the form with the LobsterMail address, submits it, calls `wait_for_verification`, gets the code back, and continues. The session never pauses for human input.
 
 <Callout type="tip">
-  `createSmartInbox()` generates a readable address from the name you pass in and handles collisions automatically — if `linear-signup` is taken, it tries variations. Use descriptive names so your logs stay readable when you're running multiple sessions.
+  `createSmartInbox()` generates a readable address from the name you pass in and handles collisions automatically, if `linear-signup` is taken, it tries variations. Use descriptive names so your logs stay readable when you're running multiple sessions.
 </Callout>
 
 ## Running sessions without watching them
@@ -123,13 +121,13 @@ openclaw gateway --port 18789 --verbose
 
 With the daemon running, you trigger sessions from a cron job or an orchestration script. Each session provisions its own inbox at startup, catches its own codes, and completes without surfacing a "waiting on human" state anywhere in the loop. You check finished results rather than monitoring individual verification steps.
 
-For chained workflows — sign up for service A, authenticate with it, use those credentials on service B, extract data from both — each step gets a dedicated inbox. No address reuse, no ambiguous codes landing in a shared inbox, no cross-contamination between sessions.
+For chained workflows, sign up for service A, authenticate with it, use those credentials on service B, extract data from both, each step gets a dedicated inbox. No address reuse, no ambiguous codes landing in a shared inbox, no cross-contamination between sessions.
 
 ## Patterns this enables beyond verification
 
 Autonomous email access opens up more than just signup flows.
 
-**Human approval gates.** Before the agent takes an irreversible action — sending a message, making a purchase, deleting records — have it email your personal inbox and poll for a reply using the same `inbox.receive()` loop you already set up. Your reply is the signal. This is the lowest-friction human-in-the-loop implementation I know of, and it requires zero additional infrastructure. More patterns like this in [what agents do with email](/blog/what-agents-do-with-email).
+**Human approval gates.** Before the agent takes an irreversible action, sending a message, making a purchase, deleting records, have it email your personal inbox and poll for a reply using the same `inbox.receive()` loop you already set up. Your reply is the signal. This is the lowest-friction human-in-the-loop implementation I know of, and it requires zero additional infrastructure. More patterns like this in [what agents do with email](/blog/what-agents-do-with-email).
 
 **Coordinated multi-agent sessions.** Two OpenClaw instances can coordinate asynchronously through LobsterMail inboxes. Instance A finishes a browser research task and emails findings to instance B's address. Instance B picks them up on its next scheduled run. Slower than a direct API call, but emails persist across restarts and you get a readable record of everything that passed between agents. See [scheduling meetings and tasks with agent email](/blog/agent-schedule-meetings-email) for more coordination patterns.
 
@@ -141,11 +139,11 @@ If you want to go from zero to a working inbox in under a minute, the [LobsterMa
 
 ---
 
-*Give your agent its own inbox. [Get started with LobsterMail](/) — it's free.*
+*Give your agent its own inbox. [Get started with LobsterMail](/), it's free.*
 
 <FAQ>
   <FAQItem question="Does LobsterMail require any manual account setup to use with OpenClaw?">
-    No. `LobsterMail.create()` provisions a free account on first run and saves the token locally. Your agent handles the entire setup step — no human signup required.
+    No. `LobsterMail.create()` provisions a free account on first run and saves the token locally. Your agent handles the entire setup step, no human signup required.
   </FAQItem>
 
   <FAQItem question="What happens if the verification email never arrives?">
@@ -157,7 +155,7 @@ If you want to go from zero to a working inbox in under a minute, the [LobsterMa
   </FAQItem>
 
   <FAQItem question="How fast is inbox provisioning?">
-    Under a second. `createSmartInbox()` returns immediately and the address can receive email as soon as the call completes — there's no warm-up period.
+    Under a second. `createSmartInbox()` returns immediately and the address can receive email as soon as the call completes, there's no warm-up period.
   </FAQItem>
 
   <FAQItem question="Can I run multiple computer use sessions in parallel, each with its own inbox?">
@@ -169,7 +167,7 @@ If you want to go from zero to a working inbox in under a minute, the [LobsterMa
   </FAQItem>
 
   <FAQItem question="Is there a cost to run this?">
-    The free tier covers 1,000 emails per month with no credit card required. For most agent computer use workflows — including running these verification handoffs regularly — the free tier is enough.
+    The free tier covers 1,000 emails per month with no credit card required. For most agent computer use workflows, including running these verification handoffs regularly, the free tier is enough.
   </FAQItem>
 
   <FAQItem question="What's the difference between createInbox() and createSmartInbox()?">
