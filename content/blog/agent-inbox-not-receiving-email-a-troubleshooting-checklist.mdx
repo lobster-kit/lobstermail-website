@@ -11,15 +11,13 @@ tags:
   - infrastructure
   - openclaw
 image: /blog/agent-inbox-not-receiving-email-a-troubleshooting-checklist.png
-author: LobsterMail Team
+author: Ian Bussières
 agent: agent-3-content
 channel: blog
 type: blog-post
-status: approved
+status: draft
 publish_at: '2026-02-24T10:00:00Z'
-approved_at: '2026-03-02T10:36:37.207Z'
 ---
-
 Your agent is waiting for a verification email. The timeout fires, `waitForEmail()` returns `null`, and the workflow stalls. Or it worked fine yesterday and stopped today without any obvious change. Either way, you're here.
 
 When an agent inbox stops receiving email, the cause is almost always one of a handful of things. None of them require a support ticket if you work through them in order.
@@ -55,13 +53,13 @@ When debugging, remove the filter entirely first:
 ```typescript
 const email = await inbox.waitForEmail({
   timeout: 60000,
-  // No filter — catches everything arriving
+  // No filter, catches everything arriving
 });
 
 console.log(email?.from, email?.subject);
 ```
 
-If that catches the email, delivery is working and your filter is the problem. Tighten from there — try matching on just the domain (`acme.com`) rather than the full address.
+If that catches the email, delivery is working and your filter is the problem. Tighten from there, try matching on just the domain (`acme.com`) rather than the full address.
 
 ## Check your timeout
 
@@ -76,13 +74,13 @@ const email = await inbox.waitForEmail({
 });
 ```
 
-There's no compute cost to a longer timeout. The server holds the connection open and responds the moment the email lands — you're not burning cycles on polling. The [polling vs. long-polling tradeoff is worth understanding](/blog/webhooks-vs-polling-email) if you're designing around high-volume inboxes.
+There's no compute cost to a longer timeout. The server holds the connection open and responds the moment the email lands, you're not burning cycles on polling. The [polling vs. long-polling tradeoff is worth understanding](/blog/webhooks-vs-polling-email) if you're designing around high-volume inboxes.
 
 ## Check that longPoll is enabled
 
 `waitForEmail()` uses server-side long-polling by default (`longPoll: true`). The server holds the connection and responds within milliseconds of delivery.
 
-If you've explicitly set `longPoll: false`, your agent falls back to exponential-backoff polling. That introduces a window where an email arrives between polls and the next check doesn't happen before your timeout fires. If you're seeing intermittent failures on the same sender — works sometimes, fails other times — check this first.
+If you've explicitly set `longPoll: false`, your agent falls back to exponential-backoff polling. That introduces a window where an email arrives between polls and the next check doesn't happen before your timeout fires. If you're seeing intermittent failures on the same sender, works sometimes, fails other times, check this first.
 
 ```typescript
 const email = await inbox.waitForEmail({
@@ -96,7 +94,7 @@ const email = await inbox.waitForEmail({
 
 If the inbox was receiving email yesterday and isn't today, check your monthly limit. The free tier handles 1,000 emails per month. The Builder plan gives your agent 5,000 emails per month and up to 500 outbound per day.
 
-Monthly limits reset at the start of each billing cycle. If your agent hit the cap, inbound delivery pauses. You'll see this in your LobsterMail dashboard — it's not silent. If you're running high-volume automation and hitting limits regularly, that's the signal to molt up.
+Monthly limits reset at the start of each billing cycle. If your agent hit the cap, inbound delivery pauses. You'll see this in your LobsterMail dashboard, it's not silent. If you're running high-volume automation and hitting limits regularly, that's the signal to molt up.
 
 ## If you're using a custom domain
 
@@ -117,11 +115,11 @@ console.log(
 );
 ```
 
-Some platforms require you to allowlist the receiving domain. Others have spam scoring that quietly drops messages without bouncing them. If your test email arrives and the platform's email doesn't, that's a sending-side problem — worth contacting their support directly.
+Some platforms require you to allowlist the receiving domain. Others have spam scoring that quietly drops messages without bouncing them. If your test email arrives and the platform's email doesn't, that's a sending-side problem, worth contacting their support directly.
 
 ## Watch out for concurrent read-write operations
 
-There's one failure mode worth knowing about, even though it's uncommon. Last year, a Meta security researcher's OpenClaw agent accidentally deleted emails from her real inbox because the inbox was too large and triggered a compaction mid-task — causing the agent to lose its original instruction context and start acting on incomplete state.
+There's one failure mode worth knowing about, even though it's uncommon. Last year, a Meta security researcher's OpenClaw agent accidentally deleted emails from her real inbox because the inbox was too large and triggered a compaction mid-task, causing the agent to lose its original instruction context and start acting on incomplete state.
 
 LobsterMail doesn't do inbox compaction, but the pattern generalizes: if your agent is both reading *and* writing to a high-volume inbox (archiving, deleting, marking read) in the same operation, concurrent state changes can produce unexpected results. Keep read and write steps separate, with explicit checks between them.
 
@@ -129,7 +127,7 @@ If you're building an agent that needs to manage a busy inbox reliably, [the pub
 
 ---
 
-*Give your agent its own inbox. [Get started with LobsterMail](/) — it's free.*
+*Give your agent its own inbox. [Get started with LobsterMail](/), it's free.*
 
 <FAQ>
   <FAQItem question="Why is waitForEmail() returning null even though I sent an email?">
@@ -141,7 +139,7 @@ If you're building an agent that needs to manage a busy inbox reliably, [the pub
   </FAQItem>
 
   <FAQItem question="Does LobsterMail filter inbound email to spam?">
-    No. Everything sent to a LobsterMail inbox is delivered — there's no spam folder. If an email isn't arriving, the problem is on the sending side. Test by sending from a personal account to confirm your inbox is working.
+    No. Everything sent to a LobsterMail inbox is delivered, there's no spam folder. If an email isn't arriving, the problem is on the sending side. Test by sending from a personal account to confirm your inbox is working.
   </FAQItem>
 
   <FAQItem question="What happens when I hit my monthly email limit?">
@@ -149,7 +147,7 @@ If you're building an agent that needs to manage a busy inbox reliably, [the pub
   </FAQItem>
 
   <FAQItem question="Can two inboxes share the same address?">
-    No. Addresses are unique. If you try to create an inbox with a local part that's already taken, you'll get a `409 Conflict`. Use `createSmartInbox()` to handle collisions automatically — it tries variants and falls back to a random address if needed.
+    No. Addresses are unique. If you try to create an inbox with a local part that's already taken, you'll get a `409 Conflict`. Use `createSmartInbox()` to handle collisions automatically, it tries variants and falls back to a random address if needed.
   </FAQItem>
 
   <FAQItem question="Are dots in email addresses significant?">
@@ -165,7 +163,7 @@ If you're building an agent that needs to manage a busy inbox reliably, [the pub
   </FAQItem>
 
   <FAQItem question="My agent inbox worked yesterday and stopped today. What changed?">
-    The most likely culprits are hitting a monthly send or receive limit, a DNS change affecting a custom domain, or a sender-side change (new sending address, added spam filtering). Check your dashboard for limit status first — it's the quickest thing to rule out.
+    The most likely culprits are hitting a monthly send or receive limit, a DNS change affecting a custom domain, or a sender-side change (new sending address, added spam filtering). Check your dashboard for limit status first, it's the quickest thing to rule out.
   </FAQItem>
 
   <FAQItem question="Can I use LobsterMail with a custom domain?">
