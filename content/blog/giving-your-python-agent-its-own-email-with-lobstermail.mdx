@@ -20,6 +20,7 @@ status: approved
 publish_at: '2026-02-26T07:00:00Z'
 approved_at: '2026-03-02T10:36:37.174Z'
 ---
+
 Python is where most agents live. LangChain, AutoGen, CrewAI, smolagents — the whole ML ecosystem is Python-first. So when your agent needs to interact over email (sign up for a service, catch a verification code, receive replies from a vendor), you want the setup to be a few lines of code, not an afternoon in Google Cloud Console.
 
 This tutorial covers the LobsterMail Python SDK from scratch. By the end, your agent will have its own `@lobstermail.ai` address and be able to receive and send email, including the verification code pattern that breaks most agent workflows.
@@ -64,7 +65,7 @@ for email in emails:
     print(email.subject)
     print(email.from_address)
     print(email.body)
-    print(email.injection_risk)  # float, 0.0 to 1.0
+    print(email.injection_risk)  # 'low' | 'medium' | 'high'
 ```
 
 The `injection_risk` score is something I didn't expect to care about until I did. Every email LobsterMail delivers comes with a score rating how likely the content contains prompt injection patterns — things written to look like instructions hidden inside normal-looking email text. If your agent is reading email bodies and passing them into a model prompt (which it almost certainly is), a high score (above 0.7, roughly) is a signal to quote the content explicitly or route it through a human review step before acting on it.
