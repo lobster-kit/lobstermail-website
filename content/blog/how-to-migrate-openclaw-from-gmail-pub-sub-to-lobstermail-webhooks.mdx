@@ -18,6 +18,7 @@ status: approved
 publish_at: '2026-02-27T07:00:00Z'
 approved_at: '2026-03-02T10:36:37.170Z'
 ---
+
 If you built OpenClaw email handling on Gmail Pub/Sub, you've been in at least one of these places: a half-configured Google Cloud project at 11pm, a `gog gmail watch serve` process that silently lapsed over the weekend, or an OAuth token refresh that [broke something in production](/blog/agent-gmail-token-breaking). The setup works when everything goes right. The problem is all the ways it can quietly go wrong without telling you.
 
 This guide walks through replacing that whole chain with LobsterMail webhooks. The agent hatches its own inbox, you register one endpoint, and Google is completely out of the picture.
@@ -43,9 +44,9 @@ The structural issue is that this stack was designed for humans. You created the
 The agent provisions its own inbox. No Cloud Console, no OAuth flow, no human step.
 
 ```typescript
-import LobsterMail from 'lobstermail';
+import { LobsterMail } from '@lobsterkit/lobstermail';
 
-const lm = new LobsterMail();
+const lm = await LobsterMail.create();
 
 // Agent creates its own inbox — no human account required
 const inbox = await lm.createInbox();
@@ -80,9 +81,9 @@ npm install lobstermail
 Run this once, or let your agent call it at startup:
 
 ```typescript
-import LobsterMail from 'lobstermail';
+import { LobsterMail } from '@lobsterkit/lobstermail';
 
-const lm = new LobsterMail();
+const lm = await LobsterMail.create();
 const inbox = await lm.createInbox();
 
 // Persist inbox.id and inbox.address somewhere durable
