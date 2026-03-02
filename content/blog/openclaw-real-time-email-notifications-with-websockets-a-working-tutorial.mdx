@@ -4,7 +4,7 @@ description: >-
   Stop polling every 5 seconds. This tutorial shows how to wire LobsterMail
   WebSocket notifications into your OpenClaw agent for sub-second email
   delivery.
-date: '2026-02-28'
+date: '2026-03-02'
 tags:
   - openclaw
   - guides
@@ -12,36 +12,32 @@ tags:
   - automation
 image: >-
   /blog/openclaw-real-time-email-notifications-with-websockets-a-working-tutorial.png
-author: LobsterMail Team
+author: Ian Bussières
 agent: agent-3-content
 channel: blog
 type: blog-post
-status: approved
-publish_at: '2026-02-28T10:00:00Z'
-approved_at: '2026-03-02T10:36:37.205Z'
+status: draft
+publish_at: '2026-03-02T10:00:00Z'
 ---
+Your agent fires a request to check for email. Nothing. Fires again. Nothing. Again. Nothing. Somewhere around the 40th empty response, an email finally lands, and your agent catches it on the next cycle. By then, 5 to 10 seconds have passed since delivery. That lag sounds trivial until it's a verification code with a 60-second expiry window, and the link has already expired by the time your agent sees it.
 
-Polling for email is a tax you pay every few seconds, whether or not anything arrives. Your agent fires off a request. Gets an empty response. Fires again. Gets nothing. Repeat until eventually, maybe, an email shows up — and your agent catches it on the next cycle.
+Polling is the default because it's simple. But simple comes with costs that compound fast when your OpenClaw agent is running real workflows against real services.
 
-This is fine for low-stakes use cases. It's not fine when your agent is mid-flow, waiting on a verification code before it can continue. Five seconds of polling latency doesn't sound like much until your agent times out, the verification link expires, and you're debugging a cascade failure at 11pm.
+This tutorial covers a different approach: keeping a WebSocket connection open so LobsterMail pushes emails to your agent the moment they arrive.
 
-WebSocket notifications solve this. The connection stays open. The email arrives. Your agent knows immediately.
+## The real cost of polling
 
-Here's how to set that up with OpenClaw and LobsterMail.
+A polling loop running every 5 seconds generates 17,280 API requests per inbox per day. At 10-second intervals, that's still 8,640 requests. Multiply across multiple inboxes or multiple agents, and you're burning through rate limits on requests that almost always return empty.
 
-## Why polling is a bad fit for agent workflows
+But the bigger problem is latency. If your agent submitted a form and is waiting on a magic link, the gap between email delivery and your agent seeing it averages half the polling interval. For a 5-second loop, that's 2.5 seconds of dead time where the email exists but your agent doesn't know it.
 
-A typical polling loop runs every 5-10 seconds. That's 8,640 to 17,280 API requests per inbox per day, before your agent has done anything useful. At scale — multiple agents, multiple inboxes — you're burning through rate limits on requests that return nothing.
+For some workflows, 2.5 seconds is nothing. For others, it's the difference between catching a verification window and missing it. We covered this tradeoff in our [webhooks vs polling comparison](/blog/webhooks-vs-polling-email), but the short version is: if your agent needs to react to inbound email quickly, polling is always a compromise.
 
-The latency problem is worse than it sounds. If your agent is signing up for a service and waiting on a magic link, a 5-second gap between email delivery and your agent seeing it is the difference between a smooth workflow and a flaky one. Some links expire in 60 seconds. Some services rate-limit re-sends. Neither of those is a problem you want to solve at 2am.
+## How LobsterMail's WebSocket delivery works
 
-The [polling vs. webhooks tradeoff](/blog/webhooks-vs-polling-email) is real, but for email specifically there's a third option: keep a WebSocket connection open and let the server push to you. No wasted requests. Notification latency measured in milliseconds, not seconds.
+When your agent creates an inbox with LobsterMail, the platform maintains a WebSocket connection for that inbox. The moment an inbound email is processed, LobsterMail pushes the full message object through the open connection. No polling interval. No wasted requests. Notification latency measured in milliseconds.
 
-## What LobsterMail's real-time delivery looks like
-
-When your agent hatches its own inbox with LobsterMail, it gets a standard `@lobstermail.ai` address. The platform maintains a WebSocket connection per inbox that fires the moment an inbound email is processed.
-
-The SDK exposes this through `inbox.listen()`. Your agent registers a callback, and that callback runs the moment an email lands. No polling interval to configure. No guessing whether 2 seconds or 30 seconds is the right tradeoff.
+The SDK exposes this through `inbox.listen()`. You register a callback, and that callback fires once per incoming email with the complete message, including headers, body, and LobsterMail's built-in injection risk score.
 
 ```typescript
 import { LobsterMail } from '@lobsterkit/lobstermail';
@@ -57,13 +53,11 @@ inbox.listen((email) => {
 });
 ```
 
-That's the core. The callback fires once per incoming email, with the full message object including LobsterMail's built-in injection risk score. That score matters if your agent is going to act on content from untrusted senders — more on that in a moment.
+That's the core pattern. `LobsterMail.create()` handles [agent self-signup](/blog/agent-self-signup-explained) automatically on first run, with no human dashboard step. Token gets stored at `~/.lobstermail/token` and reused on every subsequent call.
 
-## Wiring this into an OpenClaw agent
+## Building a working OpenClaw integration
 
-OpenClaw agents are event-driven by default. The pattern fits naturally: register the email listener when your agent starts, and handle each arriving email as an event.
-
-Here's a minimal working setup:
+OpenClaw agents are event-driven, so the WebSocket pattern fits naturally. Register the email listener when your agent starts, handle each email as an event. Here's a minimal but complete setup:
 
 ```typescript
 import { LobsterMail, Email } from '@lobsterkit/lobstermail';
@@ -76,7 +70,7 @@ async function startAgent() {
 
   inbox.listen(async (email: Email) => {
     if (email.security.injectionRisk === 'high') {
-      console.warn('Suspicious email — skipping');
+      console.warn('Suspicious email, skipping');
       return;
     }
 
@@ -97,17 +91,19 @@ async function handleEmail(email: Email) {
 startAgent();
 ```
 
-A few things worth pointing out. First, `LobsterMail.create()` handles auto-signup if no token exists — your agent gets a free account on first run, token stored at `~/.lobstermail/token`, reused on every run after that. The [auto-signup flow is entirely agent-driven](/blog/agent-self-signup-explained), no human steps involved.
+A few things worth calling out here.
 
-Second, `createSmartInbox()` generates a human-readable address from the name you pass. If `my-openclaw-agent@lobstermail.ai` is taken, it tries variations automatically. If you'd rather have a random address with zero collision risk, `createInbox()` gives you something like `lobster-xxxx@lobstermail.ai` immediately.
+First, `createSmartInbox()` generates a human-readable address from the name you pass. If `my-openclaw-agent@lobstermail.ai` is already taken, it tries variations automatically. If you'd rather have a random address with zero collision risk, `createInbox()` gives you something like `lobster-xxxx@lobstermail.ai` immediately.
 
-Third, the injection risk check is worth keeping. If your agent acts on email content from unknown senders, prompt injection is a real attack surface. LobsterMail scores each inbound email and surfaces that score on the message object so you can gate on it without writing your own detection logic.
+Second, that injection risk check on line 10 matters more than it might look. If your agent acts on email content from unknown senders, prompt injection is a real attack surface. We've written about the [security side of agent email](/blog/openclaw-agent-email-security) in detail, but the short version is: LobsterMail scores every inbound email and surfaces that score on the message object so you can gate on it without rolling your own detection logic.
 
-## A concrete end-to-end example
+Third, this works on the free tier. Your agent gets one inbox, 1,000 emails per month, no credit card required. If you need more inboxes or higher volume, the Builder plan at $9/month covers up to 10 inboxes and 5,000 emails/month.
 
-Say your OpenClaw agent is registering for a new API service. It submits the form with the inbox address and needs to catch the verification email to complete signup. With polling, your agent might wait up to 10 seconds. With WebSocket delivery, the typical round-trip from email sent to callback firing is under 900ms.
+## A concrete example: catching a verification code
 
-Here's what that part of the workflow looks like:
+Say your OpenClaw agent is registering for a new API service. It fills out the signup form using the inbox address and needs to catch the verification email to complete the flow. With polling at 5-second intervals, your agent sits idle for up to 5 seconds after the email lands. With the WebSocket approach, the typical round-trip from email sent to callback firing is under 900ms.
+
+Here's what the waiting part looks like in practice:
 
 ```typescript
 async function waitForVerificationCode(
@@ -128,13 +124,21 @@ async function waitForVerificationCode(
 }
 ```
 
-Thirty-second timeout as a safety net. In practice it resolves in under a second for most services. If it returns null, your agent can request a resend or bail cleanly. Either way, you know the outcome quickly instead of hanging.
+Thirty-second timeout as a safety net. In practice, most services deliver the email within a few seconds, and your agent catches it in under a second after that. If the promise resolves to null, your agent can request a resend or exit cleanly. Either way, the outcome is known quickly rather than hanging in a polling loop hoping the next cycle catches it.
+
+This same pattern works for any "wait for an email, then continue" workflow: password resets, two-factor codes, account confirmations, approval emails. The shape is always the same. Open a listener, match the content you're waiting for, resolve, and move on.
+
+## Connection handling and edge cases
+
+The SDK handles reconnection automatically. If the connection drops, it reconnects and delivers any emails that arrived during the gap. Your agent won't silently miss messages.
+
+One caveat: WebSocket connections require a persistent process. If your OpenClaw instance runs in a serverless environment, the connection closes when the process exits. For those setups, consider the [webhook approach with HMAC verification](/blog/openclaw-inbound-email-webhook-setup-with-hmac-verification) instead. Both deliver in real time. WebSockets need a long-running process, webhooks need an HTTP endpoint.
+
+For most OpenClaw installations running on a local machine or persistent server, WebSockets are simpler. No endpoint to expose, no signature verification to implement. The connection is outbound from your agent, so it works behind NATs and firewalls without port forwarding.
 
 ## What this doesn't cover
 
-This tutorial is focused on inbound real-time notifications. Outbound sending from OpenClaw agents — composing, threading, reply handling — is a separate topic and covered in the SDK docs.
-
-If your OpenClaw instance is handling incoming messages from real users rather than service emails, read up on [why mainstream email isn't quite ready for agents](/blog/openclaw-mainstream-email-not-ready) before you go too far down that path. The trust model is different, and it changes how you should handle the content.
+This tutorial covers inbound real-time notifications only. Outbound sending, threading, and reply handling are in the [SDK docs](/docs/getting-started). If your agent handles incoming messages from real users rather than service emails, read [why mainstream email isn't quite ready for agents](/blog/openclaw-mainstream-email-not-ready) first. The trust model is different.
 
 ---
 
@@ -142,46 +146,50 @@ If your OpenClaw instance is handling incoming messages from real users rather t
 
 <FAQ>
   <FAQItem question="Does LobsterMail use WebSockets or webhooks for real-time delivery?">
-    LobsterMail supports both. The SDK's `inbox.listen()` method opens a WebSocket connection and pushes emails to your callback as they arrive. If you prefer webhooks, you can configure an endpoint in the dashboard and LobsterMail will POST to it instead.
+    Both are supported. The SDK's `inbox.listen()` opens a WebSocket connection and pushes emails to your callback as they arrive. If you prefer webhooks, configure an endpoint in the dashboard and LobsterMail will POST to it instead.
   </FAQItem>
 
-  <FAQItem question="How fast is the real-time delivery in practice?">
-    Typical notification latency is under a second from email delivery to your callback firing. Exact timing depends on network conditions and the sending service, but it's consistently faster than any polling interval you'd configure in practice.
+  <FAQItem question="How fast is the WebSocket notification in practice?">
+    Typical latency from email delivery to your callback firing is under 900 milliseconds. Exact timing depends on network conditions and how fast the sending service's mail server hands off the message, but it's consistently faster than any polling interval you'd set.
   </FAQItem>
 
   <FAQItem question="Does my OpenClaw agent need a pre-existing API key to use LobsterMail?">
-    No. `LobsterMail.create()` handles account creation automatically on first run, with no human signup step required. Your agent gets a token stored locally at `~/.lobstermail/token` and reuses it on every subsequent run.
+    No. `LobsterMail.create()` handles account creation automatically on first run without any human signup step. Your agent gets a token stored at `~/.lobstermail/token` and reuses it on every subsequent call.
   </FAQItem>
 
   <FAQItem question="Can I run multiple inboxes per agent?">
-    Yes. Call `createSmartInbox()` or `createInbox()` multiple times and each gets its own address and listener. The free plan supports one inbox; the Builder plan ($9/month) allows up to 10.
+    Yes. Call `createSmartInbox()` or `createInbox()` multiple times and each one gets its own address and its own listener. The free plan supports one inbox. The Builder plan ($9/month) allows up to 10.
   </FAQItem>
 
   <FAQItem question="What happens if the WebSocket connection drops?">
-    The SDK handles reconnection automatically. Emails that arrive during a disconnection are queued and delivered once the connection is restored, so your agent won't silently miss anything.
+    The SDK reconnects automatically. Any emails that arrive during the disconnection are queued and delivered once the connection is restored, so your agent won't silently miss anything.
   </FAQItem>
 
   <FAQItem question="Is LobsterMail free for small OpenClaw projects?">
-    The free tier is $0/month with one inbox and up to 1,000 emails/month, no credit card required. Most single-agent workflows fit comfortably there without ever needing to upgrade.
+    Yes. The free tier is $0/month with one inbox and up to 1,000 emails/month, no credit card required. Most single-agent workflows fit comfortably within that limit.
   </FAQItem>
 
   <FAQItem question="How does the injection risk score work?">
-    LobsterMail analyzes each inbound email's content and assigns a `security.injectionRisk` value of `low`, `medium`, or `high`. Your agent can check this field before acting on email content and skip or quarantine anything that scores high. See the [security and injection guide](/docs/getting-started) for the full breakdown.
+    LobsterMail analyzes each inbound email and assigns a `security.injectionRisk` value of `low`, `medium`, or `high`. Your agent can check this field before acting on email content and skip or quarantine anything that scores high. See the [security docs](/docs/getting-started) for the full breakdown.
   </FAQItem>
 
   <FAQItem question="What's the difference between createSmartInbox and createInbox?">
-    `createSmartInbox({ name: 'My Agent' })` tries to generate a human-readable address like `my-agent@lobstermail.ai` and handles collisions by trying variations automatically. `createInbox()` gives you a random address like `lobster-xxxx@lobstermail.ai` immediately, with no collision risk.
+    `createSmartInbox({ name: 'My Agent' })` generates a human-readable address like `my-agent@lobstermail.ai` and handles collisions by trying variations. `createInbox()` gives you a random address like `lobster-xxxx@lobstermail.ai` with no collision risk.
   </FAQItem>
 
-  <FAQItem question="Can I use my own domain instead of @lobstermail.ai?">
-    Yes, custom domains are supported. Set one up in the dashboard and your inboxes will use `@yourdomain.com` instead. The [custom domains guide](/docs/getting-started) covers the setup.
+  <FAQItem question="Can I use a custom domain instead of @lobstermail.ai?">
+    Yes, custom domains are supported on the Builder plan. Set one up in the dashboard and your inboxes will use `@yourdomain.com` instead. The [custom domains guide](/docs/getting-started) covers setup.
   </FAQItem>
 
-  <FAQItem question="Does this work if my OpenClaw agent runs in a serverless environment?">
-    WebSocket connections require a persistent process, so a long-running environment is a better fit for `inbox.listen()`. For serverless or short-lived runtimes, configure a webhook endpoint instead — LobsterMail will POST to your function URL whenever email arrives.
+  <FAQItem question="Does this work in serverless environments like AWS Lambda?">
+    WebSocket connections need a persistent process, so a long-running environment is a better fit for `inbox.listen()`. For serverless or short-lived runtimes, configure a [webhook endpoint](/blog/openclaw-inbound-email-webhook-setup-with-hmac-verification) instead. LobsterMail will POST to your function URL when email arrives.
   </FAQItem>
 
-  <FAQItem question="What's the send limit if my agent needs to reply to emails?">
-    The free tier allows sending and receiving within a 1,000 emails/month ceiling. The Builder plan ($9/month) raises that to 5,000 emails/month and adds a 500 outbound emails/day limit. Replies count toward the monthly total.
+  <FAQItem question="What are the send limits if my agent needs to reply to emails?">
+    The free tier covers 1,000 emails/month for both sending and receiving. The Builder plan ($9/month) raises that to 5,000 emails/month with a 500 outbound emails/day limit. Replies count toward the monthly total.
+  </FAQItem>
+
+  <FAQItem question="Do I need to expose any ports for WebSocket connections to work?">
+    No. The WebSocket connection is outbound from your agent to LobsterMail's servers, so it works behind NATs and firewalls without any port forwarding or tunneling configuration.
   </FAQItem>
 </FAQ>
