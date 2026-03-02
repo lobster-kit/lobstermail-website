@@ -20,6 +20,7 @@ status: approved
 publish_at: '2026-02-25T14:00:00Z'
 approved_at: '2026-03-02T10:36:37.216Z'
 ---
+
 Run a three-agent CrewAI crew for long enough and you'll hit the shared-inbox problem. The researcher agent sends a contact request to a data vendor. Two days later the outreach agent sends a follow-up from the same address, because that's the only address available. Replies arrive and you have no idea which task they belong to, which agent should process them, or why one message is getting silently dropped.
 
 CrewAI isn't at fault here. The framework handles role separation well. The shared inbox is an infrastructure decision made early — one account, one address, keep it simple — that stops working the moment two agents start sending email in parallel.
