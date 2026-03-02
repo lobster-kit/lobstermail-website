@@ -2,9 +2,9 @@
 title: giving your python agent its own email with lobstermail
 description: >-
   Step-by-step tutorial for the LobsterMail Python SDK — provision an inbox,
-  receive emails with injection risk scoring, send messages, and handle
-  verification codes.
-date: '2026-02-26'
+  send and receive emails, handle verification codes, and scan for prompt
+  injection, all in async Python.
+date: '2026-03-02'
 tags:
   - getting-started
   - guides
@@ -12,34 +12,28 @@ tags:
   - infrastructure
   - automation
 image: /blog/giving-your-python-agent-its-own-email-with-lobstermail.png
-author: LobsterMail Team
+author: Ian Bussières
 agent: agent-3-content
 channel: blog
 type: blog-post
-status: approved
-publish_at: '2026-02-26T07:00:00Z'
-approved_at: '2026-03-02T10:36:37.174Z'
+status: draft
+publish_at: '2026-03-02T07:00:00Z'
 ---
+Most Python agent frameworks expect your agent to talk to APIs, call tools, and reason through multi-step tasks without human intervention. But the moment that agent needs to sign up for a service, catch a confirmation code, or send a follow-up email, the whole thing stalls. The agent can reason and plan, but it can't check its email because it doesn't have an email address.
 
-Python is where most agents live. LangChain, AutoGen, CrewAI, smolagents — the whole ML ecosystem is Python-first. So when your agent needs to interact over email (sign up for a service, catch a verification code, receive replies from a vendor), you want the setup to be a few lines of code, not an afternoon in Google Cloud Console.
+Gmail won't work here. OAuth requires a human to open a browser, click Allow, and authorize the app. That's fine for consumer apps. For an agent running unattended on a server at 2am, it's a dead end. And even if you manage to wire up a personal inbox, now your agent is reading your private messages and sending from your identity. One prompt injection in a forwarded newsletter and your agent is replying to your boss as you.
 
-This tutorial covers the LobsterMail Python SDK from scratch. By the end, your agent will have its own `@lobstermail.ai` address and be able to receive and send email, including the verification code pattern that breaks most agent workflows.
+LobsterMail gives your Python agent its own isolated inbox. No OAuth, no human signup, no shared credentials. The agent provisions the address itself and starts communicating. This tutorial walks through the full setup.
 
-## Why not just use Gmail?
-
-The blocker with Gmail is OAuth. OAuth requires a real human to open a browser, authorize the app, and click Allow. For apps people install themselves, that flow is fine. For an agent running unattended at midnight, it's a dead end.
-
-LobsterMail skips the OAuth handshake entirely. The agent provisions its own inbox through a single SDK call. No human account creation, no browser session, nothing to pre-configure before running.
-
-## Install
+## Install the SDK
 
 ```bash
 pip install lobstermail
 ```
 
-On first run, the SDK automatically creates a free account and saves a token to `~/.lobstermail/token`. Nothing else to set up. If you'd rather use explicit credentials (for example, in a serverless environment with no persistent storage), set `LOBSTERMAIL_API_KEY` in your environment and the SDK picks it up. Either way, there's no dashboard step before you can write code.
+On first run, the SDK creates a free account automatically and saves a token to `~/.lobstermail/token`. No dashboard, no email confirmation, no API key to generate first. If you're running in a stateless environment (Lambda, Cloud Run, a container), set `LOBSTERMAIL_API_KEY` in your environment variables and the SDK picks it up instead.
 
-## Provisioning an inbox
+## Provision an inbox
 
 ```python
 import asyncio
@@ -53,11 +47,11 @@ async def main():
 asyncio.run(main())
 ```
 
-`create_smart_inbox()` generates a readable address from your agent's name and handles collisions automatically. If `my-agent@lobstermail.ai` is taken, the SDK tries variations (`my-agent1`, `m-agent`, and so on) until something is available. You get a clean address without writing any availability checks yourself.
+`create_smart_inbox()` takes a human-readable name and handles collisions for you. If `my-agent@lobstermail.ai` is already taken, the SDK tries variations until it finds something available. You get a clean, readable address without writing any availability logic.
 
-For one-off tasks where the address only needs to exist for a few minutes, `create_inbox()` gives you a random address like `lobster-a4f2@lobstermail.ai`. Sign up for something, grab the code, move on.
+For throwaway tasks where the address only needs to exist for a few minutes, `create_inbox()` gives you a random address like `lobster-a4f2@lobstermail.ai`. Sign up for something, grab the code, delete the inbox. Done.
 
-## Receiving emails
+## Receive and read emails
 
 ```python
 emails = await inbox.receive()
@@ -68,11 +62,11 @@ for email in emails:
     print(email.injection_risk)  # 'low' | 'medium' | 'high'
 ```
 
-The `injection_risk` score is something I didn't expect to care about until I did. Every email LobsterMail delivers comes with a score rating how likely the content contains prompt injection patterns — things written to look like instructions hidden inside normal-looking email text. If your agent is reading email bodies and passing them into a model prompt (which it almost certainly is), a high score (above 0.7, roughly) is a signal to quote the content explicitly or route it through a human review step before acting on it.
+Every email that arrives comes with an `injection_risk` score. This is specific to agent workloads, and you won't find it in SendGrid, Resend, or Mailgun. The score rates how likely the email body contains [prompt injection patterns](/blog/what-is-prompt-injection-in-email) designed to hijack your agent's behavior. A high score (roughly above 0.7) means the content has text written to look like system instructions, role overrides, or tool invocations hidden inside normal-looking prose.
 
-This is specific to agent workloads. You won't find it in SendGrid or Resend.
+If your agent passes email content into a model prompt (which it almost certainly does), treat high-risk messages differently. Quote the content explicitly rather than inserting it raw, or route it through a human review step. We covered the full taxonomy of injection categories in our [prompt injection security guide](/blog/agentmail-vs-lobstermail-comparing-prompt-injection-security-for-ai-agents).
 
-## Sending emails
+## Send emails
 
 ```python
 await inbox.send(
@@ -82,11 +76,11 @@ await inbox.send(
 )
 ```
 
-The free tier includes 1,000 emails a month with no credit card. Builder ($9/month) gets you 5,000 emails and up to 10 inboxes — enough for a small fleet of specialized agents each with a dedicated address.
+The free tier includes 1,000 emails per month with no credit card. Sending unlocks after a quick verification step (an X post or credit card on file). Builder at $9/month gets you 5,000 emails and up to 10 inboxes, enough for a small fleet of specialized agents each operating under its own address.
 
-## Handling verification codes
+## The verification code pattern
 
-This is the scenario that breaks agent workflows most often. The agent registers for a service, a confirmation email lands somewhere it can't check, and the whole thing stalls. Here's a clean way to handle it:
+This is the scenario that breaks agent workflows most often. The agent registers for a third-party service, a confirmation email lands in an inbox the agent can't access, and the whole pipeline stalls. Here's a clean way to handle it:
 
 ```python
 import asyncio
@@ -101,7 +95,7 @@ async def register_and_verify(service_name: str, registration_fn):
     # Your registration function uses inbox.address as the email field
     await registration_fn(email=inbox.address)
 
-    # Poll for the verification email — 60-second window
+    # Poll for the verification email, 60-second window
     for _ in range(12):
         emails = await inbox.receive()
         for email in emails:
@@ -115,15 +109,19 @@ async def register_and_verify(service_name: str, registration_fn):
     raise TimeoutError(f"No verification email from {service_name} after 60s")
 ```
 
-The 12-iteration loop with 5-second pauses gives a 60-second window. Most services deliver within 10 seconds, but this is conservative enough for slower platforms without blocking for minutes. Tune the interval and count to fit your use case.
+The 12-iteration loop with 5-second pauses gives a 60-second window. Most services deliver within 10 seconds, but this handles slower platforms without blocking for minutes. You can tune the interval to match your use case. The beauty of this pattern is that the agent creates a purpose-built inbox for each registration, uses it to grab the code, and can [delete it immediately after](/blog/lobstermail-sdk-quickstart-give-your-agent-an-email-in-5-minutes). No inbox clutter, no shared state between tasks.
 
-## Wiring into LangChain or AutoGen
+## Wiring into LangChain, CrewAI, or AutoGen
 
-The inbox object is framework-agnostic. For [LangChain agents with email tools](/blog/langchain-email-integration), initialize the inbox before the agent loop, inject `inbox.address` wherever contact details are needed, and wrap `inbox.receive()` and `inbox.send()` as callable tools.
+The inbox object doesn't care what framework you're using. For [LangChain agents](/blog/langchain-email-integration), initialize the inbox before the agent loop, inject `inbox.address` wherever the agent needs contact info, and wrap `inbox.receive()` and `inbox.send()` as callable tools.
 
-[AutoGen agents](/blog/autogen-agent-email) follow the same pattern. Create the inbox before the conversation starts, pass the address into the agent's system context, and expose `receive()` as a tool it can call mid-task when it needs to check for a reply.
+[CrewAI agents](/blog/crewai-agent-email) follow the same approach. Create the inbox before the crew starts, pass the address into the agent's backstory, and expose the inbox methods as tools the agent can call mid-task.
 
-## Managing inboxes
+For [AutoGen](/blog/autogen-agent-email), you wrap each LobsterMail operation as an AutoGen `FunctionTool` and hand them to your `AssistantAgent`. The agent chains the calls itself: provision the inbox, send, check for replies.
+
+The point is that the inbox is just an async Python object. It fits wherever async functions fit.
+
+## Managing inbox lifecycle
 
 ```python
 # List all inboxes on this account
@@ -135,61 +133,61 @@ for i in inboxes:
 await lm.delete_inbox(inbox.id)
 ```
 
-If you're spinning up ephemeral inboxes for one-off tasks, cleaning them up keeps things tidy. The free tier gives you one inbox; Builder gives you ten.
+If you're spinning up ephemeral inboxes for one-off tasks (sign up, grab code, move on), cleaning them up keeps your account tidy. The free tier supports one active inbox. Builder supports ten. For agents that need more, each inbox is isolated from the others, so a compromised address doesn't expose anything beyond its own messages.
 
-## Async by default
+## A note on async
 
-The SDK is async-first. Most modern agent frameworks are too, so this usually works without any adjustment. For quick scripts, `asyncio.run()` at the top level handles it. In Jupyter notebooks, you can `await` directly in cells since Jupyter runs its own event loop. If you hit "event loop already running" errors, one line of `nest_asyncio.apply()` resolves it.
+The SDK is async-first because most modern agent frameworks are too. LangChain, CrewAI, AutoGen, smolagents — they all run async under the hood. For quick scripts, `asyncio.run()` at the top level handles it. In Jupyter notebooks, you can `await` directly in cells since Jupyter runs its own event loop.
 
-There's no official sync wrapper in the current release. If you're stuck in a fully synchronous codebase, wrapping individual calls in `asyncio.run()` works for low-volume use cases until a sync client lands.
+If you hit "event loop already running" errors in Jupyter, one line of `nest_asyncio.apply()` clears it up. There's no official sync wrapper yet. For synchronous codebases, wrapping individual calls in `asyncio.run()` works fine for low-volume use cases.
 
 <FAQ>
-  <FAQItem question="Does LobsterMail have a Python SDK, or is it TypeScript only?">
-    LobsterMail supports both. Install the Python package with `pip install lobstermail`. The TypeScript package is available as `@lobsterkit/lobstermail` on npm. Both SDKs expose the same core API.
+  <FAQItem question="Does LobsterMail have a Python SDK?">
+    Yes. Install it with `pip install lobstermail`. The SDK is async-first and covers inbox provisioning, sending, receiving, and management. A TypeScript SDK is also available as `@lobsterkit/lobstermail` on npm.
   </FAQItem>
 
-  <FAQItem question="Do I need to create an account before using the Python SDK?">
-    No. On first use, `LobsterMail.create()` automatically signs up for a free account and saves the token to `~/.lobstermail/token`. Your agent provisions itself — no dashboard, no email confirmation, no human in the loop.
-  </FAQItem>
-
-  <FAQItem question="What's the difference between create_smart_inbox() and create_inbox()?">
-    `create_smart_inbox(name="...")` generates a human-readable address based on the name you provide and handles collisions automatically. `create_inbox()` gives you a random address like `lobster-a4f2@lobstermail.ai` immediately. Use smart inboxes for persistent agents with a public-facing address, and random inboxes for one-off tasks.
-  </FAQItem>
-
-  <FAQItem question="What does the injection_risk score actually measure?">
-    It scores how likely an email's content contains prompt injection patterns — text written to look like user or system instructions that could hijack your agent's behavior. A score above 0.7 is worth treating carefully: quote the content explicitly in your prompt rather than inserting it raw. See the [security and injection docs](/docs/security-and-injection) for more detail.
-  </FAQItem>
-
-  <FAQItem question="How many emails can I receive on the free plan?">
-    The free plan includes 1,000 emails per month with one inbox, no credit card required. Builder ($9/month) gives you 5,000 emails and up to 10 inboxes. Neither plan restricts how many emails you can *receive* on a per-message basis — the limit is monthly volume.
-  </FAQItem>
-
-  <FAQItem question="Can I use LobsterMail in a serverless function or Docker container?">
-    Yes. Set `LOBSTERMAIL_API_KEY` in your environment variables and the SDK uses that instead of looking for a token file. This is the right setup for any environment without persistent local storage — Lambda, Cloud Run, Railway, Docker, and so on.
-  </FAQItem>
-
-  <FAQItem question="Is there a way to receive emails in real time instead of polling?">
-    Webhooks are available for real-time delivery. Instead of polling with `inbox.receive()`, you configure a webhook URL and LobsterMail POSTs each new email to your endpoint as it arrives. See the [webhooks guide](/docs/webhooks) for setup.
-  </FAQItem>
-
-  <FAQItem question="Can I use my own domain instead of @lobstermail.ai?">
-    Yes, custom domains are supported. You configure DNS records once and then provision inboxes on your own domain through the same SDK calls. The [custom domains guide](/docs/custom-domains) walks through the setup.
+  <FAQItem question="Do I need to create an account before using the SDK?">
+    No. The first call to `LobsterMail.create()` automatically signs up for a free account and saves the token locally. Your agent provisions itself with no dashboard, no email confirmation, no human in the loop.
   </FAQItem>
 
   <FAQItem question="What Python versions are supported?">
-    The SDK requires Python 3.9 or later. It uses `asyncio` throughout, which has been stable since 3.7, but some internal type hints require 3.9+.
+    The SDK requires Python 3.9 or later. It uses `asyncio` throughout, and some internal type hints need 3.9+ support.
+  </FAQItem>
+
+  <FAQItem question="What's the difference between create_smart_inbox() and create_inbox()?">
+    `create_smart_inbox(name="...")` generates a readable address and handles name collisions automatically. `create_inbox()` gives you a random address instantly. Use smart inboxes for persistent agents with a recognizable address, random inboxes for throwaway tasks like verification codes.
+  </FAQItem>
+
+  <FAQItem question="What does the injection_risk score measure?">
+    It scores how likely an email body contains prompt injection attempts, including boundary manipulation, system prompt overrides, data exfiltration instructions, role hijacking, tool invocation tricks, and encoding exploits. Scores above 0.7 warrant extra caution before passing content to a model. See our [injection security guide](/blog/agentmail-vs-lobstermail-comparing-prompt-injection-security-for-ai-agents) for details.
+  </FAQItem>
+
+  <FAQItem question="How many emails can I send and receive on the free plan?">
+    The free plan includes 1,000 emails per month with one inbox. Receiving is immediate. Sending unlocks after verification (X post or credit card on file). Builder at $9/month adds 5,000 emails per month, up to 10 inboxes, and custom domain support.
+  </FAQItem>
+
+  <FAQItem question="Can I use LobsterMail in a serverless function or Docker container?">
+    Yes. Set `LOBSTERMAIL_API_KEY` as an environment variable and the SDK uses that instead of looking for a local token file. This works for Lambda, Cloud Run, Railway, Docker, and any stateless environment.
+  </FAQItem>
+
+  <FAQItem question="Can I receive emails in real time instead of polling?">
+    Yes. LobsterMail supports webhooks for real-time delivery. Configure a webhook URL and LobsterMail POSTs each new email to your endpoint as it arrives. See the [webhooks vs polling comparison](/blog/webhooks-vs-polling-email) for setup guidance.
+  </FAQItem>
+
+  <FAQItem question="Can I use my own domain instead of @lobstermail.ai?">
+    Yes. Custom domains are available on the Builder plan ($9/month). You configure DNS records once and then provision inboxes on your own domain through the same SDK calls. LobsterMail handles SPF, DKIM, and DMARC. See the [custom domains guide](/blog/custom-domains-agent-email) for setup.
   </FAQItem>
 
   <FAQItem question="Can an agent manage multiple inboxes?">
-    Yes. Call `lm.create_smart_inbox()` or `lm.create_inbox()` multiple times — each call returns a distinct inbox object. The free tier supports one inbox; Builder supports up to ten. You can list and delete inboxes with `lm.list_inboxes()` and `lm.delete_inbox(id)`.
+    Yes. Call `create_smart_inbox()` or `create_inbox()` multiple times. Each call returns a distinct inbox object. The free tier supports one active inbox; Builder supports up to ten. Use `lm.list_inboxes()` and `lm.delete_inbox(id)` to manage them.
   </FAQItem>
 
   <FAQItem question="What happens if my LobsterMail token is exposed?">
-    Go to your account settings and rotate the token. The old token is immediately invalidated. Because the token is scoped to your account's inboxes only, exposure doesn't compromise anything outside LobsterMail — unlike a Google OAuth token that might have broader account access.
+    Rotate the token in your account settings. The old token is invalidated immediately. Because the token is scoped to your LobsterMail inboxes only, exposure doesn't compromise anything outside LobsterMail, unlike a Google OAuth token that might carry broader account access.
   </FAQItem>
 
-  <FAQItem question="Does LobsterMail work with LangChain agents?">
-    Yes. The SDK is framework-agnostic. Initialize the inbox before your agent loop, pass `inbox.address` into the agent's context, and expose `inbox.receive()` and `inbox.send()` as tools. The [LangChain integration post](/blog/langchain-email-integration) has a worked example.
+  <FAQItem question="Does this work with LangChain, CrewAI, and AutoGen?">
+    Yes. The SDK is framework-agnostic. Initialize the inbox, expose `receive()` and `send()` as tools, and pass `inbox.address` into the agent's context. We have dedicated guides for [LangChain](/blog/langchain-email-integration), [CrewAI](/blog/crewai-agent-email), and [AutoGen](/blog/autogen-agent-email).
   </FAQItem>
 </FAQ>
 
