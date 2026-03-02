@@ -1,0 +1,121 @@
+---
+title: 'agent email cost at scale: the math nobody does before it''s too late'
+description: >-
+  Running 10 agent inboxes feels free. Running 100 doesn't. Here's the actual
+  cost breakdown and where teams get surprised.
+date: '2026-02-24'
+tags:
+  - email
+  - infrastructure
+  - cost
+  - business
+image: /blog/agent-email-cost-at-scale.png
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+author: LobsterMail Team
+publish_at: '2026-02-24T09:00:00Z'
+approved_at: '2026-03-02T10:36:37.167Z'
+---
+Nobody thinks about email costs when they're building a proof of concept. One agent, one inbox, one workflow. The cost is zero. Then the proof of concept works.
+
+Suddenly you're running five agents for the sales team, three for support, and your infrastructure person wants to spin up a dozen test environments. You're at twenty inboxes before anyone's done a formal rollout. That's when the pricing math stops being theoretical.
+
+I want to write down the actual cost breakdown in one place, because it's surprisingly hard to find outside of a sales call.
+
+## Three cost buckets to track
+
+The first is provisioning — what it costs to create an inbox. With traditional email infrastructure (Google Workspace, Outlook, Zoho), you pay per mailbox per month whether the agent uses it or not. At $6/seat/month for Google Workspace Business Starter, 100 agent inboxes is $600/month before a single email moves. No sends. No receives. Just addresses existing.
+
+The second is volume — the per-email cost once sending starts. Agent workflows aren't newsletter blasts. They're transactional: sign up for a service, receive a confirmation, send a follow-up, extract a verification code. Low volume per inbox, but it compounds fast across a large fleet running in parallel.
+
+The third is churn overhead, which teams almost always underestimate. Agents provision inboxes for tasks, complete the task, and then you have dead addresses sitting in your account generating per-seat fees. Cleaning this up requires either human time or an automation that breaks every time the provider changes its admin API.
+
+## What the math looks like at real scale
+
+At 10 inboxes, none of this hurts. You might be on a free tier. You might have spare Google Workspace seats from employee turnover. It's invisible.
+
+At 50 inboxes, it's not. Google Workspace at $6/seat is $300/month — $3,600/year — for infrastructure that wasn't designed for agents: no programmatic provisioning, OAuth required for every API call, and every inbox tied to a human identity in Google's directory. The [full comparison](/blog/agent-email-google-workspace-cost) includes engineering hours, which make the per-seat fee look minor by comparison.
+
+The other surprise at 50 inboxes is the pricing gap in agent-native email APIs. AgentMail's free tier works fine for experiments, but their next tier jumps to $20/month with nothing in between. For a team running inboxes across multiple projects and environments, that structure forces a choice between over-provisioning free accounts or paying for headroom you don't use.
+
+LobsterMail's [$9 Builder tier](/blog/lobstermail-pricing-explained) was designed for that gap: up to 10 inboxes, 5,000 emails/month, 500 sends per day. For most teams in the 10-50 range, that's the tier where the numbers actually fit the workload. For larger fleets, [the math shifts further](/blog/running-50-agent-inboxes), but the principle holds — the right tier is the one that matches your inbox count without forcing you up a price step for capacity you don't use.
+
+## The cost that doesn't show up in the bill
+
+There's a cost that never appears on any email provider's pricing page: the engineering time to wire up email that wasn't built for agents.
+
+A standard Google Workspace integration involves OAuth setup, service account configuration, admin API permissions, token refresh handling, and a custom provisioning layer you build yourself. Conservatively that's a full day of engineering work. More realistically it's a day plus several debugging sessions when the token expires at 2am and a production workflow goes silent.
+
+Agent-native infrastructure cuts this out. When an agent calls `lm.createSmartInbox({ name: 'my-agent' })` and gets `my-agent@lobstermail.ai` back in one API call, the provisioning is part of the request. There's no separate admin flow. Whether that's worth $9/month depends on how much you value not rebuilding OAuth token refresh for the third time.
+
+## Where teams get surprised
+
+Two inflection points show up in almost every deployment I've seen.
+
+The first is the jump from 1 inbox to 10. The free tier feels limitless during testing. Then you go to production, agents start creating inboxes for every task instance, and you hit the ceiling inside a week. The fix is quick, but discovering it at midnight during a demo is not.
+
+The second is inbox lifecycle management at 50+ inboxes. Even with low per-inbox pricing, if you're not deprovisioning inboxes when tasks complete, you accumulate dead addresses counting against limits. The practical fix is treating inbox lifecycle the same way you'd treat database connections: explicit create and cleanup, with a periodic audit. The agent can handle this itself if you build it into the workflow from the start.
+
+## The honest recommendation
+
+If you're running fewer than 10 agent inboxes and just getting started, the free tier is genuinely useful. No credit card, 1,000 emails/month, agent-native provisioning from day one.
+
+If you're past that, the question isn't which email service is cheapest. It's which one was built for your actual use case. Per-email fees matter, but they're usually a rounding error compared to the operational overhead that non-agent-native providers push back onto you.
+
+The teams I've seen get surprised by agent email cost at scale weren't surprised by the per-email price. They were surprised by the provisioning complexity and dead-inbox accumulation that doesn't bite until you're 50 inboxes deep and someone asks why the AWS bill went up.
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
+
+<FAQ>
+  <FAQItem question="What is agent email cost at scale?">
+    It's the total cost of running email infrastructure for multiple autonomous AI agents — combining per-inbox fees, email volume charges, and the engineering time required to set up and maintain providers that weren't designed for programmatic, agent-driven workflows.
+  </FAQItem>
+
+  <FAQItem question="Is LobsterMail free for AI agents?">
+    Yes. The free tier includes 1,000 emails/month with no credit card required. The agent provisions its own inbox through the SDK without any human signup step involved.
+  </FAQItem>
+
+  <FAQItem question="What does the LobsterMail Builder tier include?">
+    The Builder tier is $9/month and covers up to 10 inboxes, 5,000 emails/month, and 500 sends per day. See the [full pricing breakdown](/blog/lobstermail-pricing-explained) for details.
+  </FAQItem>
+
+  <FAQItem question="Why not use Google Workspace for agent inboxes?">
+    Workspace charges $6/seat/month per mailbox, requires OAuth for any API access, and ties each address to a human identity in Google's directory. At 50 agent inboxes that's $300/month in seat fees before you add engineering time for a custom provisioning layer. The [full cost comparison](/blog/agent-email-google-workspace-cost) shows what that overhead actually looks like.
+  </FAQItem>
+
+  <FAQItem question="Can agents provision and deprovision their own inboxes?">
+    With LobsterMail, yes. `createSmartInbox()` provisions an address and standard SDK methods handle cleanup. The full lifecycle is part of the API, not a separate admin process requiring human intervention.
+  </FAQItem>
+
+  <FAQItem question="What is the pricing gap between AgentMail tiers?">
+    AgentMail goes from free directly to $20/month with nothing in between. For teams running inboxes across multiple projects, that jump can force paying for headroom they don't need. LobsterMail's $9 Builder tier fills that gap.
+  </FAQItem>
+
+  <FAQItem question="How does email volume pricing work for agents?">
+    Agent workflows tend to be transactional and low-volume per inbox — a few emails per task rather than bulk sends. LobsterMail's free tier covers 1,000 emails/month; the Builder tier covers 5,000 emails/month with up to 500 sends per day.
+  </FAQItem>
+
+  <FAQItem question="What happens when an agent hits the free tier limit?">
+    The SDK returns an error when the inbox limit is reached. You can upgrade to the Builder tier or deprovision unused inboxes to free up capacity. Building explicit lifecycle management into your agent workflow prevents this from surfacing as a production surprise.
+  </FAQItem>
+
+  <FAQItem question="What is createSmartInbox and how does it work?">
+    `createSmartInbox({ name: 'my-agent' })` generates a human-readable address like `my-agent@lobstermail.ai` and handles collisions automatically by trying variations (`my-agent1`, `m-agent`, etc.). If you don't need a readable name, `createInbox()` gives you a random address without a name parameter.
+  </FAQItem>
+
+  <FAQItem question="Can LobsterMail use a custom domain instead of @lobstermail.ai?">
+    Yes. Custom domain support lets agent inboxes use your own domain instead of the default. See the [custom domains guide](/docs/custom-domains) for setup details.
+  </FAQItem>
+
+  <FAQItem question="What's the realistic monthly cost to run 50 agent inboxes?">
+    It depends heavily on the provider and usage pattern. Google Workspace alone is $300/month in seat fees at 50 inboxes, not counting engineering overhead. For a detailed walkthrough of what 50 inboxes actually looks like in production, see [running 50 agent inboxes](/blog/running-50-agent-inboxes).
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail protect agents from email-based prompt injection?">
+    Yes. Emails returned by the SDK include security metadata and injection risk scoring so agents can evaluate content before acting on it. The [security and injection guide](/docs/security-and-injection) covers how the scoring works and what to do with flagged emails.
+  </FAQItem>
+</FAQ>
