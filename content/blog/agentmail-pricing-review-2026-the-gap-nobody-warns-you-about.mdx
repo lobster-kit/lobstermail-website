@@ -10,15 +10,13 @@ tags:
   - cost
   - guides
 image: /blog/agentmail-pricing-review-2026-the-gap-nobody-warns-you-about.png
-author: LobsterMail Team
+author: Samuel Chenard
 agent: agent-3-content
 channel: blog
 type: blog-post
-status: approved
+status: draft
 publish_at: '2026-02-24T12:00:00Z'
-approved_at: '2026-03-02T10:36:37.176Z'
 ---
-
 You've been running your agent on AgentMail's free tier. Three inboxes, no credit card, solid enough for prototyping. Then you try to spin up a fourth workflow and hit the ceiling.
 
 The natural move is to open their pricing page. What you find: $0, then $20. Nothing in between.
@@ -35,7 +33,7 @@ For many agent architectures, that's fine. For a fully autonomous agent that's s
 
 ## The paid tier and the problem it creates
 
-AgentMail's paid plans start at $20/month. The product is genuinely good — clean API design, thoughtful documentation, reliable delivery. I'm not going to pretend otherwise. The problem isn't the product. It's the pricing structure.
+AgentMail's paid plans start at $20/month. The product is genuinely good, clean API design, thoughtful documentation, reliable delivery. I'm not going to pretend otherwise. The problem isn't the product. It's the pricing structure.
 
 The jump from $0 to $20 creates a specific kind of stuck. If you're at three inboxes and need four, your only option is to commit $20/month. That's not a lot for a funded team. It's a real threshold for a solo developer building something that's almost production-ready. The free tier handles 80% of what they need. The paid tier costs more than they're ready to commit. So they stay on free and work around the limits.
 
@@ -43,9 +41,9 @@ That's a pricing dead zone. The product has earned a paid user, but there's no a
 
 ## Where LobsterMail fits
 
-LobsterMail's Builder tier is $9/month. That placement isn't accidental — it sits directly in the gap.
+LobsterMail's Builder tier is $9/month. That placement isn't accidental, it sits directly in the gap.
 
-But before you get to Builder, the free tier works differently than AgentMail's. One inbox, 1,000 emails/month, send and receive — no credit card, no human signup. Your agent calls a single function and gets its own `@lobstermail.ai` address. The SDK stores its own auth token. No one has to log in, click verify, or paste an API key anywhere. The whole provisioning sequence is autonomous.
+But before you get to Builder, the free tier works differently than AgentMail's. One inbox, 1,000 emails/month, send and receive, no credit card, no human signup. Your agent calls a single function and gets its own `@lobstermail.ai` address. The SDK stores its own auth token. No one has to log in, click verify, or paste an API key anywhere. The whole provisioning sequence is autonomous.
 
 When you outgrow free, Builder unlocks 10 inboxes, 500 outbound emails per day, and 5,000 emails per month. For most agent workflows running in production, that's the right tier. [The full tier breakdown](/blog/lobstermail-pricing-explained) has more detail if you want to see exactly where the limits land.
 
@@ -55,14 +53,14 @@ When you outgrow free, Builder unlocks 10 inboxes, 500 outbound emails per day, 
 |---|---|---|---|
 | Price | $0 | $0 | $9/mo |
 | Inboxes | 3 | 1 | 10 |
-| Emails/month | — | 1,000 | 5,000 |
+| Emails/month |, | 1,000 | 5,000 |
 | Agent self-signup | No | Yes | Yes |
 | Human setup required | Yes | No | No |
-| Next paid tier | $20/mo | — | — |
+| Next paid tier | $20/mo |, |, |
 
 The inbox count on AgentMail's free tier is a real advantage. Three is more useful than one for multi-agent work right out of the gate. If you need three parallel agent personas and don't need autonomous provisioning, AgentMail free is the more immediately practical option.
 
-The self-provisioning gap matters at a different level. If your agent needs to create its own inbox as part of its initialization sequence — completely headless, no human involved at any point — LobsterMail is the only option that supports that today. For what that looks like at scale, [running 50 agent inboxes](/blog/running-50-agent-inboxes) is a real walkthrough worth reading.
+The self-provisioning gap matters at a different level. If your agent needs to create its own inbox as part of its initialization sequence, completely headless, no human involved at any point, LobsterMail is the only option that supports that today. For what that looks like at scale, [running 50 agent inboxes](/blog/running-50-agent-inboxes) is a real walkthrough worth reading.
 
 ## Who should use which
 
@@ -88,19 +86,19 @@ That gap is real. You're not imagining it. And knowing it exists before you comm
   </FAQItem>
 
   <FAQItem question="What's the cheapest AgentMail alternative?">
-    LobsterMail's Builder tier is $9/month — half the price of AgentMail's first paid tier. LobsterMail also has a free tier with 1,000 emails/month and full send/receive capability with no credit card required.
+    LobsterMail's Builder tier is $9/month, half the price of AgentMail's first paid tier. LobsterMail also has a free tier with 1,000 emails/month and full send/receive capability with no credit card required.
   </FAQItem>
 
   <FAQItem question="Does AgentMail require human account setup?">
-    Yes. AgentMail's initial setup requires a human to create the account and configure access. After that, agents can use the API autonomously. LobsterMail is different — the agent provisions its own account and inbox with no human involved at any point.
+    Yes. AgentMail's initial setup requires a human to create the account and configure access. After that, agents can use the API autonomously. LobsterMail is different, the agent provisions its own account and inbox with no human involved at any point.
   </FAQItem>
 
   <FAQItem question="Can AI agents self-provision their own email address with AgentMail?">
-    Not at the account level. An agent can use AgentMail's API once a human has set up the account and provided credentials. LobsterMail's SDK handles the full signup and provisioning flow autonomously — one function call, no human in the loop.
+    Not at the account level. An agent can use AgentMail's API once a human has set up the account and provided credentials. LobsterMail's SDK handles the full signup and provisioning flow autonomously, one function call, no human in the loop.
   </FAQItem>
 
   <FAQItem question="Is LobsterMail free?">
-    Yes. LobsterMail's free tier includes one inbox, 1,000 emails/month for both sending and receiving, and no credit card requirement. Your agent signs itself up — no human account creation needed.
+    Yes. LobsterMail's free tier includes one inbox, 1,000 emails/month for both sending and receiving, and no credit card requirement. Your agent signs itself up, no human account creation needed.
   </FAQItem>
 
   <FAQItem question="How many inboxes does LobsterMail give you on the free plan?">
@@ -112,7 +110,7 @@ That gap is real. You're not imagining it. And knowing it exists before you comm
   </FAQItem>
 
   <FAQItem question="Does LobsterMail work with custom domains?">
-    Yes. LobsterMail supports custom domains — your agent can provision inboxes at your own domain instead of `@lobstermail.ai`. The [getting started docs](/docs/getting-started) cover the setup process.
+    Yes. LobsterMail supports custom domains, your agent can provision inboxes at your own domain instead of `@lobstermail.ai`. The [getting started docs](/docs/getting-started) cover the setup process.
   </FAQItem>
 
   <FAQItem question="Is LobsterMail suitable for running many agents at once?">
@@ -124,10 +122,10 @@ That gap is real. You're not imagining it. And knowing it exists before you comm
   </FAQItem>
 
   <FAQItem question="Can I migrate from AgentMail to LobsterMail?">
-    Yes. LobsterMail's SDK is designed to get an agent running in a few lines of code. The main consideration is any existing email addresses your agents are using — those would need to be updated as part of the switch. Most developers migrate a new workflow first to test, then port existing ones once they're comfortable with the behavior.
+    Yes. LobsterMail's SDK is designed to get an agent running in a few lines of code. The main consideration is any existing email addresses your agents are using, those would need to be updated as part of the switch. Most developers migrate a new workflow first to test, then port existing ones once they're comfortable with the behavior.
   </FAQItem>
 </FAQ>
 
 ---
 
-*Give your agent its own inbox. [Get started with LobsterMail](/) — it's free.*
+*Give your agent its own inbox. [Get started with LobsterMail](/), it's free.*
