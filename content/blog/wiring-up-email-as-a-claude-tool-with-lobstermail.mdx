@@ -11,26 +11,26 @@ tags:
   - infrastructure
   - automation
 image: /blog/wiring-up-email-as-a-claude-tool-with-lobstermail.png
-author: LobsterMail Team
+author: Samuel Chenard
 agent: agent-3-content
 channel: blog
 type: blog-post
-status: approved
+status: draft
 publish_at: '2026-03-02T12:00:00Z'
-approved_at: '2026-03-02T10:36:37.193Z'
 ---
+Email is the tool people reach for first when they give Claude something real to do. Not web search. Not code execution. Email. Almost every workflow that touches the outside world runs through it: verification codes, customer replies, vendor quotes, coordination between agents running on different frameworks. Once Claude can send and receive messages, it can participate in the actual internet.
 
-Email is almost always the first tool someone wants to give their Claude agent. Not search. Not code execution. Email. Because nearly every real workflow touches it: verification codes, customer replies, vendor quotes, async coordination with other agents. Once Claude can send and receive email, it can participate in the actual internet.
+The standard setup for this involves OAuth flows, SMTP credentials, and enough configuration that you lose an afternoon before the agent sends its first message. With LobsterMail, the agent provisions its own inbox on first run. You define the tools, hand them to Claude, and the agent handles the rest. No human account creation. No API keys to track down.
 
-Getting there used to mean OAuth flows, SMTP credentials, and at least one afternoon of setup. With LobsterMail, the agent provisions its own inbox on first run. No human account creation, no API keys to track down. You define the tools, hand them to Claude, and the agent handles the rest.
+Here's the full setup, from tool definitions through a working agent loop.
 
-Here's the full setup.
+## How Claude tool use works
 
-## What Claude tool use actually does
+Tool use lets you describe functions that Claude can call during a conversation. You provide a list of tools, each with a name, a description of what it does, and the parameters it expects. Claude reads those descriptions and decides when to call each tool based on the task at hand.
 
-Tool use lets you describe functions the model can call during a conversation. You provide a list — name, what the tool does, what parameters it takes — and Claude decides when to invoke them based on what the task requires.
+The interaction follows a loop. You send a message to Claude with your tool list. Claude responds with a `tool_use` block naming the tool and its inputs. Your code executes the tool and returns a `tool_result`. Claude reads the result and either calls another tool or finishes its response. Your application lives in that middle execution step. That's where LobsterMail runs.
 
-The loop: send a message to Claude with your tool list, Claude replies with a `tool_use` block naming the tool and its inputs, you execute the tool and return a `tool_result`, then Claude continues. Your code lives in that middle step. That's where LobsterMail runs.
+The key thing that makes this work well: Claude sequences tool calls itself. Tell it to "create an inbox and then send a welcome email," and it will call `create_inbox` first, read the address from the result, then call `send_email` with that address as the sender. You don't need to hardcode the order.
 
 ## Defining the email tools
 
@@ -102,7 +102,7 @@ const emailTools: Anthropic.Tool[] = [
 ];
 ```
 
-These go in the `tools` array on every API call. Claude reads the `description` fields to know when to use each one — write them as plain instructions, not keyword strings.
+These go in the `tools` array on every API call. Claude reads the `description` fields to know when to use each one. Write them as plain instructions ("call this before reading or sending"), not abstract keyword strings. Clear descriptions are the single biggest factor in reliable tool selection.
 
 ## Wiring in LobsterMail
 
@@ -110,7 +110,7 @@ These go in the `tools` array on every API call. Claude reads the `description` 
 npm install @lobsterkit/lobstermail @anthropic-ai/sdk
 ```
 
-The tool execution function runs when Claude decides to call one of your tools. `LobsterMail.create()` handles account provisioning on first run — it signs up for a free account and stores the token locally. No manual step.
+The tool execution function runs when Claude decides to call one of your tools. `LobsterMail.create()` handles account provisioning on first run: it signs up for a free account and stores the token locally at `~/.lobstermail/token`. No browser, no CAPTCHA, no manual step. The [agent self-signup explainer](/blog/agent-self-signup-explained) walks through the full provisioning flow.
 
 ```typescript
 import { LobsterMail } from "@lobsterkit/lobstermail";
@@ -151,11 +151,11 @@ async function executeTool(
 }
 ```
 
-`createSmartInbox` takes a name and generates a clean address from it. If `customer-support@lobstermail.ai` is already taken, the SDK tries variations until it finds a free one. You get a stable, human-readable address without writing any collision logic yourself.
+`createSmartInbox` takes a name and generates a clean address from it. If `customer-support@lobstermail.ai` is already taken, it tries variations until it finds a free one. You get a stable, human-readable address without writing any collision logic yourself.
 
 ## The tool loop
 
-Standard Claude tool use pattern, with email handlers plugged in:
+This is the standard Claude tool use pattern with email handlers plugged in:
 
 ```typescript
 const client = new Anthropic();
@@ -167,7 +167,7 @@ async function runEmailAgent(task: string): Promise<string> {
 
   while (true) {
     const response = await client.messages.create({
-      model: "claude-opus-4-5",
+      model: "claude-sonnet-4-5-20250514",
       max_tokens: 4096,
       tools: emailTools,
       messages,
@@ -215,81 +215,83 @@ const result = await runEmailAgent(
 console.log(result);
 ```
 
-Claude calls `create_inbox`, gets back an address, then calls `send_email` using that address as the sender. No hardcoded values, no config file. It sequences the calls itself based on the task description.
+Claude calls `create_inbox`, gets back an address, then calls `send_email` using that address as the sender. No hardcoded values, no config file. It sequences the calls itself based on what the task description requires.
 
 ## What becomes possible
 
-That's the foundation. A few patterns that open up once email is a real tool.
+That's the foundation. Once email is a real tool in Claude's toolkit, a few patterns open up.
 
-**Verification code loops.** Your agent creates an inbox, uses that address to sign up for a third-party service, then polls `read_emails` until the confirmation code lands. The full signup flow runs autonomously in a single conversation turn. The [agent self-signup explainer](/blog/agent-self-signup-explained) walks through this pattern in detail.
+**Verification code loops.** Your agent creates an inbox, uses that address to sign up for a third-party service, then polls `read_emails` until the confirmation code lands. The full signup flow runs autonomously in a single conversation turn. The [SDK quickstart](/blog/lobstermail-sdk-quickstart-give-your-agent-an-email-in-5-minutes) includes a working verification example you can copy.
 
-**Cross-agent coordination.** Two agents on separate frameworks can pass structured messages by email with no shared infrastructure between them — just addresses. Agent A sends a JSON payload to Agent B's LobsterMail address, Agent B polls and acts. It's slower than a direct API call, but it works across any runtime. See [what agents do with email](/blog/what-agents-do-with-email) for more on this.
+**Cross-agent coordination.** Two agents on separate frameworks can pass structured messages by email with no shared infrastructure between them, just addresses. Agent A sends a JSON payload to Agent B's LobsterMail address. Agent B polls and acts. It's slower than a direct API call, but it works across any runtime or language. See [what agents do with email](/blog/what-agents-do-with-email) for more on this pattern.
 
-**Customer-facing support agents.** Give your support agent a persistent inbox. It receives tickets, drafts replies, sends them. Because `createSmartInbox` resolves naming collisions automatically, the address stays stable across restarts with no manual re-provisioning needed.
+**Customer-facing support agents.** Give your support agent a persistent inbox. It receives tickets, drafts replies, sends them. Because `createSmartInbox` resolves naming collisions automatically, the address stays stable across restarts with no manual re-provisioning. We walk through building a full support agent in our [support agent guide](/blog/build-support-agent-email).
 
-The frame worth holding onto here: Claude isn't connecting to a preconfigured email account. It's acquiring email as a runtime capability based on what the task requires. That distinction matters when you start building more complex workflows.
+The frame worth holding onto: Claude isn't connecting to a preconfigured email account. It's acquiring email as a capability at runtime, based on what the task requires. That distinction matters when you start building workflows where the agent decides what tools it needs.
 
 <Callout type="tip">
-  LobsterMail returns injection risk scores on received emails. For agents that accept email from untrusted sources, check `email.securityMetadata.injectionRisk` before passing content directly into Claude's context. One line of code, and you avoid a whole category of attack.
+  LobsterMail returns injection risk scores on received emails. For agents that accept email from untrusted sources, check `email.security.injectionRisk` before passing content directly into Claude's context. One line of code, and you avoid a whole category of attack. The [prompt injection security guide](/blog/what-is-prompt-injection-in-email) covers the full threat model.
 </Callout>
 
 ## Before you ship
 
 A few things that matter in production but are easy to skip in prototypes.
 
-Set `LOBSTERMAIL_API_KEY` in your environment rather than relying on the local token file. The SDK reads it automatically, and it's simpler to manage in a deployed context.
+Set `LOBSTERMAIL_API_KEY` in your environment rather than relying on the local token file. The SDK reads it automatically, and it's simpler to manage when your agent runs in a container or serverless function.
 
-Decide on inbox lifetime upfront. Calling `createSmartInbox` with the same name is idempotent — you get back the same address each time. Good for long-running agents. For throwaway verification flows, `createInbox()` with no name gives you a random `lobster-xxxx@lobstermail.ai` address you can discard.
+Decide on inbox lifetime upfront. Calling `createSmartInbox` with the same name is idempotent: you get back the same address each time. Good for long-running agents. For throwaway verification flows, `createInbox()` with no name gives you a random `lobster-xxxx@lobstermail.ai` address you can discard.
 
-Free tier covers 1,000 emails a month with no credit card. That's enough for most builds. For higher volume, the Builder tier is $9/month.
+If you need real-time delivery instead of polling, LobsterMail supports [webhooks](/blog/webhooks-vs-polling-email). When an email arrives, it POSTs to your URL immediately. Better suited to event-driven agents than a polling loop.
+
+Free tier covers 1,000 emails a month with no credit card. That's enough for most builds. For higher volume, the Builder tier is $9/month. See [how pricing works](/blog/lobstermail-pricing-explained) for the full breakdown.
 
 <FAQ>
   <FAQItem question="Do I need to create a LobsterMail account before I start?">
-    No. `LobsterMail.create()` handles account creation on first run — it signs up for a free account and stores the token at `~/.lobstermail/token`. Your agent self-provisions on first call with no human step required.
+    No. `LobsterMail.create()` handles account creation on first run. It signs up for a free account and stores the token at `~/.lobstermail/token`. Your agent self-provisions on first call with no human step required.
   </FAQItem>
 
   <FAQItem question="Which Claude model should I use for tool use?">
-    Any current Claude model supports tool use. The examples here use `claude-opus-4-5`. For lighter workloads, `claude-haiku-4-5` is faster and cheaper — the tool use API is identical across models.
+    Any current Claude model supports tool use. The examples here use Claude Sonnet. For lighter workloads, Claude Haiku is faster and cheaper. The tool use API is identical across all Claude models.
   </FAQItem>
 
   <FAQItem question="How does Claude decide when to call an email tool?">
-    Claude reads the `description` field on each tool definition. Write descriptions as plain instructions — "call this before reading or sending" rather than abstract keywords. Clear descriptions are the single biggest factor in reliable tool selection.
+    Claude reads the `description` field on each tool definition. Write descriptions as plain instructions ("call this before reading or sending") rather than abstract keywords. Clear descriptions are the single biggest factor in reliable tool selection.
   </FAQItem>
 
   <FAQItem question="What happens if the inbox name is already taken?">
-    `createSmartInbox` resolves collisions automatically. If `support@lobstermail.ai` exists, it tries `support1`, `s-upport`, and other variations until it finds a free address. You get a usable address back without writing any collision logic yourself.
+    `createSmartInbox` resolves collisions automatically. If `support@lobstermail.ai` exists, it tries `support1`, `s-upport`, and other variations until it finds a free address. You get a usable address back without writing any collision logic.
   </FAQItem>
 
   <FAQItem question="Can I add more email tools beyond the three shown here?">
-    Yes. You can add tools for searching by subject, listing all inboxes, deleting inboxes, or checking for attachments. The pattern is the same — add a definition to the `emailTools` array and handle the name in `executeTool`.
+    Yes. You can add tools for searching by subject, listing all inboxes, deleting inboxes, or checking for attachments. The pattern is the same: add a definition to the `emailTools` array and handle the name in `executeTool`.
   </FAQItem>
 
   <FAQItem question="Is LobsterMail free to use?">
-    There's a free tier with no credit card required covering 1,000 emails a month. The Builder tier is $9/month with higher send limits and up to 10 inboxes. See the [pricing section](/) for current details.
+    The free tier includes 1,000 emails per month with no credit card required. The Builder tier is $9/month with higher send limits and up to 10 inboxes. See the [pricing breakdown](/blog/lobstermail-pricing-explained) for current details.
   </FAQItem>
 
   <FAQItem question="Can my agent use a custom domain instead of @lobstermail.ai?">
-    Yes. LobsterMail supports custom domains — you can provision inboxes at your own domain once it's configured. The SDK interface is the same. The [custom domains guide](https://api.lobstermail.ai/v1/docs/guides/custom-domains) covers the setup.
+    Yes. LobsterMail supports custom domains so your agent can send from `agent@yourdomain.com`. The SDK interface stays the same. Custom domains are available on the Builder plan.
   </FAQItem>
 
   <FAQItem question="What's the difference between createSmartInbox and createInbox?">
-    `createSmartInbox({ name: 'my-agent' })` generates a human-readable address from the name you provide, with automatic collision handling. `createInbox()` with no arguments gives you a random address like `lobster-xxxx@lobstermail.ai`. Use smart inboxes for stable, recognizable addresses; use plain inboxes for throwaway flows.
+    `createSmartInbox({ name: 'my-agent' })` generates a human-readable address from the name you provide, with automatic collision handling. `createInbox()` with no arguments gives you a random address like `lobster-xxxx@lobstermail.ai`. Use smart inboxes for persistent agents; use plain inboxes for throwaway verification flows.
   </FAQItem>
 
   <FAQItem question="Does this work with the LobsterMail MCP server instead of tool use?">
-    Yes. LobsterMail has an MCP server that exposes email tools without any code. If you're already using the Model Context Protocol, that's often simpler. The manual tool use approach here gives you more control over the execution loop and error handling.
+    Yes. LobsterMail has an MCP server that exposes email tools without any code. If your model already supports the Model Context Protocol, that's often simpler. The manual tool use approach here gives you more control over the execution loop and error handling. See the [MCP setup guide](/blog/how-to-set-up-the-lobstermail-email-mcp-server-for-openclaw) for details.
   </FAQItem>
 
   <FAQItem question="How does LobsterMail protect against prompt injection in received emails?">
-    Every received email includes security metadata with an injection risk score. Check `email.securityMetadata.injectionRisk` before passing content into Claude's context. The [security and injection guide](https://api.lobstermail.ai/v1/docs/guides/security-and-injection) covers the full threat model and recommended thresholds.
+    Every received email includes a security score with an injection risk level (`low`, `medium`, or `high`). Check `email.security.injectionRisk` before passing content into Claude's context. The [prompt injection guide](/blog/what-is-prompt-injection-in-email) covers the full threat model and recommended thresholds.
   </FAQItem>
 
   <FAQItem question="Can multiple agents share one inbox?">
-    Technically yes — any agent using the same LobsterMail token can read from the same inbox. In practice, it's cleaner to provision a separate inbox per agent so there's no ambiguity about which agent owns which messages.
+    Technically yes, any agent using the same LobsterMail token can read from the same inbox. In practice, it's cleaner to provision a separate inbox per agent. That way there's no ambiguity about which agent owns which messages, and the audit trail stays clear.
   </FAQItem>
 
   <FAQItem question="What if I need real-time email delivery instead of polling?">
-    LobsterMail supports webhooks. When an email arrives, it POSTs to your endpoint immediately — faster than polling and better suited to event-driven agents. See the [webhooks guide](https://api.lobstermail.ai/v1/docs/guides/webhooks).
+    LobsterMail supports webhooks. When an email arrives, it POSTs to your URL immediately. Faster than polling and better suited to event-driven agents. See the [webhooks vs polling comparison](/blog/webhooks-vs-polling-email) for the tradeoffs.
   </FAQItem>
 </FAQ>
 
