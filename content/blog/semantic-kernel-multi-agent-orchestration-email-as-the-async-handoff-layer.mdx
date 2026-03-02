@@ -20,6 +20,7 @@ status: approved
 publish_at: '2026-03-01T15:00:00Z'
 approved_at: '2026-03-02T10:36:37.217Z'
 ---
+
 Semantic Kernel's orchestration model is genuinely impressive for the use cases it was designed around. Wire together specialist agents — one for research, another for writing, a third for review — and the Process Manager coordinates the handoffs. For in-process, synchronous workflows, it works exactly as advertised.
 
 But there's a class of workflows that breaks this model, and it's the one that comes up most often in enterprise deployments: what happens when Agent A hands off to Agent B, and Agent B has to wait for something outside the process? A human approval that takes two hours. A vendor response that arrives tomorrow. A compliance sign-off that takes three days. The in-memory handoff falls apart. You need something durable — something that persists across restarts, crosses organizational boundaries, and doesn't require the receiving agent to be running at the moment the message is sent.
