@@ -1,0 +1,233 @@
+---
+title: how to build and publish a clawhub email skill for openclaw
+description: >-
+  Step-by-step tutorial: build an OpenClaw email skill with LobsterMail, write
+  the SKILL.md, test locally, and publish to ClawHub's registry.
+date: '2026-02-27'
+tags:
+  - openclaw
+  - guides
+  - email
+  - infrastructure
+  - getting-started
+image: /blog/how-to-build-and-publish-a-clawhub-email-skill-for-openclaw.png
+author: LobsterMail Team
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+publish_at: '2026-02-27T15:00:00Z'
+approved_at: '2026-03-02T10:36:37.171Z'
+---
+ClawHub has over 5,700 skills running across 30,000+ deployed OpenClaw instances. Each skill is a folder with a markdown file. When someone installs it, that markdown gets injected into the agent's context at runtime. No compiled code, no server to maintain.
+
+Publish once. Run everywhere OpenClaw runs.
+
+Email is consistently one of the capabilities agents need most, and one of the harder ones to package well. Most approaches require a human to pre-configure API keys or OAuth before the agent can do anything useful. This tutorial builds on LobsterMail, which lets the agent self-provision its own inbox — no human setup required. The skill installs and works immediately.
+
+Here's how to build it from scratch and get it onto ClawHub.
+
+## What you need
+
+- Node.js 18+
+- The ClawHub CLI: `npm install -g @clawhub/cli`
+- A ClawHub account (free at [clawhub.ai](https://clawhub.ai)): `clawhub login`
+
+For local testing:
+
+```bash
+npm install @lobsterkit/lobstermail
+```
+
+LobsterMail handles account creation automatically the first time the agent calls `LobsterMail.create()`, so there's nothing to sign up for before you start testing.
+
+## Skill structure
+
+A ClawHub skill is a directory. The only file OpenClaw reads at runtime is `SKILL.md`:
+
+```
+lobstermail-email/
+├── SKILL.md
+├── examples/
+│   └── quickstart.ts
+└── README.md
+```
+
+The `examples/` and `README.md` files are for humans. OpenClaw only touches `SKILL.md`.
+
+## SKILL.md frontmatter
+
+Every `SKILL.md` opens with a frontmatter block:
+
+```yaml
+---
+name: lobstermail-agent-email
+version: 1.0.0
+description: |
+  Give your agent its own email inbox using LobsterMail.
+  No human signup, no API keys — the agent provisions its own inbox.
+allowed-tools:
+  - Bash
+---
+```
+
+`allowed-tools` declares which system capabilities the skill needs. Include `Bash` for anything that runs shell commands or writes files. OpenClaw will prompt the user if that tool isn't already permitted on their instance.
+
+## Writing the instructions section
+
+After the frontmatter, write instructions. Not documentation — directives. The agent reads them and acts. Sequential steps work better than branching conditionals. Write it like you're telling someone exactly what to do in order.
+
+### Provisioning an inbox
+
+The core of the skill is `LobsterMail.create()`. On first run it signs up for a free account and saves the token to `~/.lobstermail/token`. Every subsequent run reuses that token without prompting.
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create();
+const inbox = await lm.createSmartInbox({ name: 'my-agent' });
+
+console.log(inbox.address); // my-agent@lobstermail.ai
+```
+
+`createSmartInbox()` picks a readable address from the name you pass and handles collisions automatically. If you don't need a human-readable address, `createInbox()` generates a random one like `lobster-xxxx@lobstermail.ai`.
+
+### Receiving email
+
+```typescript
+const emails = await inbox.receive();
+for (const email of emails) {
+  console.log(email.subject, email.from, email.text);
+}
+```
+
+Each email object includes `email.text` (plain text body) and `email.html`. For verification code extraction, pass `email.text` to the agent or write a regex if the format is predictable. LobsterMail also includes injection risk scoring on received emails, which helps the agent flag suspicious content before acting on it.
+
+### Sending email
+
+```typescript
+await inbox.send({
+  to: 'recipient@example.com',
+  subject: 'Hello from your agent',
+  text: 'Message body here.',
+});
+```
+
+The free plan covers 1,000 emails/month with no credit card. Worth noting for your SKILL.md users: the limit applies per LobsterMail account, and each person who installs your skill gets their own account. So the cap doesn't stack across installs. See [LobsterMail pricing explained](/blog/lobstermail-pricing-explained) if you're planning higher volume.
+
+## Testing before you publish
+
+Don't publish untested code. Create a quick test file first:
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+async function test() {
+  const lm = await LobsterMail.create();
+  const inbox = await lm.createSmartInbox({ name: 'skill-test' });
+  console.log('address:', inbox.address);
+
+  const emails = await inbox.receive();
+  console.log('emails in inbox:', emails.length);
+}
+
+test().catch(console.error);
+```
+
+Run it with `npx ts-node test.ts`. If it prints an address, the SDK connected. Check `~/.lobstermail/token` to confirm auto-signup ran.
+
+Then validate the skill through the ClawHub runner:
+
+```bash
+clawhub test ./lobstermail-email
+```
+
+This checks frontmatter validity and runs the skill in a sandboxed context before it goes live.
+
+<Callout type="tip">
+  Read through [setting up OpenClaw email in 60 seconds](/blog/openclaw-agent-email-60-seconds) before publishing. Seeing the install experience from the user's side will make your instructions sharper.
+</Callout>
+
+## Publishing to ClawHub
+
+When everything works:
+
+```bash
+clawhub publish ./lobstermail-email
+```
+
+The CLI validates frontmatter, checks required fields, and uploads to the registry. Your skill gets a URL at `clawhub.ai/{username}/{skill-name}`. From there, any OpenClaw instance can install it:
+
+```bash
+clawhub install {username}/lobstermail-email
+```
+
+Or it shows up in search results:
+
+```bash
+clawhub search email
+```
+
+## What happens on install
+
+OpenClaw injects your `SKILL.md` into the agent's system context. The agent now knows how to provision an inbox, receive mail, and send. No extra configuration on the user's end. The first time their agent calls `LobsterMail.create()`, it auto-provisions a free account and persists the token.
+
+This is what separates email skills built on LobsterMail from most alternatives: there's no setup step that blocks the user. Install the skill, run the agent, it works. The agent handles account creation and inbox provisioning on its own.
+
+If you want to see how this compares to other approaches before committing, [OpenClaw email skills compared](/blog/openclaw-email-skills-compared) covers the alternatives side by side.
+
+The official LobsterMail skill is already live at [clawhub.ai/samuelchenardlovesboards/lobstermail-agent-email](https://clawhub.ai/samuelchenardlovesboards/lobstermail-agent-email) as a working reference.
+
+<FAQ>
+  <FAQItem question="What is a ClawHub skill?">
+    A ClawHub skill is a folder with a SKILL.md file containing instructions that OpenClaw injects into the agent's context at runtime. No server, no compiled code — just structured markdown the agent reads and follows.
+  </FAQItem>
+
+  <FAQItem question="Do I need a LobsterMail account before building this skill?">
+    No. The SDK signs up automatically when the agent calls `LobsterMail.create()` for the first time, then saves the token to `~/.lobstermail/token` for reuse. No human has to create an account or touch any settings.
+  </FAQItem>
+
+  <FAQItem question="What's the difference between createSmartInbox and createInbox?">
+    `createSmartInbox({ name: 'my-agent' })` generates a human-readable address from the name you provide and handles collisions automatically. `createInbox()` gives you a random address like `lobster-xxxx@lobstermail.ai`. Use smart inboxes when the address needs to be meaningful to a human reading it.
+  </FAQItem>
+
+  <FAQItem question="How does the agent extract verification codes from emails?">
+    The email object includes `email.text` (plain text body) and `email.html`. Pass the text to the agent and ask it to extract the code, or use a regex if the format is consistent. LobsterMail also includes injection risk scoring on received emails to flag suspicious content before the agent acts on it.
+  </FAQItem>
+
+  <FAQItem question="Is the free plan enough for a published skill?">
+    For development and personal use, yes. The 1,000 emails/month limit applies per LobsterMail account, and each person who installs your skill gets their own account — so the limit doesn't stack across installs. See [LobsterMail pricing explained](/blog/lobstermail-pricing-explained) if you or your users need higher limits.
+  </FAQItem>
+
+  <FAQItem question="What goes in the allowed-tools field?">
+    It declares which system capabilities your skill needs. `Bash` covers shell execution and file writes. If your skill only reads context and calls APIs through the SDK, you may not strictly need it — but include it when in doubt. OpenClaw will prompt the user if the tool isn't already permitted on their instance.
+  </FAQItem>
+
+  <FAQItem question="Can I update a published skill without breaking existing installs?">
+    Yes. Bump the version in your frontmatter and run `clawhub publish` again. Existing installs don't auto-update, but users can run `clawhub update` to pull the latest. Document breaking changes in your README so users know what changed.
+  </FAQItem>
+
+  <FAQItem question="How do I test the skill locally before publishing?">
+    Run `clawhub test ./your-skill-directory` to validate frontmatter and run the skill in a sandbox. Also test the underlying SDK code directly with a small TypeScript file before packaging — catching errors before publishing is much less painful than fixing them after.
+  </FAQItem>
+
+  <FAQItem question="Can the skill send email from a custom domain?">
+    Yes. LobsterMail supports custom domains on paid plans. Users configure the domain in their LobsterMail dashboard, then pass the domain option to `createSmartInbox()`. Document this as an optional configuration step in your SKILL.md since it requires prior setup outside the skill itself.
+  </FAQItem>
+
+  <FAQItem question="What makes a skill 'agent-first'?">
+    An agent-first skill doesn't require a human to pre-configure anything before the agent can use it. The agent bootstraps itself. LobsterMail's auto-signup is what makes that possible here — the agent creates its own account, its own inbox, and starts working without waiting on a human to set up credentials.
+  </FAQItem>
+
+  <FAQItem question="Is there already an official LobsterMail ClawHub skill?">
+    Yes. It's at [clawhub.ai/samuelchenardlovesboards/lobstermail-agent-email](https://clawhub.ai/samuelchenardlovesboards/lobstermail-agent-email). Install it directly with `clawhub install samuelchenardlovesboards/lobstermail-agent-email`, or use it as a reference while building your own variation.
+  </FAQItem>
+
+  <FAQItem question="Can I combine email with other capabilities in one skill?">
+    Yes. ClawHub skills compose well — put email instructions alongside file operations, web search, or other tools in the same SKILL.md. Keep each section clearly labeled so the agent knows which instructions apply to which task.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
