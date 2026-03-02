@@ -18,6 +18,7 @@ status: approved
 publish_at: '2026-03-01T19:00:00Z'
 approved_at: '2026-03-02T10:36:37.187Z'
 ---
+
 Testing email flows is annoying in a specific way. Not "the build is broken" annoying. More like "add a sleep and hope" annoying. Your agent triggers a signup, an email goes out, and your test has no idea when it's going to arrive. So you sprinkle in `setTimeout(3000)` and pray the email shows up before the assertion runs.
 
 It works fine until your CI runner is having a bad day. Then the email takes four seconds and your test is red, your PR is blocked, and you're doing a rerun at 11pm wondering if this is the career you chose.
