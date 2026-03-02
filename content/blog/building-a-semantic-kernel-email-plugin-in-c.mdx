@@ -10,38 +10,36 @@ tags:
   - infrastructure
   - automation
 image: /blog/building-a-semantic-kernel-email-plugin-in-c.png
-author: LobsterMail Team
+author: Ian Bussières
 agent: agent-3-content
 channel: blog
 type: blog-post
-status: approved
+status: draft
 publish_at: '2026-02-25T09:00:00Z'
-approved_at: '2026-03-02T10:36:37.192Z'
 ---
+Semantic Kernel's plugin model is one of the best parts of the framework. You decorate a method with `[KernelFunction]`, register the class, and the planner figures out when to call it. For database queries, calendar lookups, web searches, it all just works. The model reads your `[Description]` attributes and sequences the calls without you writing orchestration logic.
 
-Building Semantic Kernel agents in C# is a genuinely good experience. The plugin model clicks. You decorate methods with `[KernelFunction]`, register the class with the kernel, and the planner works out when to call each function. For database queries, calendar management, weather lookups — it all just works.
+Email is where things get complicated.
 
-Email is where you run into a wall.
+## The Microsoft Graph wall
 
-## The Microsoft Graph problem
+The official path for agent email in Semantic Kernel is the `Microsoft.SemanticKernel.Plugins.MsGraph` package. It wraps a Microsoft 365 mailbox as a set of kernel functions. If your agent lives inside a corporate tenant where an IT admin has already granted the required application permissions and your Azure AD app registration is fully configured, it works fine. That setup happens once and your agent uses it going forward.
 
-The official path for agent email in Semantic Kernel is `Microsoft.SemanticKernel.Plugins.MsGraph`. It surfaces a Microsoft 365 mailbox as a set of kernel functions. If your agent lives inside an enterprise tenant where an IT admin has already consented to the required application permissions and your Azure AD app registration is fully configured — great. That setup is done once and your agent can use it.
+But that setup requires a human. Specifically, it requires a human with admin privileges in the right Azure AD tenant. Application permissions for email access need admin consent from every tenant you want to touch. Your agent can't request this on its own. Someone has to click through the consent flow, configure the app registration, and hand over the credentials before the agent can do anything.
 
-If you're building something autonomous, cross-tenant, or outside a managed corporate environment, the story changes. Application permissions for email access require admin consent from every tenant you want to reach. Your agent can't self-provision. A human has to configure the access before the agent can do anything.
+For an agent that needs to sign up for a SaaS trial, catch a verification email, or receive replies from external services, this is a dead end. The whole value of an autonomous agent is that it handles things itself. If a human has to pre-provision email access for every new workflow, you've just added a manual step to every deployment.
 
-For an agent that needs to sign up for a SaaS trial and catch the verification email, or receive replies from a service it contacted, that's a dead end. The whole point is that the agent handles this itself.
+## A different model
 
-## What LobsterMail gives you
+LobsterMail flips the direction. Instead of granting an agent access to an existing human mailbox, the agent creates its own inbox from scratch. One HTTP call to provision an address. No admin consent, no OAuth dance, no Azure configuration. The agent gets a real `@lobstermail.ai` address and can start sending and receiving immediately.
 
-LobsterMail flips the model. Instead of granting an agent access to a human mailbox, the agent creates its own inbox from scratch. One HTTP call. No admin consent, no OAuth flow, no Azure configuration. The agent gets a real `@lobstermail.ai` address and can start receiving immediately.
+The SDK is TypeScript-first, but from .NET the REST API maps cleanly onto `HttpClient`. Three endpoints cover everything:
 
-The SDK is JavaScript-first, but from .NET the REST API maps cleanly onto `HttpClient`. Three operations cover everything you need:
+1. `POST /v1/inboxes` provisions an inbox, returns an address and ID
+2. `GET /v1/inboxes/{id}/emails` polls for incoming messages
+3. `POST /v1/inboxes/{id}/send` sends from the provisioned inbox
 
-1. `POST /v1/inboxes` — provision an inbox, get back an address and ID
-2. `GET /v1/inboxes/{id}/emails` — poll for new messages
-3. `POST /v1/inboxes/{id}/send` — send from the inbox
-
-That's the full surface area for a functional email plugin.
+That's the full surface area for a working email plugin.
 
 ## Building the plugin
 
@@ -111,9 +109,9 @@ public class LobsterMailPlugin
 }
 ```
 
-The `[Description]` attributes on each parameter matter. Semantic Kernel passes them to the model so the planner knows exactly what each argument means and how to populate it from context. Skimp on them and you'll see the planner making bad guesses.
+A note on the `[Description]` attributes: the planner uses them to decide what each parameter means and how to populate it from context. If you write vague descriptions, the model guesses poorly. Be specific about what each argument expects and where it comes from.
 
-## Registering with the kernel
+## Registering it with the kernel
 
 ```csharp
 var builder = Kernel.CreateBuilder();
@@ -127,11 +125,11 @@ var apiKey = Environment.GetEnvironmentVariable("LOBSTERMAIL_API_KEY")!;
 kernel.ImportPluginFromObject(new LobsterMailPlugin(apiKey), "Email");
 ```
 
-With auto function invocation enabled, the model can now call `Email-CreateInbox`, `Email-ReceiveEmails`, and `Email-SendEmail` as part of any plan. You don't sequence the calls manually — the planner reads the function descriptions and works out the dependencies.
+With auto function invocation enabled, the model can now call `Email-CreateInbox`, `Email-ReceiveEmails`, and `Email-SendEmail` as part of any plan. The planner reads the function descriptions, understands the data dependencies, and works out the order itself. Swap `AddOpenAIChatCompletion` for another connector if you're using Claude or a different model. The plugin doesn't care which model drives the planner.
 
-## A real example
+## A real use case
 
-Here's a prompt that runs end-to-end with this plugin:
+Here's a prompt that exercises the full plugin end-to-end:
 
 ```
 Sign up for a free trial at https://example-saas.com.
@@ -139,68 +137,82 @@ Use the email you create. When the verification email arrives,
 extract the confirmation code and complete the signup.
 ```
 
-The agent calls `CreateInbox`, gets an address, submits it on the signup form, polls `ReceiveEmails` until the verification message arrives, extracts the code, and finishes the flow. Nothing human-supervised. The inbox is provisioned and discarded per task — no state to clean up.
+The agent calls `CreateInbox`, gets an address, submits it on the signup form, polls `ReceiveEmails` until the verification message shows up, extracts the code, and finishes the flow. No human involvement. The inbox is provisioned for the task and can be discarded after, or kept around for ongoing threads.
 
 <Callout type="tip">
-  For agents that handle ongoing threads, store the inbox ID somewhere durable after creation and skip `CreateInbox` on subsequent runs. The inbox persists until you delete it.
+  For agents that handle ongoing threads, store the inbox ID somewhere durable after creation and skip `CreateInbox` on subsequent runs. The inbox persists until you explicitly delete it.
 </Callout>
 
-If you're building agents that do more than catch one verification code — outreach agents, support triage, inter-agent communication — read [what agents do with email](/blog/what-agents-do-with-email) for a broader breakdown of the patterns. And if you're curious how agents self-provision accounts autonomously, [agent self-signup explained](/blog/agent-self-signup-explained) covers the full flow.
+This pattern covers the most common production use cases: service signups, confirmation codes, reply monitoring, and external system coordination.
+
+## Security: scanning inbound email
+
+When your agent reads email from the outside world, it's consuming untrusted input. Someone could send a message with text designed to hijack your agent's instructions. LobsterMail scores every inbound email for injection risk across multiple categories and returns that metadata alongside the message content.
+
+Check the risk score before passing email bodies into your agent's context. The [security docs](/docs/getting-started) cover how to use injection scores in your pipeline. If you're building agents that process external email regularly, [the prompt injection in email guide](/blog/what-is-prompt-injection-in-email) goes deeper on the threat model.
+
+## Going further: multi-agent handoffs
+
+One plugin gives a single agent email capability. But the real power shows up when multiple Semantic Kernel agents each have their own inboxes and coordinate through email. An intake agent triages incoming messages, forwards relevant ones to a specialist agent, and the specialist replies directly.
+
+We covered this pattern in detail in [Semantic Kernel multi-agent orchestration with email](/blog/semantic-kernel-multi-agent-orchestration-email-as-the-async-handoff-layer). If you're building pipelines where agents need async, durable handoffs that survive process restarts, email is the transport layer that makes it reliable.
 
 ## Getting an API key
 
-The free tier is 1,000 emails per month with no credit card required. Unlike the JavaScript SDK, which auto-signs-up on first use, from .NET you register once at [lobstermail.ai](/) and grab your key from the dashboard. Drop it in your environment as `LOBSTERMAIL_API_KEY`. The lobster does the rest.
+The free tier gives you 1,000 emails per month with no credit card. Unlike the TypeScript SDK (which auto-signs up on first use), from .NET you register once at [lobstermail.ai](/) and grab your key from the dashboard. Drop it in your environment as `LOBSTERMAIL_API_KEY` and the plugin handles the rest.
+
+When you need more volume, the Builder plan at $9/month raises limits to 5,000 emails per month and up to 10 inboxes. No per-inbox surcharge.
+
+<FAQ>
+  <FAQItem question="Do I need an Azure account to use LobsterMail with Semantic Kernel?">
+    No. LobsterMail has no dependency on Azure, Microsoft 365, or any tenant configuration. You register at lobstermail.ai, get an API key, and call the REST API with `HttpClient`.
+  </FAQItem>
+
+  <FAQItem question="Is there an official .NET or C# SDK for LobsterMail?">
+    Not yet. The primary SDK is TypeScript/JavaScript via the `@lobsterkit/lobstermail` npm package. From .NET, use the REST API directly as shown in this guide. The API surface is small enough that a thin `HttpClient` wrapper covers everything.
+  </FAQItem>
+
+  <FAQItem question="What's the difference between this approach and the Microsoft Graph email plugin?">
+    The MS Graph plugin accesses an existing Microsoft 365 mailbox and requires admin consent plus Azure AD configuration. LobsterMail creates new inboxes on demand with no pre-existing account, no admin, no tenant setup. They solve different problems for different use cases.
+  </FAQItem>
+
+  <FAQItem question="Can I use LobsterMail with other .NET AI frameworks besides Semantic Kernel?">
+    Yes. The REST API works with any HTTP client in any language. Whether you're using Semantic Kernel, a custom agent loop, or a console app with raw `HttpClient`, the integration is identical.
+  </FAQItem>
+
+  <FAQItem question="How should I handle email polling without overloading the API?">
+    Add a delay between `ReceiveEmails` calls. Two to five seconds works for most verification flows. For real-time delivery without polling, LobsterMail supports webhooks that push notifications to your endpoint. See the [docs](/docs/getting-started) for webhook setup.
+  </FAQItem>
+
+  <FAQItem question="Can I use a custom domain instead of @lobstermail.ai?">
+    Yes. Custom domain support is available on the Builder plan. Your agent's inbox becomes something like `agent@yourcompany.com` instead of the default lobstermail.ai address.
+  </FAQItem>
+
+  <FAQItem question="Is the free tier enough for development and testing?">
+    For most development workflows, yes. 1,000 emails per month covers a lot of agent test runs. When you need higher volume or multiple inboxes, the Builder plan at $9/month is the next step.
+  </FAQItem>
+
+  <FAQItem question="Can multiple Semantic Kernel agents share one inbox?">
+    They can, but managing concurrency gets tricky fast. Two agents might try to act on the same email. In practice, giving each agent its own inbox (one per task or per agent role) avoids race conditions entirely and makes debugging simpler.
+  </FAQItem>
+
+  <FAQItem question="How does LobsterMail handle prompt injection in email content?">
+    Every inbound email is scored for injection risk across multiple categories (boundary manipulation, system prompt override, data exfiltration, role hijacking, tool invocation, encoding tricks). The risk metadata comes back with the email so you can filter before your agent processes the body. See the [security guide](/docs/getting-started) for implementation details.
+  </FAQItem>
+
+  <FAQItem question="What happens if the inbox name I request is already taken?">
+    If you use the TypeScript SDK's `createSmartInbox`, it resolves collisions automatically. From the REST API, if the name is taken, the API returns an available variation. You can also skip the name entirely and get a random address with guaranteed availability.
+  </FAQItem>
+
+  <FAQItem question="Can my agent receive and process email attachments?">
+    Yes. The email objects returned by the API include attachment metadata, and you can fetch attachment content by ID. File size limits vary by plan tier.
+  </FAQItem>
+
+  <FAQItem question="Does this plugin work with Semantic Kernel's auto function calling?">
+    Yes. Once you register the plugin with `ImportPluginFromObject`, auto function calling lets the planner invoke `Email-CreateInbox`, `Email-ReceiveEmails`, and `Email-SendEmail` as part of any plan without manual orchestration.
+  </FAQItem>
+</FAQ>
 
 ---
 
 *Give your agent its own inbox. [Get started with LobsterMail](/) — it's free.*
-
-<FAQ>
-  <FAQItem question="Do I need an Azure account to use LobsterMail with Semantic Kernel?">
-    No. LobsterMail has no dependency on Azure, Microsoft 365, or any tenant configuration. You register at lobstermail.ai, get an API key, and call the REST API directly with `HttpClient`.
-  </FAQItem>
-
-  <FAQItem question="Is there an official .NET or C# SDK?">
-    Not yet — the SDK is currently JavaScript/TypeScript only via the `@lobsterkit/lobstermail` npm package. From .NET, use the REST API directly as shown in this guide. The API is stable and straightforward to wrap.
-  </FAQItem>
-
-  <FAQItem question="What's the difference between this approach and the Microsoft Graph email plugin?">
-    The MS Graph plugin accesses an existing Microsoft 365 mailbox and requires admin consent and Azure AD configuration. LobsterMail creates new inboxes on demand — no pre-existing account, no admin, no tenant. They solve different problems.
-  </FAQItem>
-
-  <FAQItem question="Can I use LobsterMail with other .NET AI frameworks besides Semantic Kernel?">
-    Yes. The REST API works with any HTTP client. Whether you're using Semantic Kernel, a custom agent loop, or just a vanilla console app with `HttpClient`, the integration is the same.
-  </FAQItem>
-
-  <FAQItem question="How does email polling work without hammering the API?">
-    Add a delay between `ReceiveEmails` calls — 2 to 5 seconds is reasonable for most verification flows. For real-time delivery, LobsterMail also supports webhooks so you can receive push notifications instead of polling. See the [docs](/docs/getting-started) for setup.
-  </FAQItem>
-
-  <FAQItem question="Can I use a custom domain instead of @lobstermail.ai?">
-    Yes. Custom domain support is available on paid plans. Your agent's inbox would be something like `agent@yourcompany.com` instead of `agent@lobstermail.ai`. See the custom domains guide in the docs.
-  </FAQItem>
-
-  <FAQItem question="Is the free tier enough for building and testing?">
-    For development and testing, yes. 1,000 emails per month covers a lot of agent runs. When you're ready to scale, the Builder plan at $9/month raises the limit substantially.
-  </FAQItem>
-
-  <FAQItem question="Can multiple Semantic Kernel agents share one inbox?">
-    They can, but you'll need to manage concurrency yourself to avoid two agents acting on the same email. In practice, giving each agent its own inbox (created fresh per task) is simpler and avoids race conditions entirely.
-  </FAQItem>
-
-  <FAQItem question="How does LobsterMail handle prompt injection in email content?">
-    LobsterMail returns security metadata with every email, including an injection risk score. If an incoming message contains text that looks like it's trying to hijack your agent's instructions, the metadata flags it before your agent processes the body. See the [security and injection guide](/docs/getting-started) for details.
-  </FAQItem>
-
-  <FAQItem question="What happens if the inbox name I request is already taken?">
-    The `createSmartInbox` function in the JavaScript SDK handles collisions automatically by trying variations. From the REST API, if the requested name is taken, the API returns an available variation. You can also use `createInbox` (no name argument) to get a random address like `lobster-xxxx@lobstermail.ai` with guaranteed availability.
-  </FAQItem>
-
-  <FAQItem question="Can my agent receive attachments?">
-    Yes. The email objects returned by the API include attachment metadata. You can fetch attachment content by ID. File size limits apply per plan.
-  </FAQItem>
-
-  <FAQItem question="Is LobsterMail suitable for production agent workloads, not just demos?">
-    The free tier is deliberately limited to keep it useful for development without requiring a credit card. For production workloads with higher volume or multiple agents, the paid plans are designed for that. The infrastructure runs on AWS and the API is the same one the SDK uses.
-  </FAQItem>
-</FAQ>
