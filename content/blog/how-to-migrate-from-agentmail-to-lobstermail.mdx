@@ -10,15 +10,13 @@ tags:
   - infrastructure
   - migration
 image: /blog/how-to-migrate-from-agentmail-to-lobstermail.png
-author: LobsterMail Team
+author: Ian Bussières
 agent: agent-3-content
 channel: blog
 type: blog-post
-status: approved
+status: draft
 publish_at: '2026-02-27T19:00:00Z'
-approved_at: '2026-03-02T10:36:37.173Z'
 ---
-
 AgentMail's free tier caps at 3 inboxes. After that, you're looking at $20/month — no middle option, no grace tier. If you're running more than a couple of agents, that pricing wall shows up fast.
 
 That's the most common reason people migrate. There's a second one, though. AgentMail still requires a human to create the account, generate API keys, and manage the console. Your agent uses infrastructure you set up for it. With LobsterMail, the agent provisions its own inbox. One `create()` call handles signup if no token exists yet. No console, no keys to rotate, no human in the loop. See [how agent self-signup works](/blog/agent-self-signup-explained) if that's new to you.
@@ -127,7 +125,7 @@ The send method lives on the inbox object rather than the top-level client. Clea
 
 ## Step 4: update stored addresses
 
-If your agent stored its AgentMail address somewhere — a database, another agent's context, a config file — those addresses stop working once you cut over. This part requires a bit of thought.
+If your agent stored its AgentMail address somewhere, a database, another agent's context, a config file, those addresses stop working once you cut over. This part requires a bit of thought.
 
 For most setups, the cleanest approach is provisioning a new LobsterMail inbox and updating the stored address in the same migration run:
 
@@ -140,13 +138,13 @@ const inbox = await lm.createSmartInbox({ name: 'Support Agent' });
 await db.updateAgentConfig('support_agent_email', inbox.address);
 ```
 
-If your agent's address was shared with external parties — users, third-party services, other agents — you'll need to communicate the change. There's no automatic forwarding from `@agentmail.to` to `@lobstermail.ai`.
+If your agent's address was shared with external parties, users, third-party services, other agents, you'll need to communicate the change. There's no automatic forwarding from `@agentmail.to` to `@lobstermail.ai`.
 
 One exception: if you're using a [custom domain for your agent's email](/blog/custom-domains-agent-email), the address itself doesn't change when you switch providers. Your domain's MX records point to LobsterMail's servers instead of AgentMail's, and inbound mail routes through LobsterMail from that point on. That's the migration path with zero address disruption for anyone already in contact with your agent.
 
 ## Step 5: handle security metadata
 
-LobsterMail attaches security metadata to every incoming email, including an injection risk score. This isn't decoration — it's genuinely useful for any agent that processes email content before passing it to a model.
+LobsterMail attaches security metadata to every incoming email, including an injection risk score. This isn't decoration, it's genuinely useful for any agent that processes email content before passing it to a model.
 
 ```typescript
 const emails = await inbox.receive();
@@ -170,7 +168,7 @@ If you used AgentMail's webhook integration for real-time delivery notifications
 await inbox.setWebhook({ url: 'https://your-server.com/email-hook' });
 ```
 
-The REST API also exposes webhook configuration if you prefer to manage it outside the SDK. If you were polling on a schedule instead of using webhooks, `receive()` works the same way — nothing to change there.
+The REST API also exposes webhook configuration if you prefer to manage it outside the SDK. If you were polling on a schedule instead of using webhooks, `receive()` works the same way, nothing to change there.
 
 ## Step 7: clean up
 
@@ -180,7 +178,7 @@ Once you've confirmed the migration works end-to-end:
 2. Delete `AGENTMAIL_API_KEY` from your environment and any secrets store
 3. Archive or close your AgentMail account if you don't need it anymore
 
-The API key that was sitting in your environment was a human-managed credential — something to generate, store, rotate, and occasionally leak. That pattern is gone. Your agent manages its own auth token from here.
+The API key that was sitting in your environment was a human-managed credential, something to generate, store, rotate, and occasionally leak. That pattern is gone. Your agent manages its own auth token from here.
 
 ## Pricing after the switch
 
@@ -188,7 +186,7 @@ AgentMail's free tier gives you 3 inboxes. After that, it's $20/month. Nothing i
 
 LobsterMail's free tier gives you 1,000 emails/month. The Builder tier at $9/month bumps that to 10 inboxes and 5,000 emails/month. For a setup with a support agent, a monitoring agent, and a sales agent all running independently, Builder covers it at a price that doesn't need sign-off from anyone.
 
-The self-provisioning model means you're not managing a billing relationship on behalf of your agents. They handle their own account setup. If you need more capacity, you upgrade from the dashboard — but a lot of projects stay on free indefinitely.
+The self-provisioning model means you're not managing a billing relationship on behalf of your agents. They handle their own account setup. If you need more capacity, you upgrade from the dashboard, but a lot of projects stay on free indefinitely.
 
 ## What you're not doing anymore
 
@@ -218,7 +216,7 @@ The agent provisions what it needs. You write the logic. The infrastructure hand
   </FAQItem>
 
   <FAQItem question="What happens to emails already in my AgentMail inbox?">
-    They stay in AgentMail until you delete the account. LobsterMail doesn't import historical email from other providers — only new emails delivered after the inbox is created.
+    They stay in AgentMail until you delete the account. LobsterMail doesn't import historical email from other providers, only new emails delivered after the inbox is created.
   </FAQItem>
 
   <FAQItem question="Can I use LobsterMail if my agent runs in multiple environments?">
@@ -234,14 +232,14 @@ The agent provisions what it needs. You write the logic. The infrastructure hand
   </FAQItem>
 
   <FAQItem question="Does LobsterMail work with OpenClaw or MCP?">
-    Yes. There's a ClawHub skill at [clawhub.ai](https://clawhub.ai/samuelchenardlovesboards/lobstermail-agent-email) that wires LobsterMail into OpenClaw with no manual SDK setup. MCP server support is also available — see the [MCP server guide](https://api.lobstermail.ai/v1/docs/guides/mcp-server).
+    Yes. There's a ClawHub skill at [clawhub.ai](https://clawhub.ai/samuelchenardlovesboards/lobstermail-agent-email) that wires LobsterMail into OpenClaw with no manual SDK setup. MCP server support is also available, see the [MCP server guide](https://api.lobstermail.ai/v1/docs/guides/mcp-server).
   </FAQItem>
 
   <FAQItem question="Is the injection risk score available on all plans?">
     Yes, including the free tier. Security metadata comes back on every email regardless of plan.
   </FAQItem>
 
-  <FAQItem question="What if I used AgentMail's webhook integration — is there an equivalent?">
+  <FAQItem question="What if I used AgentMail's webhook integration, is there an equivalent?">
     Yes. Call `inbox.setWebhook({ url: '...' })` to register a webhook on any inbox. The payload format differs from AgentMail's, so you'll need to update your handler to match LobsterMail's schema. The [webhooks guide](https://api.lobstermail.ai/v1/docs/guides/webhooks) has the full spec.
   </FAQItem>
 
@@ -252,4 +250,4 @@ The agent provisions what it needs. You write the logic. The infrastructure hand
 
 ---
 
-*Give your agent its own inbox. [Get started with LobsterMail](/) — it's free.*
+*Give your agent its own inbox. [Get started with LobsterMail](/), it's free.*
