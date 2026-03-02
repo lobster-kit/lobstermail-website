@@ -4,7 +4,7 @@ description: >-
   Flowise chatflows that interact with customers need real email—not a shared
   Gmail account. Here's how to wire up an agent-owned inbox in minutes.
 date: '2026-02-26'
-author: Samuel Chenard
+author: Ian Bussières
 tags:
   - guides
   - no-code
@@ -15,11 +15,9 @@ image: /blog/how-to-add-a-dedicated-email-inbox-to-your-flowise-chatflow.png
 agent: agent-3-content
 channel: blog
 type: blog-post
-status: approved
+status: draft
 publish_at: '2026-02-26T14:00:00Z'
-approved_at: '2026-03-02T10:36:37.199Z'
 ---
-
 Most Flowise chatflows hit the same wall eventually.
 
 The chatflow works. It handles the conversation, runs the retrieval, does whatever it was built to do. Then something needs a confirmation email. Or the agent has to sign up for an external service and catch the verification code that comes back. Or you want the chatflow to coordinate with a downstream process over email.
@@ -82,7 +80,7 @@ await inbox.send({
 return { sent: true, from: inbox.address };
 ```
 
-The LLM node routes to this tool when it determines a confirmation should go out. The `recipientEmail` and `confirmationMessage` values come from earlier nodes in the flow — extract them from conversation context or from a form submission node upstream.
+The LLM node routes to this tool when it determines a confirmation should go out. The `recipientEmail` and `confirmationMessage` values come from earlier nodes in the flow, extract them from conversation context or from a form submission node upstream.
 
 ### Pattern 2: catch verification codes from third-party signups
 
@@ -100,7 +98,7 @@ if (emails.length === 0) return { code: null, found: false };
 
 const latest = emails[0];
 
-// Extract a numeric code — pass full body to LLM for flexible parsing
+// Extract a numeric code, pass full body to LLM for flexible parsing
 const match = latest.body.match(/\b\d{4,8}\b/);
 
 return {
@@ -114,28 +112,28 @@ return {
 Feed the result into the next node in your flow. The regex handles predictable formats. If the code format varies, pass `body` directly to an LLM node and let it extract the value.
 
 <Callout type="tip">
-  Use `createSmartInbox()` with a consistent name for persistent inboxes. If an inbox with that name already exists, LobsterMail returns it rather than creating a duplicate — so your chatflow reconnects to the same address on every run.
+  Use `createSmartInbox()` with a consistent name for persistent inboxes. If an inbox with that name already exists, LobsterMail returns it rather than creating a duplicate, so your chatflow reconnects to the same address on every run.
 </Callout>
 
 ### A note on the risk score
 
-LobsterMail returns a `riskScore` with every received email. That's there to flag prompt injection attempts — cases where a bad actor sends a malicious instruction disguised as a verification code or legitimate reply. For most Flowise chatflows this isn't the primary concern, but if your flow acts autonomously on inbound content, it's worth checking. More on how that works in the [security and injection guide](/docs/guides/security-and-injection).
+LobsterMail returns a `riskScore` with every received email. That's there to flag prompt injection attempts, cases where a bad actor sends a malicious instruction disguised as a verification code or legitimate reply. For most Flowise chatflows this isn't the primary concern, but if your flow acts autonomously on inbound content, it's worth checking. More on how that works in the [security and injection guide](/docs/guides/security-and-injection).
 
 ## Managing inboxes as your chatflows scale
 
-The free tier gives you 1,000 emails per month with no credit card. That covers development and light production workloads comfortably. If you're running chatflows with real volume — hundreds of users per day — the Builder plan at $9/month gets you up to 10 isolated inboxes and 5,000 emails per month.
+The free tier gives you 1,000 emails per month with no credit card. That covers development and light production workloads comfortably. If you're running chatflows with real volume, hundreds of users per day, the Builder plan at $9/month gets you up to 10 isolated inboxes and 5,000 emails per month.
 
 One inbox per chatflow is a reasonable default. Your support flow gets its own address. Your research agent gets its own. When you need to debug why a confirmation didn't go out, you know exactly which inbox to check and there's no signal buried under other flows' traffic.
 
 ## What becomes possible
 
-Once your chatflow has a real inbox, a few things open up that weren't possible before. The flow can handle the full signup-and-verify loop for external services without any human involvement. It can send confirmations from a recognizable, consistent address rather than whatever shared account happened to be available. It can coordinate with other agents and flows over email — which matters more as you start chaining chatflows together. The [agent self-signup explained](/blog/agent-self-signup-explained) post covers that coordination pattern in depth.
+Once your chatflow has a real inbox, a few things open up that weren't possible before. The flow can handle the full signup-and-verify loop for external services without any human involvement. It can send confirmations from a recognizable, consistent address rather than whatever shared account happened to be available. It can coordinate with other agents and flows over email, which matters more as you start chaining chatflows together. The [agent self-signup explained](/blog/agent-self-signup-explained) post covers that coordination pattern in depth.
 
 The Gmail node is fine for what it was designed for. For chatflows that need isolated, persistent, agent-owned inboxes, the setup above takes about ten minutes and doesn't require touching your personal credentials again.
 
 ---
 
-*Give your chatflow its own email. [Get started with LobsterMail](/) — it's free.*
+*Give your chatflow its own email. [Get started with LobsterMail](/), it's free.*
 
 <FAQ>
   <FAQItem question="Does LobsterMail have an official Flowise node?">
@@ -143,7 +141,7 @@ The Gmail node is fine for what it was designed for. For chatflows that need iso
   </FAQItem>
 
   <FAQItem question="Why not just use the built-in Gmail node in Flowise?">
-    Gmail works well for personal assistant flows reading your own inbox. For production chatflows that need isolated, agent-owned addresses — especially across multiple flows or users — shared credentials, OAuth expiry, and a single mixed inbox create problems LobsterMail is built to avoid.
+    Gmail works well for personal assistant flows reading your own inbox. For production chatflows that need isolated, agent-owned addresses, especially across multiple flows or users, shared credentials, OAuth expiry, and a single mixed inbox create problems LobsterMail is built to avoid.
   </FAQItem>
 
   <FAQItem question="Will my chatflow create a new inbox every time it runs?">
@@ -163,11 +161,11 @@ The Gmail node is fine for what it was designed for. For chatflows that need iso
   </FAQItem>
 
   <FAQItem question="How do I receive emails in real time instead of polling?">
-    LobsterMail supports webhooks — it can POST to a URL whenever new mail arrives. See the [webhooks guide](/docs/guides/webhooks) for setup. For most Flowise chatflows that run in response to user input, polling with `receive()` is simpler and works fine.
+    LobsterMail supports webhooks, it can POST to a URL whenever new mail arrives. See the [webhooks guide](/docs/guides/webhooks) for setup. For most Flowise chatflows that run in response to user input, polling with `receive()` is simpler and works fine.
   </FAQItem>
 
   <FAQItem question="What email addresses do agents get by default?">
-    `createSmartInbox({ name: 'your-agent' })` generates `your-agent@lobstermail.ai`. It handles collisions automatically by trying variations. You can also bring your own domain — see the [custom domains guide](/docs/guides/custom-domains).
+    `createSmartInbox({ name: 'your-agent' })` generates `your-agent@lobstermail.ai`. It handles collisions automatically by trying variations. You can also bring your own domain, see the [custom domains guide](/docs/guides/custom-domains).
   </FAQItem>
 
   <FAQItem question="Does this work with n8n, Make, or other no-code tools?">
@@ -175,7 +173,7 @@ The Gmail node is fine for what it was designed for. For chatflows that need iso
   </FAQItem>
 
   <FAQItem question="What is the risk score returned with emails?">
-    Every email received via LobsterMail includes a `riskScore` that flags potential prompt injection attempts — malicious instructions disguised as legitimate email content. If your chatflow acts autonomously on inbound email, check this score before processing. See [why agents need email in 2026](/blog/why-agents-need-email-2026) for context on why this matters.
+    Every email received via LobsterMail includes a `riskScore` that flags potential prompt injection attempts, malicious instructions disguised as legitimate email content. If your chatflow acts autonomously on inbound email, check this score before processing. See [why agents need email in 2026](/blog/why-agents-need-email-2026) for context on why this matters.
   </FAQItem>
 
   <FAQItem question="Can I send emails from a custom domain instead of @lobstermail.ai?">
