@@ -13,12 +13,10 @@ image: /blog/agent-email-cost-at-scale.png
 agent: agent-3-content
 channel: blog
 type: blog-post
-status: approved
-author: LobsterMail Team
+status: draft
+author: Samuel Chenard
 publish_at: '2026-02-24T09:00:00Z'
-approved_at: '2026-03-02T10:36:37.167Z'
 ---
-
 Nobody thinks about email costs when they're building a proof of concept. One agent, one inbox, one workflow. The cost is zero. Then the proof of concept works.
 
 Suddenly you're running five agents for the sales team, three for support, and your infrastructure person wants to spin up a dozen test environments. You're at twenty inboxes before anyone's done a formal rollout. That's when the pricing math stops being theoretical.
@@ -37,11 +35,11 @@ The third is churn overhead, which teams almost always underestimate. Agents pro
 
 At 10 inboxes, none of this hurts. You might be on a free tier. You might have spare Google Workspace seats from employee turnover. It's invisible.
 
-At 50 inboxes, it's not. Google Workspace at $6/seat is $300/month — $3,600/year — for infrastructure that wasn't designed for agents: no programmatic provisioning, OAuth required for every API call, and every inbox tied to a human identity in Google's directory. The [full comparison](/blog/agent-email-google-workspace-cost) includes engineering hours, which make the per-seat fee look minor by comparison.
+At 50 inboxes, it's not. Google Workspace at $6/seat is $300/month, $3,600/year, for infrastructure that wasn't designed for agents: no programmatic provisioning, OAuth required for every API call, and every inbox tied to a human identity in Google's directory. The [full comparison](/blog/agent-email-google-workspace-cost) includes engineering hours, which make the per-seat fee look minor by comparison.
 
 The other surprise at 50 inboxes is the pricing gap in agent-native email APIs. AgentMail's free tier works fine for experiments, but their next tier jumps to $20/month with nothing in between. For a team running inboxes across multiple projects and environments, that structure forces a choice between over-provisioning free accounts or paying for headroom you don't use.
 
-LobsterMail's [$9 Builder tier](/blog/lobstermail-pricing-explained) was designed for that gap: up to 10 inboxes, 5,000 emails/month, 500 sends per day. For most teams in the 10-50 range, that's the tier where the numbers actually fit the workload. For larger fleets, [the math shifts further](/blog/running-50-agent-inboxes), but the principle holds — the right tier is the one that matches your inbox count without forcing you up a price step for capacity you don't use.
+LobsterMail's [$9 Builder tier](/blog/lobstermail-pricing-explained) was designed for that gap: up to 10 inboxes, 5,000 emails/month, 500 sends per day. For most teams in the 10-50 range, that's the tier where the numbers actually fit the workload. For larger fleets, [the math shifts further](/blog/running-50-agent-inboxes), but the principle holds, the right tier is the one that matches your inbox count without forcing you up a price step for capacity you don't use.
 
 ## The cost that doesn't show up in the bill
 
@@ -69,11 +67,11 @@ The teams I've seen get surprised by agent email cost at scale weren't surprised
 
 ---
 
-*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
+*Give your agent its own email. [Get started with LobsterMail](/), it's free.*
 
 <FAQ>
   <FAQItem question="What is agent email cost at scale?">
-    It's the total cost of running email infrastructure for multiple autonomous AI agents — combining per-inbox fees, email volume charges, and the engineering time required to set up and maintain providers that weren't designed for programmatic, agent-driven workflows.
+    It's the total cost of running email infrastructure for multiple autonomous AI agents, combining per-inbox fees, email volume charges, and the engineering time required to set up and maintain providers that weren't designed for programmatic, agent-driven workflows.
   </FAQItem>
 
   <FAQItem question="Is LobsterMail free for AI agents?">
@@ -97,7 +95,7 @@ The teams I've seen get surprised by agent email cost at scale weren't surprised
   </FAQItem>
 
   <FAQItem question="How does email volume pricing work for agents?">
-    Agent workflows tend to be transactional and low-volume per inbox — a few emails per task rather than bulk sends. LobsterMail's free tier covers 1,000 emails/month; the Builder tier covers 5,000 emails/month with up to 500 sends per day.
+    Agent workflows tend to be transactional and low-volume per inbox, a few emails per task rather than bulk sends. LobsterMail's free tier covers 1,000 emails/month; the Builder tier covers 5,000 emails/month with up to 500 sends per day.
   </FAQItem>
 
   <FAQItem question="What happens when an agent hits the free tier limit?">
