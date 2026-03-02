@@ -1,0 +1,181 @@
+---
+title: 'agent inbox not receiving email: a troubleshooting checklist'
+description: >-
+  If your agent's inbox has gone quiet, the cause is almost always one of five
+  things. Here's a systematic checklist to find it fast.
+date: '2026-02-24'
+tags:
+  - troubleshooting
+  - email
+  - guides
+  - infrastructure
+  - openclaw
+image: /blog/agent-inbox-not-receiving-email-a-troubleshooting-checklist.png
+author: LobsterMail Team
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+publish_at: '2026-02-24T10:00:00Z'
+approved_at: '2026-03-02T10:36:37.207Z'
+---
+Your agent is waiting for a verification email. The timeout fires, `waitForEmail()` returns `null`, and the workflow stalls. Or it worked fine yesterday and stopped today without any obvious change. Either way, you're here.
+
+When an agent inbox stops receiving email, the cause is almost always one of a handful of things. None of them require a support ticket if you work through them in order.
+
+## First: confirm the inbox address exists
+
+Before debugging delivery, make sure the inbox was actually created at the address you think it was.
+
+If you used `createSmartInbox()`, the address your agent got might not be what you expected. Smart inbox creation handles collisions automatically — if `billing-bot@lobstermail.ai` is taken, it tries `billing-bot1`, `billing-bot2`, and so on. If all reasonable variants are taken, it falls back to a random address. Your agent always gets *an* address, but not necessarily the one you assumed.
+
+```typescript
+const inbox = await lm.createSmartInbox({
+  preferred: ['billing-bot', 'billing'],
+  displayName: 'Billing Bot',
+});
+
+// Log this. Always.
+console.log(inbox.address);
+```
+
+One other thing: dots are cosmetic in LobsterMail addresses, the same way they are in Gmail. `sarah.shield` and `sarahshield` are the same mailbox. This only matters if you're constructing addresses programmatically and adding or stripping dots in different places — an easy source of silent mismatches.
+
+## Check your waitForEmail filters
+
+This is the most common cause of "inbox not receiving email" reports. The inbox *is* receiving email. Your filter is rejecting it.
+
+`waitForEmail()` supports `filter.from` and `filter.subject`. Both do substring matching. A filter of `noreply@acme.com` matches any sender whose address contains that string. A filter of `Verify` matches any subject containing that word.
+
+Where it breaks: sender addresses that vary. Some platforms rotate their sending addresses. A verification email from `noreply-143f3@acme.com` won't match a filter of `noreply@acme.com`. Subject lines that change between sends (dynamic order numbers, timestamps) will also slip past a static string filter.
+
+When debugging, remove the filter entirely first:
+
+```typescript
+const email = await inbox.waitForEmail({
+  timeout: 60000,
+  // No filter — catches everything arriving
+});
+
+console.log(email?.from, email?.subject);
+```
+
+If that catches the email, delivery is working and your filter is the problem. Tighten from there — try matching on just the domain (`acme.com`) rather than the full address.
+
+## Check your timeout
+
+The default timeout is 60 seconds. That's fine for most cases, but some senders are slow. Transactional systems with queue depth, cross-region relay hops, or aggressive spam scanning can take 2-3 minutes to deliver.
+
+If you're waiting on email from a known-slow sender, bump the timeout:
+
+```typescript
+const email = await inbox.waitForEmail({
+  filter: { from: 'acme.com' },
+  timeout: 180000, // 3 minutes
+});
+```
+
+There's no compute cost to a longer timeout. The server holds the connection open and responds the moment the email lands — you're not burning cycles on polling. The [polling vs. long-polling tradeoff is worth understanding](/blog/webhooks-vs-polling-email) if you're designing around high-volume inboxes.
+
+## Check that longPoll is enabled
+
+`waitForEmail()` uses server-side long-polling by default (`longPoll: true`). The server holds the connection and responds within milliseconds of delivery.
+
+If you've explicitly set `longPoll: false`, your agent falls back to exponential-backoff polling. That introduces a window where an email arrives between polls and the next check doesn't happen before your timeout fires. If you're seeing intermittent failures on the same sender — works sometimes, fails other times — check this first.
+
+```typescript
+const email = await inbox.waitForEmail({
+  filter: { from: 'noreply@acme.com' },
+  timeout: 60000,
+  longPoll: true, // The default, but worth confirming
+});
+```
+
+## Check your plan limits
+
+If the inbox was receiving email yesterday and isn't today, check your monthly limit. The free tier handles 1,000 emails per month. The Builder plan gives your agent 5,000 emails per month and up to 500 outbound per day.
+
+Monthly limits reset at the start of each billing cycle. If your agent hit the cap, inbound delivery pauses. You'll see this in your LobsterMail dashboard — it's not silent. If you're running high-volume automation and hitting limits regularly, that's the signal to molt up.
+
+## If you're using a custom domain
+
+Custom domain routing adds another layer where things can go wrong. If your agent's inbox is on a custom domain (`agent@yourdomain.com` routed through LobsterMail), MX records need to point to LobsterMail's mail servers.
+
+DNS propagation is slow and caching is aggressive. A misconfigured or stale MX record means inbound mail goes nowhere while your agent waits. Check [the custom domains guide](/blog/custom-domains-agent-email) for the exact records you need and how to verify propagation with `dig`.
+
+If you're not using a custom domain, skip this entirely. Standard `@lobstermail.ai` addresses don't have DNS dependencies.
+
+## Test with a known sender
+
+When you've worked through the checklist and still can't reproduce the problem, send a test email to the inbox manually. Use a personal email account or a mail API. If that email shows up in `receive()`, the inbox is working and the problem is on the sending side.
+
+```typescript
+const emails = await inbox.receive({ limit: 10 });
+console.log(
+  emails.map(e => ({ from: e.from, subject: e.subject, received: e.receivedAt }))
+);
+```
+
+Some platforms require you to allowlist the receiving domain. Others have spam scoring that quietly drops messages without bouncing them. If your test email arrives and the platform's email doesn't, that's a sending-side problem — worth contacting their support directly.
+
+## Watch out for concurrent read-write operations
+
+There's one failure mode worth knowing about, even though it's uncommon. Last year, a Meta security researcher's OpenClaw agent accidentally deleted emails from her real inbox because the inbox was too large and triggered a compaction mid-task — causing the agent to lose its original instruction context and start acting on incomplete state.
+
+LobsterMail doesn't do inbox compaction, but the pattern generalizes: if your agent is both reading *and* writing to a high-volume inbox (archiving, deleting, marking read) in the same operation, concurrent state changes can produce unexpected results. Keep read and write steps separate, with explicit checks between them.
+
+If you're building an agent that needs to manage a busy inbox reliably, [the pub/sub-free approach for OpenClaw](/blog/openclaw-email-without-pubsub) covers a pattern that avoids this class of problem entirely.
+
+---
+
+*Give your agent its own inbox. [Get started with LobsterMail](/) — it's free.*
+
+<FAQ>
+  <FAQItem question="Why is waitForEmail() returning null even though I sent an email?">
+    The most likely causes are a filter that doesn't match the actual sender or subject, or a timeout that fired before the email arrived. Start by removing the filter entirely and logging `inbox.address` to confirm the inbox address is what you expect.
+  </FAQItem>
+
+  <FAQItem question="How do I check what emails an inbox has actually received?">
+    Use `inbox.receive({ limit: 10 })` and log the results. You can filter by `direction: 'inbound'` to see only incoming messages, or pass a `since` timestamp to narrow the window you're looking at.
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail filter inbound email to spam?">
+    No. Everything sent to a LobsterMail inbox is delivered — there's no spam folder. If an email isn't arriving, the problem is on the sending side. Test by sending from a personal account to confirm your inbox is working.
+  </FAQItem>
+
+  <FAQItem question="What happens when I hit my monthly email limit?">
+    Inbound delivery pauses until your limit resets at the start of the next billing cycle, or until you upgrade. Free tier is 1,000 emails per month. Builder is 5,000 emails per month.
+  </FAQItem>
+
+  <FAQItem question="Can two inboxes share the same address?">
+    No. Addresses are unique. If you try to create an inbox with a local part that's already taken, you'll get a `409 Conflict`. Use `createSmartInbox()` to handle collisions automatically — it tries variants and falls back to a random address if needed.
+  </FAQItem>
+
+  <FAQItem question="Are dots in email addresses significant?">
+    No. Dots are cosmetic. `sarah.shield@lobstermail.ai` and `sarahshield@lobstermail.ai` resolve to the same mailbox. This matters if you're constructing addresses programmatically in multiple places.
+  </FAQItem>
+
+  <FAQItem question="How long should the waitForEmail() timeout be?">
+    60 seconds covers most transactional senders. For slow platforms or cross-region relay, try 2-3 minutes. The server holds the connection and responds immediately on delivery, so a longer timeout has no compute cost.
+  </FAQItem>
+
+  <FAQItem question="What's the difference between long-polling and exponential-backoff polling?">
+    Long-polling holds the server connection open and returns within milliseconds of delivery. Exponential backoff polls on a schedule, which creates a window where an email can arrive undetected before timeout. Long-polling is the default and almost always the right choice. See [the full comparison](/blog/webhooks-vs-polling-email).
+  </FAQItem>
+
+  <FAQItem question="My agent inbox worked yesterday and stopped today. What changed?">
+    The most likely culprits are hitting a monthly send or receive limit, a DNS change affecting a custom domain, or a sender-side change (new sending address, added spam filtering). Check your dashboard for limit status first — it's the quickest thing to rule out.
+  </FAQItem>
+
+  <FAQItem question="Can I use LobsterMail with a custom domain?">
+    Yes, on the Builder plan and above. You'll need to configure MX records pointing to LobsterMail's mail servers. See [the custom domains guide](/blog/custom-domains-agent-email) for exact setup steps and how to verify propagation.
+  </FAQItem>
+
+  <FAQItem question="Does OpenClaw work with LobsterMail?">
+    Yes. There's a ClawHub skill that lets your OpenClaw agent self-provision an inbox without any human setup. See [how to use LobsterMail without pub/sub in OpenClaw](/blog/openclaw-email-without-pubsub) for the pattern.
+  </FAQItem>
+
+  <FAQItem question="Can I receive email from any sender, or do I need to configure allowlists?">
+    LobsterMail inboxes accept email from any sender by default. No allowlists needed. Filtering happens in your application code via `waitForEmail()` options or by processing `receive()` results directly.
+  </FAQItem>
+</FAQ>
