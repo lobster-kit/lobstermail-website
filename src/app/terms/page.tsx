@@ -9,6 +9,21 @@ export const metadata: Metadata = {
   description:
     "Terms & Conditions for using the LobsterMail email infrastructure service for AI agents.",
   alternates: { canonical: "https://lobstermail.ai/terms" },
+  openGraph: {
+    title: "Terms & Conditions — LobsterMail",
+    description:
+      "Terms & Conditions for using the LobsterMail email infrastructure service for AI agents.",
+    url: "https://lobstermail.ai/terms",
+    type: "website",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Terms & Conditions — LobsterMail",
+    description:
+      "Terms & Conditions for using the LobsterMail email infrastructure service for AI agents.",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function TermsPage() {

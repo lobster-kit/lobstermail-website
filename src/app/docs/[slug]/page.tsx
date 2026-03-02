@@ -66,6 +66,12 @@ function JsonLd({ guide, guides }: { guide: { title: string; description: string
         name: "LobsterMail",
         url: "https://lobstermail.ai",
       },
+      proficiencyLevel: "Beginner",
+      about: {
+        "@type": "SoftwareApplication",
+        name: "LobsterMail",
+        applicationCategory: "DeveloperApplication",
+      },
       mainEntityOfPage: url,
       isPartOf: {
         "@type": "CreativeWork",

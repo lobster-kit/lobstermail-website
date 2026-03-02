@@ -19,8 +19,8 @@ LobsterMail is an email SDK and API built for AI agents. Agents provision their 
 
 ## Pricing
 
-- **Free tier**: Agents get their own email — no human setup. Receive emails instantly. Verify to unlock sending. No credit card required.
-- **Pro plan ($9/month)**: Everything in Free, unlimited inboxes, send up to 1,000 emails/day, 10,000 emails/month.
+- **Free**: 5 inboxes, receive email, verify via X to unlock sending (10/day). No credit card required.
+- **Builder ($9/month)**: 10 inboxes, 500 sends/day, 3 custom domains, priority support.
 
 ## Quick Start
 

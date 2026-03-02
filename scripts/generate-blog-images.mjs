@@ -206,6 +206,182 @@ const images = [
     slug: "how-do-i-get-an-email-for-my-openclaw",
     prompt: `A round-bodied orange lobster with two antennae and large claws, holding up a freshly opened envelope with an @ symbol on it. A thought bubble above the lobster's head with a question mark turning into a lightbulb. ${STYLE}`,
   },
+  {
+    slug: "adding-email-to-your-botpress-agent-without-oauth",
+    prompt: `A round-bodied orange lobster with two antennae and large claws connecting chat bubbles to email envelopes. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "agent-email-cost-at-scale",
+    prompt: `A round-bodied orange lobster with two antennae and large claws surrounded by dozens of small mail envelopes. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "agent-inbox-not-receiving-email-a-troubleshooting-checklist",
+    prompt: `A round-bodied orange lobster with two antennae and large claws checking a mailbox with a letter inside. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "agentmail-pricing-review-2026-the-gap-nobody-warns-you-about",
+    prompt: `A round-bodied orange lobster with two antennae and large claws examining a receipt with a calculator. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "agentmail-pricing-review-2026",
+    prompt: `A round-bodied orange lobster with two antennae and large claws examining a receipt with a calculator. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "agentmail-sdk-vs-lobstermail-what-the-developer-experience-actually-looks-like",
+    prompt: `A round-bodied orange lobster with two antennae and large claws typing code on a laptop with a coffee mug. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "agentmail-vs-lobstermail-comparing-prompt-injection-security-for-ai-agents",
+    prompt: `A round-bodied orange lobster with two antennae and large claws wearing a detective hat and holding a magnifying glass. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "ai-agent-inbox-compromise-incident-response",
+    prompt: `A round-bodied orange lobster with two antennae and large claws wearing a firefighter helmet rushing to an alarm bell. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "automating-email-handoffs-for-openclaw-computer-use-agents",
+    prompt: `A round-bodied orange lobster with two antennae and large claws passing an envelope to a robotic arm. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "building-a-semantic-kernel-email-plugin-in-c",
+    prompt: `A round-bodied orange lobster with two antennae and large claws orchestrating multiple smaller lobsters from a conductor's podium. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "clawhub-email-skill-comparison-ranked",
+    prompt: `A round-bodied orange lobster with two antennae and large claws standing at a skill marketplace kiosk. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "crewai-flows-email-checkpoint-adding-human-approval-gates-with-lobstermail",
+    prompt: `A round-bodied orange lobster with two antennae and large claws wearing a hard hat on a construction site with multiple computers. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "crewai-task-specific-inbox-isolation-with-lobstermail",
+    prompt: `A round-bodied orange lobster with two antennae and large claws wearing a hard hat on a construction site with multiple computers. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "debugging-webhook-delivery-failures-in-production-agent-workflows",
+    prompt: `A round-bodied orange lobster with two antennae and large claws wearing glasses and inspecting a bug with a magnifying glass. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "free-vs-paid-agent-email-2026",
+    prompt: `A round-bodied orange lobster with two antennae and large claws standing between two doors — one free, one premium with a key. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "giving-your-amazon-bedrock-agent-an-email-address-with-lambda-action-groups",
+    prompt: `A round-bodied orange lobster with two antennae and large claws standing on cloud servers with email icons. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "giving-your-python-agent-its-own-email-with-lobstermail",
+    prompt: `A round-bodied orange lobster with two antennae and large claws typing Python code on a dark-mode terminal. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "hipaa-compliant-ai-agent-email-what-healthcare-builders-actually-need-to-know",
+    prompt: `A round-bodied orange lobster with two antennae and large claws wearing a doctor's coat with a clipboard. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "how-an-ai-agent-can-parse-receipt-emails-for-expense-processing",
+    prompt: `A round-bodied orange lobster with two antennae and large claws scanning a receipt with a magnifying glass next to expense folders. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "how-an-ai-agent-handles-contract-deadline-email-alerts-without-missing-one",
+    prompt: `A round-bodied orange lobster with two antennae and large claws holding a calendar with deadline flags. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "how-to-add-a-dedicated-email-inbox-to-your-flowise-chatflow",
+    prompt: `A round-bodied orange lobster with two antennae and large claws arranging flowchart nodes on a whiteboard. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "how-to-build-and-publish-a-clawhub-email-skill-for-openclaw",
+    prompt: `A round-bodied orange lobster with two antennae and large claws standing at a skill marketplace kiosk. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "how-to-debug-lobstermail-webhooks-locally-with-ngrok-replay",
+    prompt: `A round-bodied orange lobster with two antennae and large claws wearing glasses and inspecting a bug with a magnifying glass. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "how-to-migrate-from-agentmail-to-lobstermail",
+    prompt: `A round-bodied orange lobster with two antennae and large claws carrying a box of files and walking toward a new server. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "how-to-migrate-openclaw-from-gmail-pub-sub-to-lobstermail-webhooks",
+    prompt: `A round-bodied orange lobster with two antennae and large claws carrying a box of files and walking toward a new server. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "how-to-set-up-email-for-your-dify-agent-with-lobstermail",
+    prompt: `A round-bodied orange lobster with two antennae and large claws plugging an email cable into an AI platform. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "how-to-set-up-the-lobstermail-email-mcp-server-for-openclaw",
+    prompt: `A round-bodied orange lobster with two antennae and large claws holding a glowing orb connected to a server by lines. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "inbox-isolation-what-it-means-and-why-every-ai-agent-needs-its-own-dedicated-inbox",
+    prompt: `A round-bodied orange lobster with two antennae and large claws in a fortress with separate compartmented mailboxes. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "lobstermail-sdk-error-codes-reference",
+    prompt: `A round-bodied orange lobster with two antennae and large claws typing code on a laptop with a coffee mug. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "lobstermail-sdk-quickstart-give-your-agent-an-email-in-5-minutes",
+    prompt: `A round-bodied orange lobster with two antennae and large claws typing code on a laptop with a coffee mug. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "lobstermail-typescript-sdk-reference-create-inboxes-and-email-methods",
+    prompt: `A round-bodied orange lobster with two antennae and large claws typing code on a laptop with a coffee mug. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "migrate-from-mailgun-inbound-to-lobstermail-for-ai-agents",
+    prompt: `A round-bodied orange lobster with two antennae and large claws carrying a box of files and walking toward a new server. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "openclaw-inbound-email-webhook-setup-with-hmac-verification",
+    prompt: `A round-bodied orange lobster with two antennae and large claws reading an instruction manual next to a computer. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "openclaw-multi-tenant-saas-per-user-agent-inbox-isolation-at-scale",
+    prompt: `A round-bodied orange lobster with two antennae and large claws surrounded by dozens of small mail envelopes. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "openclaw-real-time-email-notifications-with-websockets-a-working-tutorial",
+    prompt: `A round-bodied orange lobster with two antennae and large claws holding a lightning bolt next to a real-time dashboard. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "openclaw-skill-chaining-with-email-state-how-to-build-a-pipeline-that-doesn-t-break",
+    prompt: `A round-bodied orange lobster with two antennae and large claws connecting chain links between skill icons. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "pydantic-ai-email-agent-tutorial-give-your-agent-its-own-inbox",
+    prompt: `A round-bodied orange lobster with two antennae and large claws typing Python code on a terminal with validation checkmarks. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "semantic-kernel-multi-agent-orchestration-email-as-the-async-handoff-layer",
+    prompt: `A round-bodied orange lobster with two antennae and large claws orchestrating multiple smaller lobsters from a conductor's podium. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "the-waitforemail-pattern-human-in-the-loop-email-for-openclaw-agents",
+    prompt: `A round-bodied orange lobster with two antennae and large claws sitting patiently by a mailbox, checking a wristwatch. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "waitforemail-async-email-testing-with-the-lobstermail-sdk",
+    prompt: `A round-bodied orange lobster with two antennae and large claws typing code on a laptop with a coffee mug. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "webhook-hmac-signature-verification-failing-every-cause-and-fix",
+    prompt: `A round-bodied orange lobster with two antennae and large claws connecting a cable between two servers. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "what-is-agent-self-signup-email-provisioning",
+    prompt: `A round-bodied orange lobster with two antennae and large claws filling out a registration form on a clipboard. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "what-is-prompt-injection-in-email",
+    prompt: `A round-bodied orange lobster with two antennae and large claws holding up a shield blocking a red arrow. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
+  {
+    slug: "wiring-up-email-as-a-claude-tool-with-lobstermail",
+    prompt: `A round-bodied orange lobster with two antennae and large claws wiring an email plug into a glowing AI brain. Low-resolution pixel art drawn on a 256x144 pixel grid then scaled up, so each pixel block is large and clearly visible. Dark reddish-brown outlines, bright saturated orange body with darker orange and red-brown shading. Black dot eyes. No anti-aliasing, no smooth gradients, no sub-pixel detail. Props and accessories use muted, grounded colors — no neon, no rainbow, no candy colors. Calm neutral expression on the lobster. Wide landscape composition in 16:9 aspect ratio. White background. No text.`,
+  },
 ];
 
 fs.mkdirSync(OUT_DIR, { recursive: true });

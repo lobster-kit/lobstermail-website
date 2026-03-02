@@ -1,13 +1,13 @@
 ---
 title: "custom domains for agent email: send from your own domain"
-description: "Your agent doesn't have to send from @getlobstermail.com. Set up a custom domain so it sends from support@yourcompany.com."
+description: "Your agent doesn't have to send from @lobstermail.ai. Set up a custom domain so it sends from support@yourcompany.com."
 date: "2026-02-10"
 author: "Samuel Chenard"
 tags: ["guides", "email", "business"]
 image: "/blog/custom-domains-agent-email.png"
 ---
 
-Your agent works for your company. So why is it sending emails from `support-bot@getlobstermail.com`?
+Your agent works for your company. So why is it sending emails from `support-bot@lobstermail.ai`?
 
 The default LobsterMail address gets you up and running fast. But when your agent is handling customer support, billing inquiries, or sales outreach, the address on the "from" line matters. Customers trust emails from `support@yourcompany.com`. They're skeptical of emails from a domain they've never heard of.
 
@@ -15,7 +15,7 @@ Custom domains let your agent send and receive as part of your brand. Here's why
 
 ## Why custom domains matter for agent email
 
-Three things change when your agent sends from your own domain instead of `@getlobstermail.com`:
+Three things change when your agent sends from your own domain instead of `@lobstermail.ai`:
 
 **Brand consistency.** Every touchpoint with a customer reinforces your brand — or undermines it. An email from `support@yourcompany.com` feels like a natural extension of your business. An email from a third-party domain feels like spam. Over 75% of customers find company-branded email more credible than messages from generic or unfamiliar domains.
 
@@ -164,9 +164,9 @@ If you already use `yourcompany.com` for regular email (Google Workspace, Micros
 
 Just make sure you update your SPF record to include both providers (as shown above) rather than creating a second SPF record. One SPF record per domain — that's a hard rule.
 
-## From @getlobstermail.com to your own reef
+## From @lobstermail.ai to your own reef
 
-The path is straightforward: start on the free tier with `your-agent@getlobstermail.com`, prove out your use case, then molt up to Builder and connect your own domain. Your agent's address changes, but the SDK calls stay the same. The transition is seamless.
+The path is straightforward: start on the free tier with `your-agent@lobstermail.ai`, prove out your use case, then molt up to Builder and connect your own domain. Your agent's address changes, but the SDK calls stay the same. The transition is seamless.
 
 If you're comparing options, we broke down [how LobsterMail stacks up against AgentMail](/blog/lobstermail-vs-agentmail), including how each platform handles custom domains.
 
@@ -174,7 +174,7 @@ Custom domains aren't just a vanity feature. They're the difference between an a
 
 <FAQ>
   <FAQItem question="Do I need a custom domain to use LobsterMail?">
-    No. The free tier gives your agent an address on `@getlobstermail.com`. Custom domains are available on the Builder plan at $9/month for when you're ready to send from your own brand.
+    No. The free tier gives your agent an address on `@lobstermail.ai`. Custom domains are available on the Builder plan at $9/month for when you're ready to send from your own brand.
   </FAQItem>
   <FAQItem question="How long does DNS propagation take?">
     Usually a few minutes, but it can take up to 48 hours depending on your DNS provider and TTL settings. LobsterMail will automatically retry verification until the records are detected.
@@ -200,8 +200,8 @@ Custom domains aren't just a vanity feature. They're the difference between an a
   <FAQItem question="Do I need to set up DMARC?">
     It's strongly recommended. Google, Yahoo, and Microsoft all require DMARC for bulk senders. Even if your agent isn't sending at scale, DMARC improves deliverability and protects your domain from spoofing.
   </FAQItem>
-  <FAQItem question="Can I switch my agent from @getlobstermail.com to a custom domain later?">
-    Yes. You can add a custom domain at any time and provision new addresses on it. The SDK calls are the same; only the address changes. Your agent's existing inbox on `@getlobstermail.com` continues working alongside the new custom domain address.
+  <FAQItem question="Can I switch my agent from @lobstermail.ai to a custom domain later?">
+    Yes. You can add a custom domain at any time and provision new addresses on it. The SDK calls are the same; only the address changes. Your agent's existing inbox on `@lobstermail.ai` continues working alongside the new custom domain address.
   </FAQItem>
   <FAQItem question="What happens if my SPF or DKIM records are misconfigured?">
     LobsterMail's verification step checks your records before activating the domain. If something's off, you'll see exactly which record failed and why. Emails won't be sent from a misconfigured domain, so there's no risk of damaging your sender reputation.

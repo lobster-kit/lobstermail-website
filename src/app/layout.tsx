@@ -131,11 +131,11 @@ export default function RootLayout({
                   },
                   {
                     "@type": "Offer",
-                    name: "Pro",
-                    price: "5",
+                    name: "Builder",
+                    price: "9",
                     priceCurrency: "USD",
                     description:
-                      "Custom domains, dedicated IP, no sending limits, and priority support.",
+                      "10 inboxes, 500 sends per day, 3 custom domains, and priority support.",
                   },
                 ],
               },

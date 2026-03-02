@@ -1,0 +1,177 @@
+---
+title: 'email API agent self-signup: how 5 options compare in 2026'
+description: >-
+  Comparing LobsterMail, AgentMail, Resend, SendGrid, and Amazon SES on agent
+  self-signup: which email API lets an agent provision its own inbox without
+  human setup?
+date: '2026-03-02'
+author: Samuel Chenard
+tags:
+  - email
+  - infrastructure
+  - guides
+image: /blog/email-api-agent-self-signup-how-5-options-compare-in-2026.png
+---
+
+If you're building an AI agent and it needs an email address, the instinct is to reach for whatever email API you've used before. SendGrid, Resend, Mailgun — they all have good docs, solid SDKs, and infrastructure you've probably already got running somewhere.
+
+The problem shows up fast. Your agent needs its own address. Not one you configured. Not one tied to an API key you generated and pasted into a config file. One the agent creates itself, at runtime, without any human action. That's agent self-signup, and almost none of the standard email APIs were built for it.
+
+This is a focused comparison of five options specifically on that capability. If you're evaluating for bulk sending or marketing campaigns, this isn't the right article. But if your agent needs to provision an inbox and start receiving mail without a human in the loop, here's where each option stands.
+
+## What agent self-signup actually requires
+
+Before comparing anything, it helps to be precise about what we mean. Agent self-signup has three components:
+
+- **Account creation** — can the agent sign up without a human completing an OAuth flow, email verification, or credit card form?
+- **Inbox provisioning** — can the agent create a new address at runtime, programmatically?
+- **Email receiving** — can the agent read incoming mail, not just send?
+
+All three matter. An API that lets you send from a human-configured account doesn't solve the problem. Neither does one that creates addresses but requires a human-owned account to exist first. The [OAuth and Gmail approach](/blog/oauth-gmail-agents-painful) is the canonical example of what we're trying to avoid — a human-dependent setup that breaks down the moment you try to run it autonomously.
+
+## LobsterMail
+
+LobsterMail is the only option on this list designed around agent self-signup from the start. The whole product is built on the premise that the agent, not a human admin, should own the provisioning flow.
+
+The SDK's `LobsterMail.create()` call handles account creation automatically. First run: the SDK signs up for a free account and persists the token locally. Every subsequent run: it reuses that token. No human involvement at any point.
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create();
+const inbox = await lm.createSmartInbox({ name: 'My Agent' });
+
+console.log(inbox.address); // my-agent@lobstermail.ai
+
+const emails = await inbox.receive();
+```
+
+That's the whole setup. The agent has a real inbox it can send from and receive to. `createSmartInbox()` generates a human-readable address from a name and handles collisions automatically — if `my-agent` is taken, it tries variations until it lands on one that isn't.
+
+<Callout type="tip">
+  `createSmartInbox()` handles collisions for you. If `my-agent@lobstermail.ai` is already taken, it tries `my-agent1`, `m-agent`, and other variations automatically. Your agent doesn't need retry logic.
+</Callout>
+
+Received emails come with security metadata and prompt injection risk scoring built in. Worth knowing if your agent is going to act on content from unknown senders.
+
+Pricing: free tier covers 1,000 emails per month with no credit card required. Builder at $9/month adds up to 10 inboxes and 5,000 emails per month. For most agent use cases — verification codes, onboarding flows, inter-agent coordination — the free tier handles it without issue.
+
+**Self-signup: ✓ Full.**
+
+## AgentMail
+
+AgentMail is the most direct competitor in the "email built for agents" category. It's actively developed, has agent-aware documentation, and handles some receiving use cases.
+
+But account creation still requires a human. You sign up, generate an API key, and pass it to your agent. The agent can manage inboxes through the API once the account exists — but it can't create that account on its own. The self-signup gap is real, and it matters for any architecture where you don't want humans in the provisioning path.
+
+The pricing structure also has a hole worth knowing about: free tier, then $20/month with nothing in between. If your agent use case outgrows the free tier, you jump straight to $20. LobsterMail's Builder tier at $9/month covers that middle ground, which is where most early-stage agent projects land. More detail on the differences is in the [LobsterMail vs AgentMail comparison](/blog/lobstermail-vs-agentmail).
+
+**Self-signup: ✗ Partial** (agent API requires a human-created account).
+
+## Resend
+
+Resend is genuinely well-built for what it does. Clean API, solid React SDK, good deliverability, sensible pricing. If you're sending transactional email from an application, it's worth considering.
+
+The limitation for agents is structural: Resend is a sending API. It has no inbox concept. Your agent can send email through Resend (assuming a human set up the account and API key), but it can't receive anything. No inbox, no polling, no way to catch a verification code or a reply from a service it just contacted.
+
+For agents that only need outbound — generating summaries, sending reports, alerting a human — Resend pairs fine with LobsterMail. They solve different problems and don't compete for the same job. But if your agent needs a two-way inbox, Resend doesn't get you there.
+
+**Self-signup: ✗ None** (sending only, no inbox provisioning).
+
+## SendGrid
+
+SendGrid handles massive sending volume. Over 100 billion emails per month run through it. Large companies run their entire transactional email on it, and for that use case, it's battle-tested infrastructure.
+
+For agent self-signup, it's the wrong tool entirely. Getting SendGrid operational requires a human-created account, domain verification through DNS records, API key generation, and potentially IP warming for dedicated IPs. Nothing in that process can be automated by an agent. It's infrastructure you configure once, as a human, before your application ever runs.
+
+SendGrid also has no inbox concept. No email receiving, no per-agent addresses. If your agent needs to receive mail, you'd need to bolt on an inbound parsing service, handle routing manually, and build the address management layer yourself. That's a substantial amount of work to replicate what LobsterMail does by default.
+
+**Self-signup: ✗ None** (human-configured infrastructure only).
+
+## Amazon SES
+
+SES is cheap at scale — $0.10 per thousand emails — and serious production workloads run on it. If you need high-volume sending with fine-grained control over every aspect of deliverability, it's a legitimate option.
+
+Getting there is a process. New AWS accounts start in SES sandbox mode with strict sending limits. Exiting sandbox requires submitting a manual request to AWS. On top of that: IAM credentials, domain verification, DNS configuration, and potentially Route 53 setup. None of this can be automated by an agent at provisioning time.
+
+Honestly, "agent self-signup" may not be a fair criterion to apply to SES at all. It was designed for applications that a human architect builds and deploys over weeks, not for autonomous agents that provision resources at runtime. Making it work for agent self-signup would mean building most of what LobsterMail already is, on top of AWS primitives, from scratch.
+
+**Self-signup: ✗ None** (extensive human setup required before any agent can run).
+
+## How they compare
+
+| API | Agent self-signup | Email receiving | Human setup required | Free tier |
+|---|---|---|---|---|
+| LobsterMail | ✓ Full | ✓ Yes | ✗ No | ✓ 1,000 emails/mo |
+| AgentMail | Partial | Partial | ✓ Yes | ✓ Yes |
+| Resend | ✗ No | ✗ No | ✓ Yes | ✓ Yes |
+| SendGrid | ✗ No | ✗ No | ✓ Yes | ✓ Limited |
+| Amazon SES | ✗ No | ✗ No | ✓ Yes | Pay-per-use |
+
+## Who to use when
+
+For agent self-signup specifically, LobsterMail is the only option on this list that fully satisfies the requirement. If your agent needs to provision its own inbox at runtime — no preloaded API keys, no human account setup, no dependency on a person to kick things off — the others either require human involvement or don't support receiving at all.
+
+That doesn't make the others useless. Resend and SendGrid handle high-volume outbound sending better than LobsterMail for bulk use cases. If your architecture has a fixed application-level sending address alongside per-agent inboxes, mixing APIs makes sense: LobsterMail for the agent-provisioned layer, Resend or SendGrid for bulk outbound. They're not competing for the same job.
+
+The [agent self-signup deep dive](/blog/agent-self-signup-explained) walks through exactly how the provisioning flow works if you want to understand what happens under the hood before committing to an architecture.
+
+For most agent projects, especially early-stage ones, the answer is straightforward: start with LobsterMail's free tier, see how the volume fits, and upgrade only if you need to.
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
+
+<FAQ>
+  <FAQItem question="What is agent self-signup in the context of email APIs?">
+    Agent self-signup means an AI agent can create its own email account and inbox at runtime, without any human completing a signup flow, generating API keys, or configuring credentials. LobsterMail is currently the only email API with this capability built in.
+  </FAQItem>
+
+  <FAQItem question="Can my AI agent use Gmail or a regular email provider instead?">
+    Technically possible, but painful in practice. Gmail requires OAuth with a real user account, which means a human has to authorize access, and that authorization can expire. The [reasons this breaks down for agents](/blog/oauth-gmail-agents-painful) are worth reading before you go down that path.
+  </FAQItem>
+
+  <FAQItem question="Does Resend support email receiving for agents?">
+    No. Resend is a sending API only. It has no inbox concept and no way for your agent to read incoming email. If you need your agent to receive mail — catch verification codes, get replies — you need a separate solution for that.
+  </FAQItem>
+
+  <FAQItem question="How does LobsterMail.create() sign up without human input?">
+    The SDK detects whether a token exists at `~/.lobstermail/token`. If not, it makes an automated API call to provision a free account and saves the token. No browser, no OAuth, no human action required. The agent handles it in the same call that initializes the SDK.
+  </FAQItem>
+
+  <FAQItem question="Is LobsterMail's free tier actually free forever?">
+    Yes. The free tier is $0 per month with no credit card required, and it includes 1,000 emails per month. It's not a trial — it's a permanent free tier for agents with lighter volume.
+  </FAQItem>
+
+  <FAQItem question="What's the practical difference between LobsterMail and AgentMail?">
+    Both are agent-focused email products, but AgentMail still requires a human to create the account and generate an API key. LobsterMail removes that step entirely. There's also a pricing gap: AgentMail goes from free to $20/month, while LobsterMail has a $9/month Builder tier in between. More detail in the [full comparison](/blog/lobstermail-vs-agentmail).
+  </FAQItem>
+
+  <FAQItem question="How many inboxes can one LobsterMail account support?">
+    The free tier supports a single inbox. The Builder plan at $9/month supports up to 10 inboxes. If you're running multiple agents that each need their own address, Builder covers most small-to-medium deployments.
+  </FAQItem>
+
+  <FAQItem question="Can I use a custom domain with LobsterMail instead of @lobstermail.ai?">
+    Yes. Custom domain support is available. See the [custom domains guide](/docs/getting-started) for setup instructions. Your agent can then provision inboxes on your own domain rather than the default `@lobstermail.ai` addresses.
+  </FAQItem>
+
+  <FAQItem question="What happens if my agent tries to create an inbox name that's already taken?">
+    `createSmartInbox()` handles this automatically. It tries your requested name first, then falls back to variations (`name1`, `n-ame`, etc.) until it finds one that's available. Your agent gets a working inbox either way without needing to handle the collision logic itself.
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail work with any AI framework?">
+    Yes. The `@lobsterkit/lobstermail` npm package is framework-agnostic. It works with OpenAI Agents SDK, LangChain, AutoGen, Claude, custom agent runtimes — anywhere you can run TypeScript or JavaScript.
+  </FAQItem>
+
+  <FAQItem question="Can I use LobsterMail alongside SendGrid or Resend in the same project?">
+    Yes, and this is a reasonable architecture. Use LobsterMail for per-agent inboxes that agents provision themselves, and use Resend or SendGrid for high-volume bulk sending from a fixed application address. The two layers don't interfere with each other.
+  </FAQItem>
+
+  <FAQItem question="What is prompt injection protection and does LobsterMail include it?">
+    Prompt injection in email means a malicious sender embeds instructions in an email body hoping your agent will execute them. LobsterMail returns a risk score with every received email so your agent can flag or quarantine suspicious content before acting on it. See the [security guide](/docs/getting-started) for details.
+  </FAQItem>
+
+  <FAQItem question="Does Amazon SES have any path to supporting agent self-signup?">
+    Not without significant custom engineering. SES requires IAM credentials, domain verification, and manual sandbox exit requests — all human-initiated processes. You'd essentially need to build an automated account provisioning layer on top of SES, which is roughly what LobsterMail already is.
+  </FAQItem>
+</FAQ>

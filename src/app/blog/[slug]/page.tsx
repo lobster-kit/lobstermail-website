@@ -141,6 +141,27 @@ export default async function BlogPostPage({
           },
         ]
       : []),
+    // Hub page CollectionPage schema
+    ...(post.type === "hub"
+      ? [
+          {
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            name: post.title,
+            description: post.description,
+            url: `https://lobstermail.ai/blog/${slug}`,
+            mainEntity: {
+              "@type": "ItemList",
+              itemListElement: relatedPosts.map((rp, i) => ({
+                "@type": "ListItem",
+                position: i + 1,
+                url: `https://lobstermail.ai/blog/${rp.slug}`,
+                name: rp.title,
+              })),
+            },
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -172,7 +193,7 @@ export default async function BlogPostPage({
                   <div className="border-b-2 border-edge">
                     <Image
                       src={post.image}
-                      alt={post.title}
+                      alt={post.imageAlt ?? `Illustration for ${post.title}`}
                       width={1200}
                       height={630}
                       className="h-auto w-full"
@@ -289,7 +310,7 @@ export default async function BlogPostPage({
                       <div className="aspect-[16/9] overflow-hidden border-b-2 border-edge">
                         <Image
                           src={rp.image}
-                          alt={rp.title}
+                          alt={rp.imageAlt ?? `Illustration for ${rp.title}`}
                           width={400}
                           height={225}
                           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"

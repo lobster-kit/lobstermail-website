@@ -24,7 +24,7 @@ If a file isn't accessible (Google Drive sync), note the gap and ask the user ra
 
 ## What This Project Is
 
-LobsterMail is email infrastructure for autonomous AI agents — a subproduct of The Claw Depot. The website at getlobstermail.com is the marketing site, docs hub, and blog.
+LobsterMail is email infrastructure for autonomous AI agents — a subproduct of The Claw Depot. The website at lobstermail.ai is the marketing site, docs hub, and blog.
 
 - **Primary audience:** OpenClaw community (developers + non-technical users)
 - **Secondary audience:** Broader agent ecosystem (LangChain, CrewAI, AutoGen)

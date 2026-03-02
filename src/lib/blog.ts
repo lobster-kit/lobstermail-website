@@ -13,6 +13,8 @@ export interface BlogPost {
   updatedDate?: string;
   tags: string[];
   image?: string;
+  imageAlt?: string;
+  type?: string;
   author?: string;
   content: string;
   readingTime: number;
@@ -43,6 +45,8 @@ export const getAllPosts = cache(function getAllPosts(): BlogPost[] {
       updatedDate: data.updatedDate,
       tags: data.tags ?? [],
       image: data.image,
+      imageAlt: data.imageAlt,
+      type: data.type,
       author: data.author,
       content,
       readingTime: getReadingTime(content),
@@ -71,6 +75,8 @@ export function getPostBySlug(slug: string): BlogPost | null {
     updatedDate: data.updatedDate,
     tags: data.tags ?? [],
     image: data.image,
+    imageAlt: data.imageAlt,
+    type: data.type,
     author: data.author,
     content,
     readingTime: getReadingTime(content),
@@ -180,6 +186,22 @@ export function extractFaqItems(
       .replace(/\s+/g, " ")
       .trim();
     items.push({ question: match[1], answer });
+  }
+
+  // Fallback: h3 headings ending with ? followed by paragraph text (for manual posts)
+  if (items.length === 0) {
+    const h3Regex = /###\s+(.+\?)\s*\n\s*\n((?:(?!###|\n##)[\s\S])+)/g;
+    let h3Match;
+    while ((h3Match = h3Regex.exec(content)) !== null) {
+      const answer = h3Match[2]
+        .replace(/<[^>]*>/g, "")
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (answer.length > 10) {
+        items.push({ question: h3Match[1].trim(), answer });
+      }
+    }
   }
 
   return items;

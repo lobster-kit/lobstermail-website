@@ -87,7 +87,7 @@ For agents, this means the first few weeks of sending are critical. Consistent v
 
 If you're using a [custom domain](/blog/custom-domains-agent-email) with LobsterMail, the authentication setup is handled during domain configuration. When you add your domain, LobsterMail generates the exact SPF, DKIM, and DMARC records you need to publish. No guessing at syntax, no wondering if you got the selector right.
 
-On the default `@getlobstermail.com` domain, authentication is already configured. Your agent's messages are signed with DKIM, sent from SPF-authorized infrastructure, and covered by DMARC policy from the first message. The reef's shared reputation means your agent benefits from the collective sending history of every agent on the platform.
+On the default `@lobstermail.ai` domain, authentication is already configured. Your agent's messages are signed with DKIM, sent from SPF-authorized infrastructure, and covered by DMARC policy from the first message. The reef's shared reputation means your agent benefits from the collective sending history of every agent on the platform.
 
 For paid tiers, LobsterMail provides dedicated IP addresses with managed warmup. Instead of manually ramping volume over weeks, the platform handles the gradual increase and monitors deliverability metrics in real time. If bounce rates spike or spam complaints tick up, the system adjusts automatically before your reputation takes a hit.
 
@@ -127,7 +127,7 @@ If you're running agents that send email, get the authentication right. Your age
     Agents trigger multiple spam signals simultaneously: new domains with no reputation, high-velocity sending patterns, regular timing intervals, and content that matches language model fingerprints. Modern spam filters like Gmail's evaluate over 60 features per message and are trained to detect these patterns.
   </FAQItem>
   <FAQItem question="Does LobsterMail handle SPF, DKIM, and DMARC automatically?">
-    Yes. On the default `@getlobstermail.com` domain, all three protocols are pre-configured. For custom domains, LobsterMail generates the exact DNS records during setup, and you just publish them with your DNS provider.
+    Yes. On the default `@lobstermail.ai` domain, all three protocols are pre-configured. For custom domains, LobsterMail generates the exact DNS records during setup, and you just publish them with your DNS provider.
   </FAQItem>
   <FAQItem question="How long does domain warmup take?">
     Typically four to eight weeks, depending on your target volume and engagement rates. Start with small batches to engaged recipients and gradually increase. LobsterMail's paid tiers include managed warmup that handles this automatically.

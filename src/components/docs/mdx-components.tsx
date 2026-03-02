@@ -143,7 +143,12 @@ export const docsComponents: Record<string, React.ComponentType<any>> = {
   img: (props) => (
     <span className="my-8 block overflow-hidden rounded-2xl border-2 border-edge">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img className="h-auto w-full" alt={props.alt ?? ""} {...props} />
+      <img
+        className="h-auto w-full"
+        {...props}
+        alt={props.alt || "Documentation image"}
+        loading="lazy"
+      />
     </span>
   ),
 

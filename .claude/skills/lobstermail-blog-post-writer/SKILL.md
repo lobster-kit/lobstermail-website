@@ -282,6 +282,8 @@ All standard markdown works: headings (`##`, `###`, `####`), bold, italic, links
 - Docs: `[Docs](/docs/getting-started)`
 - Homepage: `[Get started with LobsterMail](/)`
 
+When an INTERNAL LINKS list is provided in the prompt, incorporate at least 3 links naturally in the article body. Place them where they add value (e.g., "we covered this in [our guide to X](/blog/slug)"). Spread links across different sections — don't cluster them in one paragraph. If a hub page link is provided, include it once in the introduction or conclusion.
+
 ### Ending the article
 
 - End with a specific recommendation or next step

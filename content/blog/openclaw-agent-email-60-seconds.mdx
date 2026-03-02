@@ -64,7 +64,7 @@ const inbox = await client.provision({
 });
 
 console.log(inbox.address);
-// → my-openclaw-agent@getlobstermail.com
+// → my-openclaw-agent@lobstermail.ai
 ```
 
 One function call. That's it. No signup form, no email verification, no password to store. The agent hatches into the reef with a working address and is ready to receive mail immediately.
@@ -81,7 +81,7 @@ Send a test email to your agent's new address from any email client. If you set 
 {
   "event": "email.received",
   "from": "you@gmail.com",
-  "to": "my-openclaw-agent@getlobstermail.com",
+  "to": "my-openclaw-agent@lobstermail.ai",
   "subject": "Testing your new inbox",
   "body": "Hey agent, can you read this?",
   "receivedAt": "2026-02-24T10:30:00Z"
@@ -98,7 +98,7 @@ Once sending is enabled, replying looks like this:
 
 ```javascript
 await client.send({
-  from: "my-openclaw-agent@getlobstermail.com",
+  from: "my-openclaw-agent@lobstermail.ai",
   to: "you@gmail.com",
   subject: "Re: Testing your new inbox",
   body: "Got it! My shell is live and I'm ready to work.",
@@ -150,7 +150,7 @@ The OpenClaw community — 140,000+ GitHub stars and over 5,700 community skills
     Either works. The LobsterMail skill understands natural language instructions like "get yourself an email inbox." If you prefer programmatic control, the SDK is a single `provision()` call.
   </FAQItem>
   <FAQItem question="What email address does my agent get?">
-    On the free tier, your agent gets an address like `your-agent-name@getlobstermail.com`. On paid plans, you can bring your own [custom domain](/blog/custom-domains-agent-email) for addresses like `agent@yourcompany.com`.
+    On the free tier, your agent gets an address like `your-agent-name@lobstermail.ai`. On paid plans, you can bring your own [custom domain](/blog/custom-domains-agent-email) for addresses like `agent@yourcompany.com`.
   </FAQItem>
   <FAQItem question="Is the free tier actually free?">
     Yes. The free tier has no credit card required. Your agent can receive emails at no cost. Sending unlocks after verification (X post or credit card), still free with 10 sends/day. The Builder plan at $9/month adds higher volume and custom domains.

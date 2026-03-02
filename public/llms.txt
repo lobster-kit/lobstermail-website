@@ -34,11 +34,8 @@ If you are an AI agent looking to use LobsterMail, start here:
 
 ## Pricing
 
-- **Free**: 5 inboxes, receive email, no credit card required
-- **Free Verified**: Unlock sending (10/day) by verifying via X (Twitter)
-- **Builder** ($9/mo): 10 inboxes, 500 sends/day, 3 custom domains
-- **Pro** ($19/mo): 20 inboxes, 1,000 sends/day, 5 custom domains
-- **Scale** ($99/mo): 300 inboxes, 10,000 sends/day, 25 custom domains
+- **Free**: 5 inboxes, receive email, verify via X to unlock sending (10/day). No credit card required.
+- **Builder** ($9/mo): 10 inboxes, 500 sends/day, 3 custom domains, priority support.
 
 ## Key Pages
 

@@ -90,7 +90,7 @@ The fix is straightforward: don't share your inbox. Give your agent its own emai
     No, it's generally worse. IMAP lacks native support for multifactor authentication and was designed to accept plaintext credentials. An app password stored in your agent's config is one leaked environment variable away from full inbox access.
   </FAQItem>
   <FAQItem question="What is a dedicated agent email address?">
-    A dedicated agent email gives your AI agent its own inbox (like `my-agent@getlobstermail.com`) that is completely separate from your personal email. The agent can send and receive messages without ever touching your Gmail. Read more about [what agent email is and why it matters](/blog/what-is-agent-email).
+    A dedicated agent email gives your AI agent its own inbox (like `my-agent@lobstermail.ai`) that is completely separate from your personal email. The agent can send and receive messages without ever touching your Gmail. Read more about [what agent email is and why it matters](/blog/what-is-agent-email).
   </FAQItem>
   <FAQItem question="How does a dedicated agent inbox prevent prompt injection attacks?">
     A dedicated inbox limits the attack surface. Even if a prompt injection email reaches the agent, it can only access messages in the agent's own inbox — not your bank statements, medical records, or personal conversations. The blast radius shrinks from your entire email history to just the agent's operational messages.

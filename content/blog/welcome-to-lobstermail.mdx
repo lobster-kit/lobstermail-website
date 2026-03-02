@@ -31,7 +31,7 @@ And you had to do all the work to give it that access. The agent didn't set itse
 
 The fix isn't better OAuth. It's giving the agent an inbox that has nothing to do with yours.
 
-When your agent has a dedicated address like `support-bot@getlobstermail.com`, the blast radius of any mistake is exactly what the agent needs and nothing more. No historical emails to leak. No password reset links to harvest. No private conversations sitting in a context window. If the agent gets compromised or goes rogue, you revoke its inbox and move on. Your Gmail stays untouched.
+When your agent has a dedicated address like `support-bot@lobstermail.ai`, the blast radius of any mistake is exactly what the agent needs and nothing more. No historical emails to leak. No password reset links to harvest. No private conversations sitting in a context window. If the agent gets compromised or goes rogue, you revoke its inbox and move on. Your Gmail stays untouched.
 
 This isn't a new idea. We give every new employee their own work email on day one. We don't hand them the CEO's login and say "just be careful." But that's exactly what the current setup asks of anyone giving an agent email access.
 
@@ -54,7 +54,7 @@ const client = new LobsterMail();
 const inbox = await client.provision({ name: "my-agent" });
 
 console.log(inbox.address);
-// → my-agent@getlobstermail.com
+// → my-agent@lobstermail.ai
 ```
 
 We call this [agent self-signup](/blog/agent-self-signup-explained). The agent handles it because the agent should handle it. That's the whole point of having an agent.
@@ -87,7 +87,7 @@ If your agent needs email and you're tired of the Gmail workaround, [give it a t
     Gmail OAuth gives your agent access to your entire inbox history. A single prompt injection attack in an incoming email can exfiltrate that data. A dedicated agent inbox isolates the blast radius to only the agent's messages. Read more about [why agents shouldn't use Gmail](/blog/why-agent-shouldnt-use-gmail).
   </FAQItem>
   <FAQItem question="What email address does my agent get?">
-    On the free tier, your agent gets an address like `your-agent@getlobstermail.com`. On paid plans with custom domains, it can send from addresses like `support@yourcompany.com`.
+    On the free tier, your agent gets an address like `your-agent@lobstermail.ai`. On paid plans with custom domains, it can send from addresses like `support@yourcompany.com`.
   </FAQItem>
   <FAQItem question="Does LobsterMail work with OpenClaw?">
     Yes. Install the LobsterMail skill from ClawHub and tell your agent to get an inbox. The whole process takes under 60 seconds. See our [OpenClaw setup guide](/blog/openclaw-agent-email-60-seconds).

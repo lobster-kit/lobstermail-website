@@ -1,8 +1,10 @@
 # LobsterMail Website
 
+> **Start here:** Read [`marketing-plan.md`](./marketing-plan.md) first — it covers the full GTM strategy, channel priorities (ClawHub, Discord, Reddit, YouTube, SEO), competitive positioning, and what needs to be built next. It's the fastest way to understand what you're working toward before touching any code.
+
 Marketing website for LobsterMail — agent-first email infrastructure for AI agents. Built with Next.js 16, React 19, Tailwind CSS v4.
 
-**Domain:** getlobstermail.com
+**Domain:** lobstermail.ai
 **Deployed at:** lobster-mail.vercel.app
 
 ## Knowledge Base

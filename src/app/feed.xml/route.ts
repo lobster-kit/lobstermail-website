@@ -1,9 +1,11 @@
 import { getGuides } from "@/lib/docs";
+import { getAllPosts } from "@/lib/blog";
 
 export async function GET() {
   const guides = await getGuides();
+  const posts = getAllPosts();
 
-  const items = guides
+  const guideItems = guides
     .map(
       (guide) => `    <item>
       <title>${escapeXml(guide.title)}</title>
@@ -15,16 +17,29 @@ export async function GET() {
     )
     .join("\n");
 
+  const blogItems = posts
+    .map(
+      (post) => `    <item>
+      <title>${escapeXml(post.title)}</title>
+      <link>https://lobstermail.ai/blog/${post.slug}</link>
+      <guid isPermaLink="true">https://lobstermail.ai/blog/${post.slug}</guid>
+      <description>${escapeXml(post.description ?? "")}</description>
+      <pubDate>${post.date ? new Date(post.date).toUTCString() : new Date().toUTCString()}</pubDate>
+    </item>`,
+    )
+    .join("\n");
+
   const feed = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>LobsterMail Docs</title>
-    <link>https://lobstermail.ai/docs</link>
-    <description>Documentation for LobsterMail — email infrastructure for autonomous AI agents.</description>
+    <title>LobsterMail</title>
+    <link>https://lobstermail.ai</link>
+    <description>Email infrastructure for autonomous AI agents — docs, guides, and blog posts.</description>
     <language>en</language>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
     <atom:link href="https://lobstermail.ai/feed.xml" rel="self" type="application/rss+xml"/>
-${items}
+${blogItems}
+${guideItems}
   </channel>
 </rss>`;
 

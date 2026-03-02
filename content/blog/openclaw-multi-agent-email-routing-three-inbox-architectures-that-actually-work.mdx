@@ -1,0 +1,224 @@
+---
+title: >-
+  openclaw multi-agent email routing: three inbox architectures that actually
+  work
+description: >-
+  When multiple OpenClaw agents share an email domain, routing becomes an
+  architecture decision. Three patterns, with tradeoffs and working code for
+  each.
+date: '2026-03-02'
+author: Samuel Chenard
+tags:
+  - openclaw
+  - email
+  - infrastructure
+  - guides
+  - automation
+image: >-
+  /blog/openclaw-multi-agent-email-routing-three-inbox-architectures-that-actually-work.png
+---
+
+When you stack a second OpenClaw agent onto a project — say, a support agent running alongside a research agent — email routing surfaces fast. Do they share one inbox? Do they each get their own address? If one agent is handling outreach and another is catching verification codes, who reads what?
+
+I've seen this solved three ways in the wild. Two of them scale cleanly. One creates a silent message-loss problem that nobody notices until an important verification code expires or an inbound lead disappears into the wrong agent's context.
+
+Here's the breakdown.
+
+## Why single-inbox assumptions break at two agents
+
+Single-agent email is trivial. One agent, one inbox, one polling loop. But multi-agent setups introduce a real routing problem: inbound messages arrive at a single address before any agent can claim them. The question is what happens between delivery and handling.
+
+OpenClaw's Gateway handles agent-to-agent message passing internally. Email is different — it comes from outside the system, from vendors, SaaS platforms, humans who don't know or care how your agent stack is wired. It hits an address and waits. Your architecture determines whether the right agent actually sees it.
+
+## Pattern 1: dedicated inbox per agent
+
+The simplest model. Each agent provisions its own address and handles everything delivered there independently.
+
+```typescript
+// Agent: support
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create();
+const inbox = await lm.createSmartInbox({ name: 'acme-support' });
+// acme-support@lobstermail.ai
+```
+
+```typescript
+// Agent: research
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create();
+const inbox = await lm.createSmartInbox({ name: 'acme-research' });
+// acme-research@lobstermail.ai
+```
+
+Clean separation. No routing logic, no shared state, no message collisions. If a vendor emails `acme-support@lobstermail.ai`, only the support agent ever sees it. The research agent's polling loop is completely unaffected.
+
+This works well when your agents have clearly distinct external identities. Users and vendors learn which address to use for what. The model is easy to reason about and easy to debug.
+
+The failure mode: verification codes and time-sensitive messages. If a SaaS platform sends a code to `acme-research@lobstermail.ai` while the research agent is mid-task with a slow polling interval, the code expires. You end up needing each agent to manage its own timing independently — which compounds as you add agents.
+
+## Pattern 2: gateway inbox with routing rules
+
+One inbox receives everything. A routing layer reads inbound messages and forwards them to the correct agent based on subject, sender, or content.
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create();
+const gateway = await lm.createSmartInbox({ name: 'acme-gateway' });
+// acme-gateway@lobstermail.ai
+
+async function routeInbound() {
+  const emails = await gateway.receive();
+
+  for (const email of emails) {
+    if (email.subject.includes('[SUPPORT]') || email.from.includes('helpdesk')) {
+      await routeToAgent('support', email);
+    } else if (email.subject.includes('[RESEARCH]')) {
+      await routeToAgent('research', email);
+    } else {
+      await routeToAgent('default', email);
+    }
+  }
+}
+```
+
+The `routeToAgent` function writes to a shared queue, calls into the agent's run loop, or pushes a webhook — depending on how your OpenClaw setup is wired. The point is the routing logic lives in one place.
+
+This scales to 10+ agents. You give out one external address, which makes it easier to expose in public-facing materials. Inbound logging is centralized. When something goes wrong, there's one place to look.
+
+The failure mode: the gateway is a single point of failure. If the routing agent hangs or crashes, email piles up unprocessed. The fix is a dead-letter inbox and a timeout alert. If unrouted messages accumulate beyond a threshold, surface that as a signal rather than letting them sit silently.
+
+<Callout type="tip">
+  Set your gateway polling interval shorter than your shortest verification code TTL. Most services expire codes in 10–15 minutes. Polling every 60 seconds works for most cases; every 5 minutes is risky for anything time-sensitive.
+</Callout>
+
+## Pattern 3: prefix-addressed inboxes
+
+Each agent gets its own address under the same domain, with a consistent naming convention. Routing happens at the address level — no central routing agent, no shared queue.
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create();
+
+const supportInbox  = await lm.createSmartInbox({ name: 'acme-support' });
+// acme-support@lobstermail.ai
+
+const researchInbox = await lm.createSmartInbox({ name: 'acme-research' });
+// acme-research@lobstermail.ai
+
+const billingInbox  = await lm.createSmartInbox({ name: 'acme-billing' });
+// acme-billing@lobstermail.ai
+```
+
+Externally this looks organized. Internally each agent polls independently. There's no bottleneck and no shared failure mode — if the billing agent goes down, the support agent's inbox is completely unaffected.
+
+If you're on a [custom domain](/docs/custom-domains), this gets cleaner: `support@yourcompany.ai`, `research@yourcompany.ai`, `billing@yourcompany.ai`. Looks professional, hides the infrastructure details from anyone looking at the address.
+
+The tradeoff: you're exposing agent identity in the address, and you need consistent naming discipline. At 20 agents without a naming convention, `acme-temp3@lobstermail.ai` starts appearing in vendor records and nobody remembers what it's for.
+
+## Which pattern for which situation
+
+**Use dedicated inboxes** (Pattern 1) when you have 2–3 agents with non-overlapping roles and want to avoid routing complexity while you're still figuring out the architecture.
+
+**Use a gateway inbox** (Pattern 2) when you have one external address in public materials and can't change it, or when you need centralized logging of all inbound email across your entire agent fleet.
+
+**Use prefix addressing** (Pattern 3) when you have 5–20 agents and want independent polling without a routing bottleneck. Agent failures stay isolated, and adding a new agent means provisioning one more inbox rather than modifying routing logic.
+
+For most setups I'd combine patterns: prefix addressing for operational inboxes (support, research, billing) plus a dedicated gateway inbox polling aggressively for anything time-sensitive like verification codes. The gateway runs a tight loop. The operational inboxes run at normal intervals. Nothing time-critical goes through a slow poll cycle.
+
+## Persistence across agent restarts
+
+One thing that bites people: routing logic needs to survive OpenClaw agent restarts. If the Gateway restarts your agent mid-task and it loses the inbox reference, emails stop arriving with no error to show for it.
+
+The LobsterMail SDK persists your API token at `~/.lobstermail/token` automatically, so authentication survives restarts. But you also need to persist the inbox address itself, or re-provision consistently.
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+import * as fs from 'fs';
+
+const STATE_FILE = './agent-inbox-state.json';
+
+async function getOrCreateInbox(agentName: string) {
+  const lm = await LobsterMail.create();
+
+  if (fs.existsSync(STATE_FILE)) {
+    const state = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+    if (state.inboxAddress) {
+      return lm.getInboxByAddress(state.inboxAddress);
+    }
+  }
+
+  const inbox = await lm.createSmartInbox({ name: agentName });
+  fs.writeFileSync(STATE_FILE, JSON.stringify({ inboxAddress: inbox.address }));
+  return inbox;
+}
+```
+
+`createSmartInbox()` with a consistent name also handles restarts gracefully — if the same agent calls it twice with the same name, it returns the existing address rather than provisioning a duplicate. That collision handling is built in. For how this holds up at real scale, [running 50 agent inboxes](/blog/running-50-agent-inboxes) covers the operational details.
+
+## A note on shared inbox security
+
+If you're using Pattern 2 with a gateway inbox where multiple agents read from the same source, think carefully about what email content reaches which agent. LobsterMail's injection risk scoring runs on every received message — each email comes back with a risk score and flagged content. But in a gateway model, a malicious email crafted to manipulate your billing agent could theoretically reach your research agent if your routing logic has a bug.
+
+Keep routing logic minimal. Validate routing decisions against an expected-sender allowlist before passing email body content into agent context. The [security and injection docs](/docs/security-and-injection) go deeper on the threat model.
+
+For a worked example of coordinating multiple agents through a shared communication layer, [multi-agent email coordination](/blog/multi-agent-email-coordination) is worth reading before you finalize your architecture.
+
+---
+
+<FAQ>
+  <FAQItem question="Can two OpenClaw agents read from the same LobsterMail inbox simultaneously?">
+    Yes, but you need to handle message claiming to avoid both agents processing the same email. The cleaner approach is to use the gateway pattern — one agent routes, others receive forwarded messages — rather than both agents polling the same inbox directly.
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail support creating multiple inboxes under one account?">
+    Yes. The free tier allows one inbox; the Builder plan ($9/mo) supports up to 10 inboxes. For larger multi-agent setups, check the [pricing page](/) for higher tiers.
+  </FAQItem>
+
+  <FAQItem question="What happens to emails if the routing agent in Pattern 2 goes down?">
+    Emails are still delivered to the gateway inbox — they queue up and wait. They're not lost. When the routing agent restarts, it picks up the backlog on its next `receive()` call. Set a dead-letter inbox or alerting if you need real-time awareness of the backlog.
+  </FAQItem>
+
+  <FAQItem question="Can I use a custom domain instead of @lobstermail.ai for my agents?">
+    Yes. LobsterMail supports custom domains, so your agents can send and receive from addresses like `support@yourcompany.ai`. See the [custom domains guide](/docs/custom-domains) for setup.
+  </FAQItem>
+
+  <FAQItem question="How do I route emails to agents that haven't started yet?">
+    Use the gateway inbox pattern. The gateway holds messages until each agent is ready to poll. This is useful for agents that spin up on demand rather than running continuously.
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail work with OpenClaw's built-in MCP server?">
+    Yes. LobsterMail has an [MCP server](/guides/mcp-server) that gives OpenClaw agents email tools without writing any SDK code directly. It's the fastest way to add email to an existing OpenClaw agent.
+  </FAQItem>
+
+  <FAQItem question="How many emails can a multi-agent setup send per day?">
+    On the Builder plan, the limit is 500 emails per day across all inboxes. If you're running a fleet of outreach agents, factor that into your architecture. High-volume setups should look at the Scale tier.
+  </FAQItem>
+
+  <FAQItem question="What's the best pattern for handling verification codes across multiple agents?">
+    Either a dedicated gateway inbox polling on a tight interval (every 30–60 seconds), or per-agent inboxes where each agent manages its own timing. Don't route verification codes through a slow-polling operational inbox — the codes expire.
+  </FAQItem>
+
+  <FAQItem question="Can agents provision their own inboxes without a human involved?">
+    That's exactly what `LobsterMail.create()` does. If no API token exists, the SDK signs up for a free account automatically and persists the token. No human signup step, no API key to pre-configure.
+  </FAQItem>
+
+  <FAQItem question="How does LobsterMail handle prompt injection in emails received by agents?">
+    Every received email includes an injection risk score and flagged content markers. Your agent can check `email.injectionRisk` before passing body content into its context. More detail in the [security and injection guide](/docs/security-and-injection).
+  </FAQItem>
+
+  <FAQItem question="Is there a way to see all inboxes and email activity across a multi-agent setup in one place?">
+    The LobsterMail dashboard shows all inboxes under your account with send/receive activity. For programmatic monitoring across agents, you can use webhooks to push all inbound events to a central logging endpoint.
+  </FAQItem>
+
+  <FAQItem question="Does the smart inbox naming handle collisions if two agents try to claim the same name?">
+    Yes. `createSmartInbox()` tries the exact name first, then falls back to variations automatically (`my-agent`, `my-agent1`, `m-agent`, etc.). Two agents calling it with the same name get different addresses. See the [getting started guide](/docs/getting-started) for details.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give each of your agents its own inbox. [Get started with LobsterMail](/) — it's free.*

@@ -28,6 +28,13 @@ export async function generateMetadata({
       description: `Articles tagged "${decoded}" on the LobsterMail blog.`,
       url: `https://lobstermail.ai/blog/tag/${tag}`,
       type: "website",
+      images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${decoded} — LobsterMail Blog`,
+      description: `Articles tagged "${decoded}" on the LobsterMail blog.`,
+      images: ["/og-image.png"],
     },
   };
 }

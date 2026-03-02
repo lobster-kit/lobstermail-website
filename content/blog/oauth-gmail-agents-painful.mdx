@@ -126,7 +126,7 @@ const client = new LobsterMail();
 const inbox = await client.provision({ name: "my-agent" });
 
 console.log(inbox.address);
-// → my-agent@getlobstermail.com
+// → my-agent@lobstermail.ai
 ```
 
 That's it. No Google Cloud project. No consent screen. No token refresh logic. No IMAP bandwidth math. Your agent hatches into its own shell with a working email address. It can receive messages immediately.

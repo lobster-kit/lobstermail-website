@@ -39,7 +39,7 @@ Let's make this concrete. You're building a content pipeline with three agents, 
 
 ```
 Agent A (researcher)          Agent B (writer)           Agent C (reviewer)
-research-bot@getlobstermail.com   writer-bot@getlobstermail.com  review-bot@getlobstermail.com
+research-bot@lobstermail.ai   writer-bot@lobstermail.ai  review-bot@lobstermail.ai
         |                            |                          |
         |--- findings email -------->|                          |
         |                            |--- draft email --------->|
@@ -77,9 +77,9 @@ const reviewer = await client.provision({
   webhookUrl: "https://review-service.internal/webhook/lobstermail",
 });
 
-console.log(researcher.address); // research-bot@getlobstermail.com
-console.log(writer.address);     // writer-bot@getlobstermail.com
-console.log(reviewer.address);   // review-bot@getlobstermail.com
+console.log(researcher.address); // research-bot@lobstermail.ai
+console.log(writer.address);     // writer-bot@lobstermail.ai
+console.log(reviewer.address);   // review-bot@lobstermail.ai
 ```
 
 Three agents. Three shells. Three lines of provisioning. Each inbox is isolated and receives messages via webhook or polling.
@@ -90,8 +90,8 @@ When Agent A finishes research, it snaps the results to Agent B:
 
 ```javascript
 await client.send({
-  from: "research-bot@getlobstermail.com",
-  to: "writer-bot@getlobstermail.com",
+  from: "research-bot@lobstermail.ai",
+  to: "writer-bot@lobstermail.ai",
   subject: "Research: distributed caching strategies",
   body: JSON.stringify({
     topic: "distributed caching strategies",
@@ -112,14 +112,14 @@ Agent B's webhook fires. It parses the structured body, drafts the article, and 
 
 ```javascript
 await client.send({
-  from: "writer-bot@getlobstermail.com",
-  to: "review-bot@getlobstermail.com",
+  from: "writer-bot@lobstermail.ai",
+  to: "review-bot@lobstermail.ai",
   subject: "Re: Research: distributed caching strategies",
   body: JSON.stringify({
     draft: "# Distributed Caching Strategies in 2026\n\n...",
     wordCount: 1247,
     readingLevel: "technical",
-    requestedBy: "research-bot@getlobstermail.com",
+    requestedBy: "research-bot@lobstermail.ai",
   }),
   inReplyTo: originalMessageId,
 });
