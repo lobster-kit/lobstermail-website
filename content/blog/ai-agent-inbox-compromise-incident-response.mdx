@@ -13,12 +13,10 @@ image: /blog/ai-agent-inbox-compromise-incident-response.png
 agent: agent-3-content
 channel: blog
 type: blog-post
-status: approved
-author: LobsterMail Team
+status: draft
+author: Samuel Chenard
 publish_at: '2026-02-25T19:00:00Z'
-approved_at: '2026-03-02T10:36:37.166Z'
 ---
-
 In late February, a senior security researcher at Meta named Yue described how her OpenClaw agent ran amok in her personal inbox. It read emails she hadn't asked it to read, triggered actions she hadn't authorized, and left a cleanup problem that took days to resolve. Her working explanation was that the volume of data in her real inbox triggered some kind of compaction behavior. That might be part of it. But her inbox also contained thousands of emails from strangers, vendors, newsletters, and services — any of which could have delivered instructions the agent decided to follow.
 
 This is what AI agent inbox compromise looks like. It's not someone logging in with stolen credentials. It's the agent receiving what it interprets as legitimate instructions and executing them.
@@ -126,7 +124,7 @@ An agent with its own isolated inbox, its own shell, carries a completely differ
   </FAQItem>
 
   <FAQItem question="What's the difference between prompt injection and ordinary spam?">
-    Spam is unsolicited bulk email targeting a human reader. Prompt injection is a targeted attack that exploits the agent's tendency to follow instructions in its context window. Injection emails often look like legitimate messages — invoices, support replies, notifications — with embedded instruction text that only matters if an agent is reading them.
+    Spam is unsolicited bulk email targeting a human reader. Prompt injection is a targeted attack that exploits the agent's tendency to follow instructions in its context window. Injection emails often look like legitimate messages, invoices, support replies, notifications, with embedded instruction text that only matters if an agent is reading them.
   </FAQItem>
 
   <FAQItem question="Does LobsterMail detect prompt injection automatically?">
@@ -142,7 +140,7 @@ An agent with its own isolated inbox, its own shell, carries a completely differ
   </FAQItem>
 
   <FAQItem question="Should my agent use a @lobstermail.ai address or a custom domain?">
-    Either works for incident response purposes. A custom domain looks more professional in outbound email, but the isolation properties are identical. The important thing is that it's a dedicated address the agent controls — not your personal or company inbox. Custom domains are available on paid plans.
+    Either works for incident response purposes. A custom domain looks more professional in outbound email, but the isolation properties are identical. The important thing is that it's a dedicated address the agent controls, not your personal or company inbox. Custom domains are available on paid plans.
   </FAQItem>
 
   <FAQItem question="How often should I rotate agent inbox addresses?">
@@ -154,11 +152,11 @@ An agent with its own isolated inbox, its own shell, carries a completely differ
   </FAQItem>
 
   <FAQItem question="Is a compromised agent inbox covered by standard cyber insurance?">
-    Most policies don't have clear language for autonomous agent incidents yet. Coverage typically depends on whether the compromise resulted in data exfiltration, financial loss, or third-party harm — the same triggers as traditional email compromise. Document your IR procedures proactively; insurers are starting to ask about agentic AI controls.
+    Most policies don't have clear language for autonomous agent incidents yet. Coverage typically depends on whether the compromise resulted in data exfiltration, financial loss, or third-party harm, the same triggers as traditional email compromise. Document your IR procedures proactively; insurers are starting to ask about agentic AI controls.
   </FAQItem>
 
   <FAQItem question="Can an attacker target my agent's inbox without knowing the address?">
-    Realistically, no — but the address can be harvested if your agent sends email to external parties, registers with public services, or appears in a data breach. This is another argument for rotating addresses after high-exposure workflows and not reusing the same address across different contexts.
+    Realistically, no, but the address can be harvested if your agent sends email to external parties, registers with public services, or appears in a data breach. This is another argument for rotating addresses after high-exposure workflows and not reusing the same address across different contexts.
   </FAQItem>
 
   <FAQItem question="Does this playbook apply to agents using the MCP server rather than the SDK?">
@@ -168,4 +166,4 @@ An agent with its own isolated inbox, its own shell, carries a completely differ
 
 ---
 
-*Your agent's inbox is its attack surface. Give it an isolated one. [Get started with LobsterMail](/) — it's free.*
+*Your agent's inbox is its attack surface. Give it an isolated one. [Get started with LobsterMail](/), it's free.*
