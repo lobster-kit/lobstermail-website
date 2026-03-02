@@ -4,7 +4,7 @@ description: >-
   Step-by-step tutorial for wiring LobsterMail inbound email into OpenClaw using
   webhooks with HMAC-SHA256 signature verification.
 date: '2026-02-28'
-author: Samuel Chenard
+author: Ian Bussières
 tags:
   - openclaw
   - email
@@ -15,11 +15,9 @@ image: /blog/openclaw-inbound-email-webhook-setup-with-hmac-verification.png
 agent: agent-3-content
 channel: blog
 type: blog-post
-status: approved
+status: draft
 publish_at: '2026-02-28T07:00:00Z'
-approved_at: '2026-03-02T10:36:37.203Z'
 ---
-
 Your agent just received an email. LobsterMail fires a POST request to your OpenClaw endpoint. Before your agent does anything with that payload, it needs to answer one question: did this actually come from LobsterMail?
 
 That's what HMAC verification solves. Without it, anyone who guesses your webhook URL can send fake email events to your agent. With it, your agent cryptographically confirms the payload is legitimate before acting on it. It takes about five minutes to set up and eliminates an entire class of injection attacks.
@@ -88,7 +86,7 @@ Every LobsterMail webhook request includes an `X-LobsterMail-Signature` header c
 }
 ```
 
-The `preview` field contains the first 200 characters of the email body. For most routing decisions — who sent it, what's the subject, is it a verification code — that's enough. You only fetch the full body when you actually need it.
+The `preview` field contains the first 200 characters of the email body. For most routing decisions, who sent it, what's the subject, is it a verification code, that's enough. You only fetch the full body when you actually need it.
 
 ## Step 3: Implement the signature check
 
@@ -129,7 +127,7 @@ async function handleLobsterMailWebhook(req: Request): Promise<Response> {
   const payload = JSON.parse(rawBody);
 
   if (payload.event === 'email.received') {
-    // Don't await — respond immediately, process in background
+    // Don't await, respond immediately, process in background
     processIncomingEmail(payload.data).catch(console.error);
   }
 
@@ -137,7 +135,7 @@ async function handleLobsterMailWebhook(req: Request): Promise<Response> {
 }
 ```
 
-LobsterMail waits up to 10 seconds for a 2xx response. If your agent's email logic takes longer than that, returning 200 quickly and processing async is the right call — missing that window triggers a retry.
+LobsterMail waits up to 10 seconds for a 2xx response. If your agent's email logic takes longer than that, returning 200 quickly and processing async is the right call, missing that window triggers a retry.
 
 ## Step 5: Fetch the full email when you need it
 
@@ -205,7 +203,7 @@ ngrok http 3000
 # Use the ngrok HTTPS URL when creating the test webhook
 ```
 
-During testing, log the raw body and the computed signature on each request. The three most common causes of mismatches: middleware consuming the body stream before your handler, an environment variable with a trailing newline in the secret, and a proxy layer that modifies the request body. If you're running on a Cloudflare Worker or an edge runtime, test behind the same infrastructure you'll use in production — some runtimes handle streaming body reads differently than Node.
+During testing, log the raw body and the computed signature on each request. The three most common causes of mismatches: middleware consuming the body stream before your handler, an environment variable with a trailing newline in the secret, and a proxy layer that modifies the request body. If you're running on a Cloudflare Worker or an edge runtime, test behind the same infrastructure you'll use in production, some runtimes handle streaming body reads differently than Node.
 
 Once you've confirmed that sending a real email to your LobsterMail inbox produces a verified webhook call in your OpenClaw agent, the setup is done. For a broader look at when polling is a reasonable alternative to webhooks, see [webhooks vs polling for inbound email](/blog/webhooks-vs-polling-email). If you're building a simpler agent and want to skip the full event-driven architecture, [there's a lighter approach worth knowing about](/blog/openclaw-email-without-pubsub).
 
@@ -215,7 +213,7 @@ Once you've confirmed that sending a real email to your LobsterMail inbox produc
   </FAQItem>
 
   <FAQItem question="Where do I find my webhook secret after creation?">
-    You don't — it's only returned when you first create the webhook. If you missed it, delete the webhook via `lm.deleteWebhook(id)` and create a new one. There is no retrieve-secret endpoint.
+    You don't, it's only returned when you first create the webhook. If you missed it, delete the webhook via `lm.deleteWebhook(id)` and create a new one. There is no retrieve-secret endpoint.
   </FAQItem>
 
   <FAQItem question="Can I use LobsterMail webhooks without the npm SDK?">
@@ -231,7 +229,7 @@ Once you've confirmed that sending a real email to your LobsterMail inbox produc
   </FAQItem>
 
   <FAQItem question="Does the webhook payload include the full email body?">
-    No — the `preview` field contains the first 200 characters. Fetch the full body with `lm.getEmail(emailId)` when you need it. For subject-line routing and verification code detection, the preview is usually sufficient.
+    No, the `preview` field contains the first 200 characters. Fetch the full body with `lm.getEmail(emailId)` when you need it. For subject-line routing and verification code detection, the preview is usually sufficient.
   </FAQItem>
 
   <FAQItem question="My signature verification keeps failing. Where should I look first?">
@@ -239,7 +237,7 @@ Once you've confirmed that sending a real email to your LobsterMail inbox produc
   </FAQItem>
 
   <FAQItem question="Is this different from polling the inbox?">
-    Yes. Webhooks are push-based — LobsterMail notifies your agent the moment an email arrives. Polling is pull-based — your agent checks on a schedule and may miss emails or react slowly. For real-time workflows, webhooks are the right approach. See [webhooks vs polling](/blog/webhooks-vs-polling-email) for a full comparison.
+    Yes. Webhooks are push-based, LobsterMail notifies your agent the moment an email arrives. Polling is pull-based, your agent checks on a schedule and may miss emails or react slowly. For real-time workflows, webhooks are the right approach. See [webhooks vs polling](/blog/webhooks-vs-polling-email) for a full comparison.
   </FAQItem>
 
   <FAQItem question="Can I filter webhooks to only fire for a specific inbox?">
@@ -251,7 +249,7 @@ Once you've confirmed that sending a real email to your LobsterMail inbox produc
   </FAQItem>
 
   <FAQItem question="Can my OpenClaw agent provision its own LobsterMail inbox without human involvement?">
-    That's exactly what LobsterMail is built for. Your agent calls a single function and gets its own address — no human signup, no OAuth flow, no configuration step. See [the 60-second setup guide](/blog/openclaw-agent-email-60-seconds) for the full walkthrough.
+    That's exactly what LobsterMail is built for. Your agent calls a single function and gets its own address, no human signup, no OAuth flow, no configuration step. See [the 60-second setup guide](/blog/openclaw-agent-email-60-seconds) for the full walkthrough.
   </FAQItem>
 
   <FAQItem question="Is LobsterMail free to use with OpenClaw?">
@@ -261,4 +259,4 @@ Once you've confirmed that sending a real email to your LobsterMail inbox produc
 
 ---
 
-*Your agent's inbox is live and locked down. [Get started with LobsterMail](/) — it's free.*
+*Your agent's inbox is live and locked down. [Get started with LobsterMail](/), it's free.*
