@@ -59,7 +59,7 @@ Provisioning three shells takes three calls:
 ```javascript
 import { LobsterMail } from "@lobstermail/sdk";
 
-const client = new LobsterMail();
+const client = await LobsterMail.create();
 
 // each agent gets its own inbox
 const researcher = await client.provision({

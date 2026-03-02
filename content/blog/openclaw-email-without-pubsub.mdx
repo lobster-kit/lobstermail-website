@@ -61,7 +61,7 @@ That's it. Behind the scenes, the agent calls one function:
 ```javascript
 import { LobsterMail } from "@lobstermail/sdk";
 
-const client = new LobsterMail();
+const client = await LobsterMail.create();
 const inbox = await client.provision({ name: "my-openclaw-agent" });
 // → my-openclaw-agent@lobstermail.ai
 ```

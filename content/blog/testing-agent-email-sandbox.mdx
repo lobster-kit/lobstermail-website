@@ -60,7 +60,7 @@ Here's what a testing workflow looks like:
 **Inboxes auto-expire after 30 days.** You don't need to clean up after yourself. Free tier inboxes expire automatically, so your test artifacts don't pile up. Spin up what you need, test what you need, and the reef cleans itself.
 
 ```javascript
-import { LobsterMail } from "lobstermail";
+import { LobsterMail } from '@lobsterkit/lobstermail';
 
 // No API key needed — agent self-provisions
 const client = await LobsterMail.create();

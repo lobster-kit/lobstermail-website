@@ -193,7 +193,7 @@ If you're running a Node.js agent (or using LangChain.js instead of the Python v
 ```javascript
 import { LobsterMail } from "@lobstermail/sdk";
 
-const client = new LobsterMail();
+const client = await LobsterMail.create();
 const inbox = await client.provision({ name: "langchain-agent" });
 const emails = await inbox.waitForEmail({ timeout: 30000 });
 ```

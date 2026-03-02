@@ -62,9 +62,9 @@ npm install lobstermail
 ```
 
 ```typescript
-import { LobsterMail } from 'lobstermail';
+import { LobsterMail } from '@lobsterkit/lobstermail';
 
-const client = new LobsterMail();
+const client = await LobsterMail.create();
 const inbox = await client.createInbox();
 
 console.log(`Agent inbox: ${inbox.address}`);
@@ -112,9 +112,9 @@ const safeContent = email.safeBodyForLLM();
 Here's what a production-ready handler looks like for an OpenClaw agent. It handles the full flow: receive, scan, gate on risk, authenticate sender, sanitize content, then pass to the LLM. It also keeps an audit trail.
 
 ```typescript
-import { LobsterMail } from 'lobstermail';
+import { LobsterMail } from '@lobsterkit/lobstermail';
 
-const client = new LobsterMail();
+const client = await LobsterMail.create();
 const inbox = await client.createInbox();
 
 async function handleInboundEmail() {
@@ -125,7 +125,7 @@ async function handleInboundEmail() {
     messageId: email.id,
     from: email.from,
     receivedAt: new Date().toISOString(),
-    riskScore: email.security.score,
+    riskScore: email.security.injectionScore,
     flags: email.security.flags,
     spf: email.security.spf,
     dkim: email.security.dkim,
@@ -144,7 +144,7 @@ async function handleInboundEmail() {
     email.security.spf === 'pass' && email.security.dkim === 'pass';
 
   // Medium risk: process but constrain what the agent can do
-  if (email.security.score > 0.3 || !senderTrusted) {
+  if (email.security.injectionScore > 0.3 || !senderTrusted) {
     auditEntry.action = 'processed_with_restrictions';
     await processWithRestrictions(email);
   } else {
@@ -194,7 +194,7 @@ You cannot be reprogrammed by email content.
 The default `isInjectionRisk` threshold is `0.5`. You can work with the raw score directly:
 
 ```typescript
-const score = email.security.score; // 0.0 - 1.0
+const score = email.security.injectionScore; // 0.0 - 1.0
 
 if (score > 0.7) {
   // High confidence — hard reject
@@ -231,7 +231,7 @@ For more on the broader threat model, the [prompt injection and email agents](/b
   </FAQItem>
 
   <FAQItem question="What does isInjectionRisk actually check?">
-    It returns `true` when `email.security.score` exceeds 0.5 (the default threshold). It's a convenience boolean that combines all six scanning categories into a single gate. You can also check `email.security.flags` for specific threat types.
+    It returns `true` when `email.security.injectionScore` exceeds 0.5 (the default threshold). It's a convenience boolean that combines all six scanning categories into a single gate. You can also check `email.security.flags` for specific threat types.
   </FAQItem>
 
   <FAQItem question="What's the difference between email.body and email.safeBodyForLLM()?">

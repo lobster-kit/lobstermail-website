@@ -52,7 +52,7 @@ Head to [lobstermail.ai/skill](https://lobstermail.ai/skill) and follow the setu
 ```javascript
 import { LobsterMail } from "@lobstermail/sdk";
 
-const client = new LobsterMail();
+const client = await LobsterMail.create();
 const inbox = await client.provision({ name: "client-acme-support" });
 // → client-acme-support@lobstermail.ai
 ```

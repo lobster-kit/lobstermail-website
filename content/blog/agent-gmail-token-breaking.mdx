@@ -72,7 +72,7 @@ LobsterMail takes a different approach. Instead of wrapping your personal Gmail 
 ```javascript
 import { LobsterMail } from "@lobstermail/sdk";
 
-const client = new LobsterMail();
+const client = await LobsterMail.create();
 const inbox = await client.provision({ name: "my-agent" });
 
 // inbox.address → my-agent@lobstermail.ai

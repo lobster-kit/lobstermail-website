@@ -47,7 +47,7 @@ LobsterMail handles this with `createSmartInbox()`, which uses 8+ fallback strat
 ```javascript
 import { LobsterMail } from "@lobstermail/sdk";
 
-const client = new LobsterMail();
+const client = await LobsterMail.create();
 
 // provision 50 inboxes with readable names
 const regions = ["east", "west", "central", "south", "north"];

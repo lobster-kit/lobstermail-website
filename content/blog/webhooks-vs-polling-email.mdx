@@ -20,7 +20,7 @@ Polling is the simplest pattern. Your agent calls the LobsterMail API on a sched
 ```javascript
 import { LobsterMail } from "@lobstermail/sdk";
 
-const client = new LobsterMail();
+const client = await LobsterMail.create();
 
 // Poll for new messages every 30 seconds
 async function pollForMail(inboxId) {
@@ -65,7 +65,7 @@ import express from "express";
 import { LobsterMail } from "@lobstermail/sdk";
 
 const app = express();
-const client = new LobsterMail();
+const client = await LobsterMail.create();
 
 // Register a webhook when provisioning the inbox
 const inbox = await client.provision({
@@ -122,7 +122,7 @@ In practice, most production agents use webhooks for real-time delivery and poll
 ```javascript
 import { LobsterMail } from "@lobstermail/sdk";
 
-const client = new LobsterMail();
+const client = await LobsterMail.create();
 
 // Primary: handle webhooks for real-time delivery
 async function onWebhook(message) {

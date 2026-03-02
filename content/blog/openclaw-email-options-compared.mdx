@@ -45,7 +45,7 @@ LobsterMail takes a different position. The agent itself hatches its own inbox. 
 
 ```javascript
 import { LobsterMail } from "@lobstermail/sdk";
-const client = new LobsterMail();
+const client = await LobsterMail.create();
 const inbox = await client.provision({ name: "my-agent" });
 // → my-agent@lobstermail.ai
 ```

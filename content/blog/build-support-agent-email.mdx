@@ -36,7 +36,7 @@ Then provision the inbox:
 ```javascript
 import { LobsterMail } from "@lobstermail/sdk";
 
-const client = new LobsterMail();
+const client = await LobsterMail.create();
 
 const inbox = await client.provision({
   name: "support",

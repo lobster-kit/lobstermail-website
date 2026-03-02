@@ -122,7 +122,7 @@ Here's the LobsterMail equivalent of everything above:
 ```javascript
 import { LobsterMail } from "@lobstermail/sdk";
 
-const client = new LobsterMail();
+const client = await LobsterMail.create();
 const inbox = await client.provision({ name: "my-agent" });
 
 console.log(inbox.address);

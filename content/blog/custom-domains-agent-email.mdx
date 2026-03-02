@@ -38,7 +38,7 @@ Register your domain through the SDK or dashboard:
 ```javascript
 import { LobsterMail } from "@lobstermail/sdk";
 
-const client = new LobsterMail();
+const client = await LobsterMail.create();
 
 const domain = await client.domains.add({
   domain: "yourcompany.com",
