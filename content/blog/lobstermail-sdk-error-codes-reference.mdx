@@ -1,0 +1,309 @@
+---
+title: lobstermail sdk error codes reference
+description: >-
+  Every LobsterMail SDK error code, what caused it, and exactly how to fix it. A
+  complete reference for agents and developers.
+date: '2026-02-28'
+tags:
+  - troubleshooting
+  - guides
+  - infrastructure
+  - getting-started
+image: /blog/lobstermail-sdk-error-codes-reference.png
+author: LobsterMail Team
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+publish_at: '2026-02-28T14:00:00Z'
+approved_at: '2026-03-02T10:36:37.190Z'
+---
+Something breaks at 11pm. Your agent is mid-workflow — it provisioned an inbox, started polling, then threw an error you've never seen before. You copy the string into Google. Nothing useful comes back.
+
+This page is the reference I wish had existed. Every LobsterMail SDK error code, organized by category, with what caused it and how to fix it. Bookmark it.
+
+## How the SDK surfaces errors
+
+All SDK methods throw typed `LobsterMailError` instances. Each error has three properties you'll actually use:
+
+```typescript
+try {
+  const inbox = await lm.createSmartInbox({ name: 'checkout-agent' });
+} catch (err) {
+  if (err instanceof LobsterMailError) {
+    console.log(err.code);     // "LM_INBOX_LIMIT_REACHED"
+    console.log(err.message);  // human-readable description
+    console.log(err.status);   // HTTP status (403, 429, etc.)
+  }
+}
+```
+
+Import `LobsterMailError` for type-safe error handling:
+
+```typescript
+import { LobsterMail, LobsterMailError } from '@lobsterkit/lobstermail';
+```
+
+---
+
+## Authentication errors
+
+These come up when the token is wrong, missing, or from the wrong environment.
+
+### `LM_AUTH_MISSING_TOKEN`
+
+**HTTP status:** 401
+
+The SDK couldn't find a token and auto-signup failed. This usually means the `.lobstermail/token` file doesn't exist, the `LOBSTERMAIL_API_KEY` environment variable isn't set, and the auto-signup request itself failed (network issue or the API is unreachable).
+
+**Fix:** Run `LobsterMail.create()` in a context where the machine has outbound internet. Or pass a token explicitly:
+
+```typescript
+const lm = await LobsterMail.create({ apiKey: process.env.LOBSTERMAIL_API_KEY });
+```
+
+### `LM_AUTH_INVALID_TOKEN`
+
+**HTTP status:** 401
+
+The token exists but the API rejected it. Common causes: the token was revoked from the dashboard, you're using a test token (`lm_sk_test_*`) against the live API, or the token was corrupted when written.
+
+**Fix:** Generate a new token from the LobsterMail dashboard and update your environment variable. If you're testing locally, confirm the `~/.lobstermail/token` file hasn't been manually edited.
+
+### `LM_AUTH_ENVIRONMENT_MISMATCH`
+
+**HTTP status:** 403
+
+You passed a test token to a live endpoint or vice versa. Test tokens start with `lm_sk_test_`, live tokens with `lm_sk_live_`. They're not interchangeable.
+
+**Fix:** Check which token prefix you're using and confirm it matches the environment. In CI/CD, this often surfaces when a local dev token gets committed or copied into production config.
+
+---
+
+## Inbox errors
+
+### `LM_INBOX_LIMIT_REACHED`
+
+**HTTP status:** 403
+
+Your account has hit the inbox limit for your plan. Free plans get one inbox. Builder gets up to five. The error fires the moment you try to create a new one.
+
+**Fix:** Delete an inbox you're no longer using, or upgrade. If your agent creates throwaway inboxes without cleaning them up, add `inbox.delete()` at the end of each workflow.
+
+```typescript
+const inbox = await lm.createInbox();
+// ... do the work ...
+await inbox.delete(); // free the slot
+```
+
+### `LM_INBOX_NOT_FOUND`
+
+**HTTP status:** 404
+
+The inbox ID in your request doesn't exist on the account. Usually means the inbox was deleted (manually or by a previous cleanup call) and your code is holding a stale reference.
+
+**Fix:** Don't cache inbox IDs across long-running sessions without a fallback. Re-create the inbox if this error fires, or verify it exists with `lm.getInbox(id)` before using it.
+
+### `LM_INBOX_NAME_UNAVAILABLE`
+
+**HTTP status:** 409
+
+`createSmartInbox()` tried every variation of your requested name and all of them are taken. This happens on shared infrastructure when a common name like `agent` or `assistant` has exhausted its collision pool.
+
+**Fix:** Use a more specific name — include a project prefix or a short random suffix:
+
+```typescript
+const inbox = await lm.createSmartInbox({ name: `checkout-${Math.random().toString(36).slice(2, 6)}` });
+```
+
+Or fall back to `createInbox()`, which generates a guaranteed-unique address like `lobster-xxxx@lobstermail.ai`.
+
+---
+
+## Sending errors
+
+### `LM_SEND_RATE_LIMIT_DAILY`
+
+**HTTP status:** 429
+
+You've hit the daily send limit for your plan. Free: 50/day. Builder: 500/day.
+
+**Fix:** Queue outbound emails and spread them across the day, or upgrade if your agent legitimately needs higher volume. The error response includes a `reset_at` timestamp showing when the limit clears.
+
+```typescript
+catch (err) {
+  if (err.code === 'LM_SEND_RATE_LIMIT_DAILY') {
+    const resetAt = new Date(err.meta.reset_at);
+    // schedule retry after resetAt
+  }
+}
+```
+
+### `LM_SEND_MONTHLY_LIMIT_REACHED`
+
+**HTTP status:** 429
+
+Monthly email cap hit. 1,000 for Free, 5,000 for Builder. Unlike the daily limit, this one doesn't reset until your billing cycle renews.
+
+**Fix:** Check your usage in the dashboard before your cycle resets. If your agent sends in bursts, add a usage check before high-volume operations.
+
+### `LM_SEND_INVALID_RECIPIENT`
+
+**HTTP status:** 422
+
+The `to` address failed validation. Either the format is wrong (missing `@`, invalid TLD) or the address is on LobsterMail's internal blocklist.
+
+**Fix:** Validate email addresses before passing them to the SDK. A simple regex catches most formatting issues; for agents processing user-provided addresses, sanitize before sending.
+
+### `LM_SEND_FROM_UNAUTHORIZED`
+
+**HTTP status:** 403
+
+Your token doesn't own the inbox you're trying to send from. This fires when an agent tries to impersonate an inbox it didn't create.
+
+**Fix:** Only send from inboxes provisioned by the same token. If you're sharing infrastructure across agents, each agent should have its own token and its own inboxes.
+
+---
+
+## Receive errors
+
+### `LM_RECEIVE_TIMEOUT`
+
+**HTTP status:** 408
+
+The `receive()` call timed out waiting for new mail. This isn't a fatal error — it just means nothing arrived in the polling window.
+
+**Fix:** Treat this as a normal empty result, not a crash:
+
+```typescript
+try {
+  const emails = await inbox.receive({ timeout: 30_000 });
+} catch (err) {
+  if (err.code === 'LM_RECEIVE_TIMEOUT') return []; // no mail, keep going
+  throw err; // re-throw everything else
+}
+```
+
+### `LM_RECEIVE_INBOX_INACTIVE`
+
+**HTTP status:** 410
+
+The inbox was deleted or expired before the receive call completed. Long-polling sessions are most vulnerable to this.
+
+**Fix:** Re-create the inbox and restart the polling loop. If your agent relies on a persistent inbox, store the inbox ID in durable state so you can detect when it needs to be re-provisioned.
+
+---
+
+## Validation and network errors
+
+### `LM_VALIDATION_ERROR`
+
+**HTTP status:** 422
+
+A request parameter failed schema validation. The `err.meta.fields` array will tell you exactly which parameters are wrong.
+
+```typescript
+if (err.code === 'LM_VALIDATION_ERROR') {
+  console.log(err.meta.fields); // [{ field: 'name', issue: 'too long' }]
+}
+```
+
+### `LM_NETWORK_ERROR`
+
+**HTTP status:** N/A (no response received)
+
+The SDK couldn't reach the API at all. DNS failure, timeout before connection, or the local network is down.
+
+**Fix:** Retry with exponential backoff. Most agent frameworks have retry middleware; if yours doesn't, wrap SDK calls in a simple retry loop with a max attempt count.
+
+### `LM_API_UNAVAILABLE`
+
+**HTTP status:** 503
+
+The API is temporarily down. This is rare but happens during deployments or infrastructure incidents.
+
+**Fix:** Same as `LM_NETWORK_ERROR` — retry with backoff. Follow [lobstermail.ai/status](https://lobstermail.ai/status) for incident updates.
+
+---
+
+## A defensive error handling pattern
+
+Here's a wrapper that covers the common cases cleanly:
+
+```typescript
+async function withLobsterRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (!(err instanceof LobsterMailError)) throw err;
+
+      const retryable = ['LM_NETWORK_ERROR', 'LM_API_UNAVAILABLE', 'LM_RECEIVE_TIMEOUT'];
+      const fatal = ['LM_AUTH_INVALID_TOKEN', 'LM_SEND_FROM_UNAUTHORIZED', 'LM_AUTH_ENVIRONMENT_MISMATCH'];
+
+      if (fatal.includes(err.code)) throw err; // don't retry auth failures
+      if (!retryable.includes(err.code) || attempt >= maxRetries) throw err;
+
+      await new Promise(r => setTimeout(r, 2 ** attempt * 1000)); // 1s, 2s, 4s
+      attempt++;
+    }
+  }
+}
+```
+
+The key distinction: authentication failures are always fatal (retrying won't help), while network and timeout errors are worth retrying.
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
+
+<FAQ>
+  <FAQItem question="Where do I find the full error code in my console output?">
+    Every `LobsterMailError` exposes a `.code` string (like `LM_AUTH_INVALID_TOKEN`), a `.message` string, and a `.status` HTTP status code. Log `err.code` to get the exact string to look up here.
+  </FAQItem>
+
+  <FAQItem question="Why does LM_AUTH_MISSING_TOKEN fire even when I have a .env file?">
+    The SDK looks for `LOBSTERMAIL_API_KEY` in the environment. If you're using `dotenv`, make sure `dotenv.config()` runs before `LobsterMail.create()`. In Docker or CI, confirm the variable is explicitly passed to the container or runner.
+  </FAQItem>
+
+  <FAQItem question="Can I catch multiple error codes in one block?">
+    Yes. The standard pattern is to check `err.code` with a switch or array includes. See the retry wrapper above for a working example.
+  </FAQItem>
+
+  <FAQItem question="What's the difference between LM_SEND_RATE_LIMIT_DAILY and LM_SEND_MONTHLY_LIMIT_REACHED?">
+    Daily limits reset every 24 hours. Monthly limits reset on your billing cycle. Both return 429 but different codes so you can handle them separately — daily you can queue and retry the same day, monthly you might need to upgrade.
+  </FAQItem>
+
+  <FAQItem question="My agent keeps hitting LM_INBOX_LIMIT_REACHED. What's the best fix?">
+    The cleanest pattern is to delete inboxes at the end of each workflow with `inbox.delete()`. If you need persistent inboxes, store the inbox ID in state and re-use it rather than creating a new one each run. See [testing agent email workflows in a sandbox](/blog/testing-agent-email-sandbox) for a practical approach.
+  </FAQItem>
+
+  <FAQItem question="Is LM_RECEIVE_TIMEOUT actually an error I need to handle?">
+    Functionally, no. It just means no emails arrived in the polling window. The right response is to treat it like an empty result and continue. Only re-throw it if you're operating in a strict error-budget context.
+  </FAQItem>
+
+  <FAQItem question="How do I know which plan I'm on to understand my limits?">
+    The LobsterMail dashboard shows your current plan, usage, and limits. You can also check `err.meta.plan` on rate limit errors — it includes your current tier.
+  </FAQItem>
+
+  <FAQItem question="Can a test token be upgraded to a live token?">
+    No. Test and live tokens are separate credentials tied to separate environments. If you've been developing with a test token, generate a fresh live token from the dashboard for production.
+  </FAQItem>
+
+  <FAQItem question="What does LM_INBOX_NAME_UNAVAILABLE mean for my createSmartInbox call?">
+    It means every variation of the name you requested is already taken. Use a more specific name (include a project prefix) or fall back to `createInbox()` which generates a guaranteed-unique `lobster-xxxx@lobstermail.ai` address.
+  </FAQItem>
+
+  <FAQItem question="Is there a status page for API availability?">
+    Yes, at lobstermail.ai/status. If you're seeing `LM_API_UNAVAILABLE` and can't find an obvious cause on your end, check there first.
+  </FAQItem>
+
+  <FAQItem question="Do error codes change between SDK versions?">
+    Error codes are treated as stable API surface — they won't change within a major version. If you're upgrading across major versions, check the changelog for any renamed codes.
+  </FAQItem>
+
+  <FAQItem question="Where can I learn more about getting started with LobsterMail?">
+    The [welcome and setup guide](/blog/welcome-to-lobstermail) covers initial setup, and the [docs](/docs/getting-started) walk through the full SDK API surface including all the methods referenced in this article.
+  </FAQItem>
+</FAQ>
