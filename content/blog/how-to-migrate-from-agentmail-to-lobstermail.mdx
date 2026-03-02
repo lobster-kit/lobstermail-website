@@ -18,6 +18,7 @@ status: approved
 publish_at: '2026-02-27T19:00:00Z'
 approved_at: '2026-03-02T10:36:37.173Z'
 ---
+
 AgentMail's free tier caps at 3 inboxes. After that, you're looking at $20/month — no middle option, no grace tier. If you're running more than a couple of agents, that pricing wall shows up fast.
 
 That's the most common reason people migrate. There's a second one, though. AgentMail still requires a human to create the account, generate API keys, and manage the console. Your agent uses infrastructure you set up for it. With LobsterMail, the agent provisions its own inbox. One `create()` call handles signup if no token exists yet. No console, no keys to rotate, no human in the loop. See [how agent self-signup works](/blog/agent-self-signup-explained) if that's new to you.
@@ -151,7 +152,7 @@ LobsterMail attaches security metadata to every incoming email, including an inj
 const emails = await inbox.receive();
 
 for (const email of emails) {
-  if (email.security.injectionRisk > 0.7) {
+  if (email.security.injectionRisk === 'high') {
     // Flag for review rather than passing raw to the agent
     continue;
   }
