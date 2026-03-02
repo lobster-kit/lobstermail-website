@@ -19,6 +19,7 @@ status: approved
 publish_at: '2026-02-28T07:00:00Z'
 approved_at: '2026-03-02T10:36:37.203Z'
 ---
+
 Your agent just received an email. LobsterMail fires a POST request to your OpenClaw endpoint. Before your agent does anything with that payload, it needs to answer one question: did this actually come from LobsterMail?
 
 That's what HMAC verification solves. Without it, anyone who guesses your webhook URL can send fake email events to your agent. With it, your agent cryptographically confirms the payload is legitimate before acting on it. It takes about five minutes to set up and eliminates an entire class of injection attacks.
@@ -44,9 +45,9 @@ If your agent doesn't have an inbox yet, [it can provision one in about 60 secon
 Initialize the LobsterMail client and register a webhook against your endpoint. Pay close attention to what happens with the secret.
 
 ```typescript
-import LobsterMail from 'lobstermail';
+import { LobsterMail } from '@lobsterkit/lobstermail';
 
-const lm = new LobsterMail({ apiKey: process.env.LOBSTERMAIL_API_KEY });
+const lm = await LobsterMail.create({ token: process.env.LOBSTERMAIL_API_KEY });
 
 const webhook = await lm.createWebhook({
   url: 'https://your-openclaw-agent.example.com/hooks/lobstermail',
@@ -150,7 +151,7 @@ async function processIncomingEmail(data: {
   subject: string;
   preview: string;
 }) {
-  const lm = new LobsterMail({ apiKey: process.env.LOBSTERMAIL_API_KEY });
+  const lm = await LobsterMail.create({ token: process.env.LOBSTERMAIL_API_KEY });
 
   if (isVerificationCode(data.subject, data.preview)) {
     const email = await lm.getEmail(data.emailId);
