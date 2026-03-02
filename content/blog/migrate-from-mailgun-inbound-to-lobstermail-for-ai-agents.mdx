@@ -1,0 +1,193 @@
+---
+title: migrate from mailgun inbound to lobstermail for ai agents
+description: >-
+  Mailgun's inbound routing wasn't built for autonomous agents. Here's a
+  step-by-step migration guide to LobsterMail — agent-native email from day one.
+date: '2026-02-28'
+tags:
+  - migration
+  - email
+  - infrastructure
+  - guides
+  - automation
+image: /blog/migrate-from-mailgun-inbound-to-lobstermail-for-ai-agents.png
+author: LobsterMail Team
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+publish_at: '2026-02-28T19:00:00Z'
+approved_at: '2026-03-02T10:36:37.206Z'
+---
+Mailgun is a good email API. Solid deliverability, clean REST interface, battle-tested for transactional sending. Most teams already have it wired up, so when it's time to give an AI agent its own inbox, reaching for Mailgun feels natural.
+
+It doesn't hold up.
+
+Not because Mailgun is bad at inbound — it handles inbound fine for the use case it was built for. The problem is that use case: a human configures a domain, sets up MX records, writes a webhook receiver, and leaves it running. That works great for a support inbox. It completely breaks down when your agent needs to provision its own address autonomously, on demand, without touching a dashboard or waiting for DNS propagation.
+
+This guide covers exactly how to move your inbound email handling from Mailgun to LobsterMail, including what to keep, what to delete, and where the two tools can coexist.
+
+## What Mailgun inbound actually costs you
+
+Before your first email lands through Mailgun inbound, you need five things in place:
+
+1. A domain with MX records pointing at Mailgun's servers (10-48 hours for DNS)
+2. A route configured via API or dashboard — filter expression, action, priority
+3. A server endpoint that Mailgun POSTs to on delivery
+4. Code that parses Mailgun's multipart form data: `stripped-text`, `body-html`, headers, attachments as separate fields, signature for verification
+5. Ongoing maintenance when routes break, tokens rotate, or Mailgun's webhook format changes
+
+That's reasonable for a backend service. It's a significant obstacle for an agent that needs a working inbox in the next 30 seconds.
+
+The structural issue is deeper than setup friction. Mailgun's model assumes one team, one domain, one set of routes that a human administrator manages. Agents don't fit that shape. If you're running multiple agents — one handling customer inquiries, one signing up for services, one catching verification codes during automated workflows — each needs its own routing configuration. Routes don't self-provision. Someone with billing access has to create them.
+
+That someone can't be your agent.
+
+## The LobsterMail model
+
+LobsterMail reverses the provisioning direction. The agent creates its own inbox. No domain setup, no route configuration, no webhook endpoint to write.
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create();
+const inbox = await lm.createSmartInbox({ name: 'onboarding-agent' });
+
+console.log(inbox.address); // onboarding-agent@lobstermail.ai
+
+const emails = await inbox.receive();
+for (const email of emails) {
+  console.log(email.subject, email.preview);
+}
+```
+
+`LobsterMail.create()` handles account provisioning automatically — no API key management, no human signup flow. If no token is present, it creates a free account and stores the token at `~/.lobstermail/token`. `createSmartInbox()` generates a readable address from the name you provide and handles collisions automatically. `receive()` returns structured JSON with security metadata already attached.
+
+The agent runs this on first boot. That's it.
+
+## The migration steps
+
+### 1. Install the SDK
+
+```bash
+npm install @lobsterkit/lobstermail
+```
+
+### 2. Replace inbox provisioning
+
+Wherever you currently configure a Mailgun route — through the dashboard, the API, or a Terraform file — replace it with a `createSmartInbox()` call. Store the returned address in your agent's state however you already store persistent config.
+
+```typescript
+// Mailgun: route configured externally, address hardcoded
+const agentAddress = 'agent-inbox@yourdomain.com'; // set up manually
+
+// LobsterMail: agent provisions its own
+const inbox = await lm.createSmartInbox({ name: 'my-agent' });
+const agentAddress = inbox.address; // persist this
+```
+
+If you want a random address rather than a name-derived one, `createInbox()` gives you something like `lobster-a4f8@lobstermail.ai`. For most agent workflows, the readable format from `createSmartInbox()` is easier to debug.
+
+### 3. Delete the webhook handler
+
+This is the cleanest part of the migration. Mailgun pushes to your server; LobsterMail lets your agent pull when it needs to. If you had a webhook receiver endpoint, you can remove it entirely.
+
+```typescript
+// Before: webhook handler your server had to keep running
+app.post('/mailgun-inbound', (req, res) => {
+  verifyMailgunSignature(req.body);
+  const { sender, subject, 'stripped-text': body } = req.body;
+  // ...
+});
+
+// After: agent polls when it needs email
+const emails = await inbox.receive();
+```
+
+If your workflow genuinely needs push delivery — you want to react to email the moment it arrives rather than polling — [webhooks are available](/docs/getting-started). But most agent patterns work better with pull: check for a verification code after signing up, check for a reply after sending a message. Poll when you need it, not on every POST from an external service.
+
+### 4. Drop the Mailgun parsing code
+
+Mailgun sends multipart form data with separate fields for every part of the message. You end up writing (and maintaining) a parser. LobsterMail returns clean, structured JSON.
+
+```typescript
+// No multipart parsing needed
+for (const email of emails) {
+  const { subject, from, text, html, receivedAt } = email;
+  // structured, ready to use
+}
+```
+
+Each email also includes injection risk scoring. If you're passing email content into an agent's context, that matters — email is an attack surface for prompt injection, and LobsterMail flags suspicious content automatically before your agent ever sees it.
+
+### 5. Keep Mailgun for outbound if you want
+
+LobsterMail handles both inbound and outbound from your agent's address. But if your team already uses Mailgun for customer-facing transactional email — receipts, notifications, password resets — there's no reason to touch that setup. The two tools don't conflict.
+
+Your agent uses LobsterMail for its own inbox. Your backend keeps using Mailgun for your main domain. Different use cases, clean separation. See [agent email APIs compared](/blog/agent-email-api-comparison) for a fuller breakdown of when each tool makes sense.
+
+## One thing to watch
+
+If you're currently receiving email on your own domain through Mailgun (`agent@yourcompany.com`), you'll need to decide whether to keep that Mailgun route or move to a custom domain in LobsterMail. LobsterMail's free tier uses `@lobstermail.ai` addresses. For most agent workflows — catching verification codes, receiving structured messages from other agents — that works without issue.
+
+Custom domains are available if your agent needs to receive mail at your own domain. Worth considering if your agent's inbox is customer-visible or if you need continuity with an existing address. For internal agent-to-agent communication and external signups, `@lobstermail.ai` is fine.
+
+Also worth reading before you go live: the [security and injection guide](/docs/getting-started). Email coming into your agent's context from arbitrary senders is an injection surface. LobsterMail's risk scoring gives you a signal. [Webhooks vs polling](/blog/webhooks-vs-polling-email) covers the delivery model tradeoffs in more depth if you're on the fence about which approach fits your architecture.
+
+For agents that need a custom domain from the start, [custom domains for agent email](/blog/custom-domains-agent-email) walks through that setup.
+
+---
+
+<FAQ>
+  <FAQItem question="Do I need to change any DNS records to use LobsterMail?">
+    No. The default `@lobstermail.ai` addresses require zero DNS configuration on your end. DNS setup is only needed if you want your agent to receive email at your own domain via the custom domains feature.
+  </FAQItem>
+
+  <FAQItem question="Can I keep using Mailgun for sending while using LobsterMail for inbound?">
+    Yes. The two tools don't conflict. Many teams use Mailgun or SendGrid for customer-facing transactional email and LobsterMail for agent inboxes. They operate independently.
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail support custom domains?">
+    Yes. Custom domains let your agent receive mail at your own domain instead of `@lobstermail.ai`. The [custom domains guide](/blog/custom-domains-agent-email) covers the setup.
+  </FAQItem>
+
+  <FAQItem question="Is there a free tier? What are the limits?">
+    The free tier is $0/month, no credit card required, and includes 1,000 emails per month. It covers send and receive. The paid Builder plan at $9/month adds more inboxes and higher send volume.
+  </FAQItem>
+
+  <FAQItem question="How does my agent receive emails in real time?">
+    LobsterMail supports both polling (`inbox.receive()`) and webhooks for push delivery. Most agent workflows work fine with polling — you check for email after triggering an action that should produce one. [Webhooks vs polling](/blog/webhooks-vs-polling-email) covers when to use each.
+  </FAQItem>
+
+  <FAQItem question="What happens to emails already sitting in my Mailgun routes after I migrate?">
+    Nothing automatic. Mailgun routes continue working until you delete them. Emails in transit to those routes will still deliver normally. You can run both in parallel during migration and cut over when ready.
+  </FAQItem>
+
+  <FAQItem question="Can multiple agents share one inbox, or does each need its own?">
+    Each agent should have its own inbox for clean message isolation. `createSmartInbox()` is fast enough to call on every agent startup — there's no reason to share addresses between agents doing different things.
+  </FAQItem>
+
+  <FAQItem question="What's the difference between createInbox() and createSmartInbox()?">
+    `createInbox()` gives you a random address like `lobster-a4f8@lobstermail.ai`. `createSmartInbox({ name: 'my-agent' })` generates a readable address from the name you provide and handles collisions automatically. Use `createSmartInbox()` when the address will be visible or logged; use `createInbox()` for fully disposable addresses.
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail handle attachments?">
+    Yes. Attachments are returned as structured fields in the email object, not as separate multipart form fields you have to reassemble. No custom parsing code needed.
+  </FAQItem>
+
+  <FAQItem question="How does LobsterMail protect against prompt injection through email?">
+    Every received email includes an injection risk score. If incoming content contains patterns commonly used for prompt injection attacks, LobsterMail flags it before your agent processes the email body. The [security and injection guide](/docs/getting-started) covers the model in detail.
+  </FAQItem>
+
+  <FAQItem question="Does my agent need to manage its own API key?">
+    No. `LobsterMail.create()` auto-provisions a free account and stores the token locally if none is found. The agent handles its own credentials — no human needs to generate or rotate keys.
+  </FAQItem>
+
+  <FAQItem question="Can I migrate multiple Mailgun routes at once?">
+    Yes. Each call to `createSmartInbox()` provisions a new address. If you have three agents using three different Mailgun routes, you run `createSmartInbox()` three times (with different names) and replace each route independently.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own inbox. [Get started with LobsterMail](/) — it's free.*
