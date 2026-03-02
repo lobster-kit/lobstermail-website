@@ -10,15 +10,13 @@ tags:
   - infrastructure
   - troubleshooting
 image: /blog/how-to-debug-lobstermail-webhooks-locally-with-ngrok-replay.png
-author: LobsterMail Team
+author: Ian Bussières
 agent: agent-3-content
 channel: blog
 type: blog-post
-status: approved
+status: draft
 publish_at: '2026-02-27T17:00:00Z'
-approved_at: '2026-03-02T10:36:37.202Z'
 ---
-
 Something breaks in your webhook handler. You don't know if it's the HMAC verification, the payload parsing, or something in between. Your agent is silently dropping emails. The only way to reproduce it is to send another email, wait, check logs, realize you're missing a header, and start over.
 
 There's a better loop.
@@ -64,14 +62,14 @@ const webhook = await lm.createWebhook({
   events: ['email.received'],
 });
 
-console.log(webhook.secret); // whsec_... — store this immediately
+console.log(webhook.secret); // whsec_..., store this immediately
 ```
 
-The secret is returned only once. Put it in your `.env` now. If you lose it, you'll need to delete and recreate the webhook — which is annoying but not catastrophic.
+The secret is returned only once. Put it in your `.env` now. If you lose it, you'll need to delete and recreate the webhook, which is annoying but not catastrophic.
 
 ## Step 3: Verify the signature (and the order that matters)
 
-This is where most webhook handlers fail silently. Every request from LobsterMail includes an `X-LobsterMail-Signature` header: an HMAC-SHA256 signature computed over the raw request body. If you parse the body before verifying — which most Express middleware does automatically — the verification will fail because the bytes have already changed shape.
+This is where most webhook handlers fail silently. Every request from LobsterMail includes an `X-LobsterMail-Signature` header: an HMAC-SHA256 signature computed over the raw request body. If you parse the body before verifying, which most Express middleware does automatically, the verification will fail because the bytes have already changed shape.
 
 Here's a working handler:
 
@@ -119,7 +117,7 @@ Switch to `localhost:4040`. The request appears in real time: status code, every
 
 ## Step 5: Use the replay button
 
-This is the part that makes the whole setup worth it. In the ngrok inspector, find the request and click **Replay**. ngrok resends the exact same HTTP request — same headers, same body, same signature — to your local server.
+This is the part that makes the whole setup worth it. In the ngrok inspector, find the request and click **Replay**. ngrok resends the exact same HTTP request, same headers, same body, same signature, to your local server.
 
 Now your loop is:
 1. Fix a bug in your handler
@@ -135,7 +133,7 @@ One practical note: the free ngrok tier assigns a new random URL every time you 
 
 ## What happens when things fail
 
-If your local server isn't running — or ngrok isn't — LobsterMail will see a connection refused and start the retry sequence. That's expected during development. Just re-enable the webhook when you're back:
+If your local server isn't running, or ngrok isn't, LobsterMail will see a connection refused and start the retry sequence. That's expected during development. Just re-enable the webhook when you're back:
 
 ```
 PATCH /v1/webhooks/:id
@@ -177,11 +175,11 @@ The replay step at 5 is what collapses a 2-hour debugging session into 20 minute
   </FAQItem>
 
   <FAQItem question="Where do I find my webhook secret after creating it?">
-    The secret is only returned once — at creation time. If you didn't save it, you'll need to delete the webhook and create a new one. There's no way to retrieve it after the fact.
+    The secret is only returned once, at creation time. If you didn't save it, you'll need to delete the webhook and create a new one. There's no way to retrieve it after the fact.
   </FAQItem>
 
   <FAQItem question="How do I replay a webhook request in ngrok?">
-    Open ngrok's web inspector at `http://localhost:4040`, find the request in the list, and click **Replay**. ngrok resends the exact same request — headers, body, and signature — to your local server. Use **Replay with modifications** to edit the payload before resending.
+    Open ngrok's web inspector at `http://localhost:4040`, find the request in the list, and click **Replay**. ngrok resends the exact same request, headers, body, and signature, to your local server. Use **Replay with modifications** to edit the payload before resending.
   </FAQItem>
 
   <FAQItem question="What events does LobsterMail send via webhook?">
@@ -193,7 +191,7 @@ The replay step at 5 is what collapses a 2-hour debugging session into 20 minute
   </FAQItem>
 
   <FAQItem question="Can I test LobsterMail webhooks without ngrok?">
-    Yes. Any tool that creates a public HTTPS tunnel to localhost works: Cloudflare Tunnel, Pinggy, localtunnel, or a small VPS running a reverse proxy. The ngrok inspector's replay feature is the main differentiator — some alternatives have it, some don't.
+    Yes. Any tool that creates a public HTTPS tunnel to localhost works: Cloudflare Tunnel, Pinggy, localtunnel, or a small VPS running a reverse proxy. The ngrok inspector's replay feature is the main differentiator, some alternatives have it, some don't.
   </FAQItem>
 
   <FAQItem question="What's in the LobsterMail webhook payload?">
@@ -201,7 +199,7 @@ The replay step at 5 is what collapses a 2-hour debugging session into 20 minute
   </FAQItem>
 
   <FAQItem question="Does the webhook URL need to use HTTPS?">
-    Yes. LobsterMail requires HTTPS for webhook endpoints. That's one of the reasons ngrok is useful for local development — it provides a valid HTTPS URL that tunnels to your plain HTTP localhost server.
+    Yes. LobsterMail requires HTTPS for webhook endpoints. That's one of the reasons ngrok is useful for local development, it provides a valid HTTPS URL that tunnels to your plain HTTP localhost server.
   </FAQItem>
 
   <FAQItem question="How do I delete a webhook I no longer need?">
@@ -215,4 +213,4 @@ The replay step at 5 is what collapses a 2-hour debugging session into 20 minute
 
 ---
 
-*Give your agent its own inbox. [Get started with LobsterMail](/) — free, no credit card.*
+*Give your agent its own inbox. [Get started with LobsterMail](/), free, no credit card.*
