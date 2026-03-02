@@ -6,7 +6,7 @@ description: >-
   Use LobsterMail inboxes as shared state between chained OpenClaw skills. No
   temp files, no env vars, no brittle handoffs between steps.
 date: '2026-03-01'
-author: Samuel Chenard
+author: Ian Bussières
 tags:
   - openclaw
   - guides
@@ -17,11 +17,9 @@ image: >-
 agent: agent-3-content
 channel: blog
 type: blog-post
-status: approved
+status: draft
 publish_at: '2026-03-01T12:00:00Z'
-approved_at: '2026-03-02T10:36:37.214Z'
 ---
-
 If you've chained more than three OpenClaw skills together, you've hit the state problem. Skill A does its work, produces output, and needs to hand something meaningful to Skill B. The options aren't great.
 
 You can write to a temp file and hope the next skill runs on the same machine. You can stuff state into an environment variable and watch it truncate at 8KB. You can introduce a database — which now means your pipeline depends on external infrastructure that needs to be provisioned, migrated, and monitored separately.
@@ -38,7 +36,7 @@ It's addressable by design. You can route different kinds of state to different 
 
 It's persistent across failures. Unlike process-level state or a temp file, an email survives a skill crashing and restarting. If Skill B fails halfway through, the input message is still sitting in the inbox. Re-run the skill and it picks up where it left off. That's a free retry loop with no extra code.
 
-It's asynchronous by default. Skill A finishes its work, drops a message in an inbox, exits. Skill B starts when it's ready — five seconds later or five minutes later. The handoff doesn't care. Most multi-step OpenClaw skill chaining pipelines are orchestrating work that takes seconds to minutes per step. Email delivery latency is invisible at that scale.
+It's asynchronous by default. Skill A finishes its work, drops a message in an inbox, exits. Skill B starts when it's ready, five seconds later or five minutes later. The handoff doesn't care. Most multi-step OpenClaw skill chaining pipelines are orchestrating work that takes seconds to minutes per step. Email delivery latency is invisible at that scale.
 
 ## A concrete pipeline: research → synthesize → dispatch
 
@@ -111,7 +109,7 @@ for (const email of emails) {
 }
 ```
 
-Now the pipeline has a dead-letter queue built in. Errors accumulate in `pipeline-errors@lobstermail.ai` and you can review them without digging through logs. If you're also using LobsterMail for your agent's actual business email, keep these state inboxes in a separate namespace — different jobs, different addresses, no cross-contamination. See [OpenClaw business email patterns](/blog/openclaw-business-email) for how to organize that side.
+Now the pipeline has a dead-letter queue built in. Errors accumulate in `pipeline-errors@lobstermail.ai` and you can review them without digging through logs. If you're also using LobsterMail for your agent's actual business email, keep these state inboxes in a separate namespace, different jobs, different addresses, no cross-contamination. See [OpenClaw business email patterns](/blog/openclaw-business-email) for how to organize that side.
 
 LobsterMail also scores incoming messages for injection risk. For pipeline state that should only ever come from your own skills, a non-zero score on a received message is worth flagging. It's a cheap sanity check that catches unexpected content early.
 
@@ -127,7 +125,7 @@ The other thing a key-value store doesn't give you is a readable audit trail. Wh
 
 ## Inbox hygiene for long-running pipelines
 
-Inboxes accumulate messages if you don't clear them out. A pipeline running hourly will have 24 messages in the research inbox by end of day. That's usually fine — `receive()` returns unread messages by default, so old messages don't interfere. But for high-frequency runs or large payloads, a cleaner approach is provisioning a fresh inbox per pipeline run:
+Inboxes accumulate messages if you don't clear them out. A pipeline running hourly will have 24 messages in the research inbox by end of day. That's usually fine, `receive()` returns unread messages by default, so old messages don't interfere. But for high-frequency runs or large payloads, a cleaner approach is provisioning a fresh inbox per pipeline run:
 
 ```typescript
 const runId = Date.now();
@@ -150,7 +148,7 @@ Isolated, timestamped, and the full history is there if you need to replay a spe
   </FAQItem>
 
   <FAQItem question="Is there a limit on how many inboxes I can create?">
-    The free tier gives you up to 1,000 emails per month. The Builder plan at $9/month raises the send limit to 500 emails per day. For most skill pipelines — even ones running multiple times per day — the free tier is more than enough.
+    The free tier gives you up to 1,000 emails per month. The Builder plan at $9/month raises the send limit to 500 emails per day. For most skill pipelines, even ones running multiple times per day, the free tier is more than enough.
   </FAQItem>
 
   <FAQItem question="What happens if a skill crashes mid-pipeline?">
@@ -158,7 +156,7 @@ Isolated, timestamped, and the full history is there if you need to replay a spe
   </FAQItem>
 
   <FAQItem question="Can I use this pattern for pipelines running on different machines?">
-    Yes — this is one of the main advantages over file-based state. Skill A runs on one machine, drops state into an inbox, and Skill B picks it up from a completely different machine. The inbox is accessible from anywhere with a network connection.
+    Yes, this is one of the main advantages over file-based state. Skill A runs on one machine, drops state into an inbox, and Skill B picks it up from a completely different machine. The inbox is accessible from anywhere with a network connection.
   </FAQItem>
 
   <FAQItem question="How does LobsterMail's injection risk scoring work?">
@@ -166,7 +164,7 @@ Isolated, timestamped, and the full history is there if you need to replay a spe
   </FAQItem>
 
   <FAQItem question="Is this pattern suitable for real-time pipelines?">
-    Not really. Email delivery adds latency — usually under a second with LobsterMail, but not sub-100ms. If your skills need sub-second handoffs, use a message queue or in-process state. For pipelines where each step takes seconds or longer, the latency disappears.
+    Not really. Email delivery adds latency, usually under a second with LobsterMail, but not sub-100ms. If your skills need sub-second handoffs, use a message queue or in-process state. For pipelines where each step takes seconds or longer, the latency disappears.
   </FAQItem>
 
   <FAQItem question="Can multiple skills read from the same inbox concurrently?">
@@ -182,10 +180,10 @@ Isolated, timestamped, and the full history is there if you need to replay a spe
   </FAQItem>
 
   <FAQItem question="How do I keep pipeline state inboxes separate from business email inboxes?">
-    Naming convention is enough. Prefix pipeline inboxes with something consistent — `pipeline-`, `run-`, `state-` — and your business inboxes use your agent's actual name. LobsterMail doesn't enforce any hierarchy, so the separation is entirely up to your naming scheme.
+    Naming convention is enough. Prefix pipeline inboxes with something consistent, `pipeline-`, `run-`, `state-`, and your business inboxes use your agent's actual name. LobsterMail doesn't enforce any hierarchy, so the separation is entirely up to your naming scheme.
   </FAQItem>
 </FAQ>
 
 ---
 
-*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
+*Give your agent its own email. [Get started with LobsterMail](/), it's free.*
