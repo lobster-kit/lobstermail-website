@@ -10,15 +10,13 @@ tags:
   - infrastructure
   - getting-started
 image: /blog/lobstermail-sdk-error-codes-reference.png
-author: LobsterMail Team
+author: Ian Bussières
 agent: agent-3-content
 channel: blog
 type: blog-post
-status: approved
+status: draft
 publish_at: '2026-02-28T14:00:00Z'
-approved_at: '2026-03-02T10:36:37.190Z'
 ---
-
 Something breaks at 11pm. Your agent is mid-workflow — it provisioned an inbox, started polling, then threw an error you've never seen before. You copy the string into Google. Nothing useful comes back.
 
 This page is the reference I wish had existed. Every LobsterMail SDK error code, organized by category, with what caused it and how to fix it. Bookmark it.
@@ -172,7 +170,7 @@ Your token doesn't own the inbox you're trying to send from. This fires when an 
 
 **HTTP status:** 408
 
-The `receive()` call timed out waiting for new mail. This isn't a fatal error — it just means nothing arrived in the polling window.
+The `receive()` call timed out waiting for new mail. This isn't a fatal error, it just means nothing arrived in the polling window.
 
 **Fix:** Treat this as a normal empty result, not a crash:
 
@@ -223,7 +221,7 @@ The SDK couldn't reach the API at all. DNS failure, timeout before connection, o
 
 The API is temporarily down. This is rare but happens during deployments or infrastructure incidents.
 
-**Fix:** Same as `LM_NETWORK_ERROR` — retry with backoff. Follow [lobstermail.ai/status](https://lobstermail.ai/status) for incident updates.
+**Fix:** Same as `LM_NETWORK_ERROR`, retry with backoff. Follow [lobstermail.ai/status](https://lobstermail.ai/status) for incident updates.
 
 ---
 
@@ -257,7 +255,7 @@ The key distinction: authentication failures are always fatal (retrying won't he
 
 ---
 
-*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
+*Give your agent its own email. [Get started with LobsterMail](/), it's free.*
 
 <FAQ>
   <FAQItem question="Where do I find the full error code in my console output?">
@@ -273,7 +271,7 @@ The key distinction: authentication failures are always fatal (retrying won't he
   </FAQItem>
 
   <FAQItem question="What's the difference between LM_SEND_RATE_LIMIT_DAILY and LM_SEND_MONTHLY_LIMIT_REACHED?">
-    Daily limits reset every 24 hours. Monthly limits reset on your billing cycle. Both return 429 but different codes so you can handle them separately — daily you can queue and retry the same day, monthly you might need to upgrade.
+    Daily limits reset every 24 hours. Monthly limits reset on your billing cycle. Both return 429 but different codes so you can handle them separately, daily you can queue and retry the same day, monthly you might need to upgrade.
   </FAQItem>
 
   <FAQItem question="My agent keeps hitting LM_INBOX_LIMIT_REACHED. What's the best fix?">
@@ -285,7 +283,7 @@ The key distinction: authentication failures are always fatal (retrying won't he
   </FAQItem>
 
   <FAQItem question="How do I know which plan I'm on to understand my limits?">
-    The LobsterMail dashboard shows your current plan, usage, and limits. You can also check `err.meta.plan` on rate limit errors — it includes your current tier.
+    The LobsterMail dashboard shows your current plan, usage, and limits. You can also check `err.meta.plan` on rate limit errors, it includes your current tier.
   </FAQItem>
 
   <FAQItem question="Can a test token be upgraded to a live token?">
@@ -301,7 +299,7 @@ The key distinction: authentication failures are always fatal (retrying won't he
   </FAQItem>
 
   <FAQItem question="Do error codes change between SDK versions?">
-    Error codes are treated as stable API surface — they won't change within a major version. If you're upgrading across major versions, check the changelog for any renamed codes.
+    Error codes are treated as stable API surface, they won't change within a major version. If you're upgrading across major versions, check the changelog for any renamed codes.
   </FAQItem>
 
   <FAQItem question="Where can I learn more about getting started with LobsterMail?">
