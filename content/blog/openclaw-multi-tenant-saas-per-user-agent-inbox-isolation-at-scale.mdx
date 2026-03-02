@@ -1,0 +1,158 @@
+---
+title: 'openclaw multi-tenant saas: per-user agent inbox isolation at scale'
+description: >-
+  When each customer gets their own OpenClaw agent, email isolation is the
+  architecture problem nobody warns you about. Here's the blueprint.
+date: '2026-02-28'
+tags:
+  - openclaw
+  - infrastructure
+  - email
+  - automation
+  - guides
+image: /blog/openclaw-multi-tenant-saas-per-user-agent-inbox-isolation-at-scale.png
+author: LobsterMail Team
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+publish_at: '2026-02-28T09:00:00Z'
+approved_at: '2026-03-02T10:36:37.197Z'
+---
+The GitHub issue says it plainly. OpenClaw #17299, "Agents Plane — multi-tenant agent provisioning and isolation": *"Today, deploying OpenClaw agents for a team is manual: spin up a VM, install OpenClaw, configure secrets, set up channels — repeat per person."*
+
+Filed by someone who'd done it once too many times. If you're building a SaaS product where each customer gets their own OpenClaw agent, you've mentally filed that same issue yourself.
+
+OpenClaw was built as a single-user personal assistant. The architecture docs are direct about this: "multi-tenant patterns require explicit workspace separation." There's no native tenant concept, no API to provision a new user's agent in three lines. You work that out yourself.
+
+Most builders do. But the place where the architecture starts leaking is almost always email.
+
+## Why email breaks the isolation model first
+
+When a user onboards to your product and their agent starts acting on their behalf, email is the first external surface it touches. Signing up for services, catching verification codes, sending outbound updates. The inbox becomes the agent's identity in the outside world.
+
+Route all your users' agents through a single shared inbox and the model collapses. Agents receive mail meant for other tenants. A phishing message targeted at one user becomes a prompt injection risk for all of them. A rate limit triggered by one tenant's agent blocks everyone else.
+
+The instinct is to use a shared gateway with per-tenant routing. Subaddressing, Mailgun routes, SES receipt rules. These work for basic filtering, but you're one routing bug away from cross-tenant email leakage. With over 30,000 OpenClaw instances deployed, this isn't a theoretical edge case — it's a production incident waiting for a busy sprint to surface it.
+
+The cleaner architecture gives each agent its own isolated inbox from the start.
+
+## What isolation actually requires
+
+Per-tenant inbox isolation means the agent for User A cannot see, send from, or interact with the inbox of the agent for User B. Not as a policy setting, but as a structural fact.
+
+Three layers need to hold. The address layer is the obvious one — each tenant gets a unique address, and at 10,000 users, collision-resistance matters in ways that naive name-based generation doesn't handle. The credential layer is where most builders cut corners: each agent should authenticate with credentials scoped to its inbox, so a compromised agent can't read another tenant's mail even if it tries. The rate-limit layer is the one that bites you later — per-inbox send limits, not per-account limits, so one misbehaving tenant can't drag down everyone else.
+
+Getting all three right with a traditional provider is real infrastructure work. Programmatic mailbox provisioning, per-mailbox credentials stored in a database, custom domain verification at scale. You can build it. But you're now owning that infrastructure indefinitely.
+
+## Self-provisioning inboxes
+
+The shift that makes per-tenant email tractable is having the agent provision its own inbox at initialization time. Not a human admin, not a batch job. The agent does it.
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+// Called once during agent initialization for a new tenant
+const lm = await LobsterMail.create();
+const inbox = await lm.createSmartInbox({ name: `tenant-${tenantId}` });
+
+// Store inbox.address with the tenant record
+await db.tenants.update(tenantId, { agentEmail: inbox.address });
+```
+
+The SDK handles the API token automatically. If no token exists, it creates a free account and persists it to `~/.lobstermail/token`. The inbox is provisioned in the same call. From that point, the agent has an isolated `@lobstermail.ai` address scoped entirely to that tenant.
+
+`createSmartInbox()` generates a human-readable address from the name you provide and handles collisions on its own (`tenant-abc`, `tenant-abc1`, and so on). If you don't need a readable address, `createInbox()` gives you a random `lobster-xxxx@lobstermail.ai` with zero collision risk.
+
+The provisioning logic is two SDK calls. No admin panel, no domain verification per tenant, no webhook configuration per inbox. The agent self-provisions and you store the address.
+
+## Scaling from 50 to 5,000 tenants
+
+The pattern above works for one tenant. What changes at scale is mostly *when* you provision.
+
+At 50 tenants, idempotency matters most. Your agent initialization code runs multiple times — restarts, redeployments, retries. Build in a check: if the tenant already has an `agentEmail` in your database, skip provisioning and initialize with the existing token. Don't create a new inbox on every deploy.
+
+At 500 tenants, monitoring comes into focus. You need visibility into which tenants are sending, which are receiving, and which are approaching their limits. The free tier gives each inbox 1,000 emails per month. For most agent use cases, that's enough. An agent catching verification codes or sending the occasional outbound update isn't burning through 1,000 emails. Your high-activity tenants are the ones to watch. The [Builder plan](/blog/lobstermail-pricing-explained) at $9/month supports up to 10 inboxes per account and raises the send cap significantly — that's usually where growing products land per active tenant cohort.
+
+At 5,000 tenants, the provisioning strategy shifts to lazy initialization. Create the inbox when the agent first actually needs email, not at user signup. Most users won't activate every feature. If email-capable agents are one capability among several, you only pay for tenants who use it. This keeps both costs and inbox count tied to real activity rather than signup volume.
+
+## Prompt injection at tenant boundaries
+
+OpenClaw's security docs are explicit: when multiple users share a tool-enabled agent, their tool authority is shared. Email is the easiest injection vector because any external sender can reach an inbox.
+
+An attacker who knows your product routes email through a shared inbox can craft a message designed to hijack agent behavior. Isolated inboxes eliminate this cross-tenant attack surface. An attacker can only reach their own agent's inbox, not anyone else's.
+
+LobsterMail includes injection risk scoring on received emails. Each message comes back with security metadata you can act on:
+
+```typescript
+const emails = await inbox.receive();
+for (const email of emails) {
+  if (email.injectionRisk === 'high') {
+    // Flag for human review instead of passing to agent
+    continue;
+  }
+  // Safe to process
+}
+```
+
+In a multi-tenant deployment, I'd treat injection scoring as a hard gate rather than a logging signal. Your users are trusting you to keep their agents from getting hijacked.
+
+## What the architecture looks like end-to-end
+
+Lazy provisioning at initialization, tenant credentials stored per-row in your database, injection scoring before anything reaches the agent, and per-inbox activity monitoring. Those four pieces give you isolation that holds from launch to scale.
+
+If you're still early in the architecture and want to understand how the SDK handles token persistence and initial account creation, [agent self-signup explained](/blog/agent-self-signup-explained) covers the full flow. If you're already running at volume, [running 50+ agent inboxes](/blog/running-50-agent-inboxes) goes into operational patterns beyond the initial setup.
+
+<FAQ>
+  <FAQItem question="Does each tenant need their own LobsterMail account?">
+    No. One account can manage multiple inboxes, and each inbox is isolated by address and credentials. The Builder plan supports up to 10 inboxes per account. For most SaaS products, a small number of LobsterMail accounts covers a large tenant base.
+  </FAQItem>
+
+  <FAQItem question="How do I prevent duplicate inbox provisioning on agent restarts?">
+    Store the inbox address in your database after the first successful provisioning call. At initialization, check whether `agentEmail` is already set for the tenant — if it is, skip `createSmartInbox()` and just initialize with the existing token. The SDK's `LobsterMail.create()` also persists tokens automatically, so the auth step is already idempotent.
+  </FAQItem>
+
+  <FAQItem question="What happens when a free-tier tenant hits 1,000 emails per month?">
+    The inbox stops delivering until the month resets. For high-activity tenants, upgrading to the Builder plan raises the send and receive limits. You can detect approaching limits by monitoring per-inbox activity and proactively prompting high-usage tenants.
+  </FAQItem>
+
+  <FAQItem question="Can I use a custom domain for tenant inboxes instead of @lobstermail.ai?">
+    Yes. LobsterMail supports custom domains, so tenants can receive and send from addresses at your own domain. See the [Custom Domains guide](/docs/custom-domains) for setup. This is worth doing if brand consistency matters to your users.
+  </FAQItem>
+
+  <FAQItem question="What's the difference between createInbox() and createSmartInbox()?">
+    `createSmartInbox()` takes a human-readable name and generates a clean address from it, handling collisions automatically. `createInbox()` generates a random `lobster-xxxx@lobstermail.ai` address with no collision risk. For tenant provisioning where readable addresses matter, `createSmartInbox()` is the better choice.
+  </FAQItem>
+
+  <FAQItem question="How should I store LobsterMail credentials per tenant?">
+    Store the inbox address and the associated API token alongside your tenant record in your database. Treat the token the same way you'd treat any secret — encrypted at rest, not exposed in logs. The SDK also handles token persistence locally via `~/.lobstermail/token`, but in a multi-tenant server environment you'll want to manage tokens explicitly per tenant.
+  </FAQItem>
+
+  <FAQItem question="Can I delete an inbox when a tenant churns?">
+    Yes. Inboxes can be deleted via the SDK, which frees up the address and stops billing for that inbox. Build churn handling into your offboarding flow so you're not accumulating unused inboxes.
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail support webhooks for real-time delivery across multiple tenant inboxes?">
+    Yes. You can configure a webhook per inbox so your application gets notified immediately when email arrives, rather than polling. In a multi-tenant setup, a single webhook endpoint with tenant identification in the payload is the typical pattern. See the [Webhooks guide](/docs/webhooks) for setup details.
+  </FAQItem>
+
+  <FAQItem question="Is injection risk scoring available via the API or only the SDK?">
+    It's available through both. The SDK surfaces it as `email.injectionRisk` on each received message. The REST API includes the same metadata in the email response object. Either way, you get the score before deciding whether to pass the email content to your agent.
+  </FAQItem>
+
+  <FAQItem question="Is LobsterMail free to start with?">
+    Yes. The free tier requires no credit card and gives each inbox 1,000 emails per month. You can provision multiple inboxes and test the full multi-tenant flow before paying anything. See [pricing explained](/blog/lobstermail-pricing-explained) for what each tier includes.
+  </FAQItem>
+
+  <FAQItem question="Can I build this pattern using LobsterMail's MCP server instead of the SDK?">
+    Yes. The MCP server exposes the same inbox provisioning and email reading tools that the SDK provides. If your agents use MCP-based tool access, you can provision and manage inboxes through that interface without writing SDK integration code directly.
+  </FAQItem>
+
+  <FAQItem question="What's the right send limit for agents that send at high volume?">
+    The Builder plan allows up to 500 emails per day per account. For most SaaS agent use cases — signing up for services, sending notifications, coordinating with external services — that's well above what any single tenant needs. If you have agents generating genuinely high send volumes, reach out to discuss volume arrangements.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
