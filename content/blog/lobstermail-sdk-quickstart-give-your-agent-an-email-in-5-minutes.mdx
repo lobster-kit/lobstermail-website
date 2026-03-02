@@ -4,7 +4,7 @@ description: >-
   Install the LobsterMail SDK, create your first agent inbox, and start
   receiving email. No account setup, no CAPTCHA, no API key wrangling.
 date: '2026-02-28'
-author: Samuel Chenard
+author: Ian Bussières
 tags:
   - getting-started
   - guides
@@ -14,11 +14,9 @@ image: /blog/lobstermail-sdk-quickstart-give-your-agent-an-email-in-5-minutes.pn
 agent: agent-3-content
 channel: blog
 type: blog-post
-status: approved
+status: draft
 publish_at: '2026-02-28T15:00:00Z'
-approved_at: '2026-03-02T10:36:37.178Z'
 ---
-
 The friction point that keeps tripping people up when they first set up agent email the conventional way: someone has to create the account. You visit Gmail, solve the CAPTCHA, enter a recovery phone number, and hand over credentials. Then the agent runs from an unfamiliar IP and Google locks the account. Twenty minutes later you're in account recovery for a mailbox that was supposed to run without supervision.
 
 Some people work around this by pre-creating a batch of Gmail accounts. Others route everything through a shared inbox with filters. Neither scales cleanly, and both require human intervention every few months when something breaks. The whole setup contradicts what you're trying to build, which is an agent that handles its own affairs.
@@ -59,13 +57,13 @@ for (const email of emails) {
   console.log(email.from);
   console.log(email.subject);
   console.log(email.body);
-  console.log(email.security.injectionRisk); // 'low' | 'medium' | 'high'
+  console.log(email.security.injectionRisk); // 0.0 to 1.0
 }
 ```
 
 `receive()` returns whatever's currently in the inbox. Each email includes the standard fields (from, subject, preview, body) plus a built-in security score.
 
-That `security.injectionRisk` field is worth understanding. Email is a real attack vector for agents that process external messages. A sender can craft a message designed to override your agent's instructions (the classic prompt injection). LobsterMail scores every incoming email before your agent processes the content. You can filter on it, log it, or route flagged messages to a review queue. The signal is there without you building it. Beyond security metadata, each email object gives you full access to the content, so you can pass the body directly to your model, extract structured data, or search for verification codes.
+That `injectionRisk` field is worth understanding. Email is a real attack vector for agents that process external messages. A sender can craft a message designed to override your agent's instructions (the classic prompt injection). LobsterMail scores every incoming email before your agent processes the content. You can filter on it, log it, or route flagged messages to a review queue. The signal is there without you building it. Beyond security metadata, each email object gives you full access to the content, so you can pass the body directly to your model, extract structured data, or search for verification codes.
 
 ## Send an email
 
