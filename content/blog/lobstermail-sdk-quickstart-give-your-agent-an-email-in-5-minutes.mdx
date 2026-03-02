@@ -1,0 +1,199 @@
+---
+title: 'lobstermail sdk quickstart: give your agent an email in 5 minutes'
+description: >-
+  Install the LobsterMail SDK, create your first agent inbox, and start
+  receiving email. No account setup, no CAPTCHA, no API key wrangling.
+date: '2026-02-28'
+author: Samuel Chenard
+tags:
+  - getting-started
+  - guides
+  - email
+  - infrastructure
+image: /blog/lobstermail-sdk-quickstart-give-your-agent-an-email-in-5-minutes.png
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+publish_at: '2026-02-28T15:00:00Z'
+approved_at: '2026-03-02T10:36:37.178Z'
+---
+The friction point that keeps tripping people up when they first set up agent email the conventional way: someone has to create the account. You visit Gmail, solve the CAPTCHA, enter a recovery phone number, and hand over credentials. Then the agent runs from an unfamiliar IP and Google locks the account. Twenty minutes later you're in account recovery for a mailbox that was supposed to run without supervision.
+
+Some people work around this by pre-creating a batch of Gmail accounts. Others route everything through a shared inbox with filters. Neither scales cleanly, and both require human intervention every few months when something breaks. The whole setup contradicts what you're trying to build, which is an agent that handles its own affairs.
+
+LobsterMail takes a different approach. The SDK lets the agent provision its own inbox with no human account creation step and no credentials to manage. Here's the full quickstart.
+
+## Install
+
+```bash
+npm install @lobsterkit/lobstermail
+```
+
+No dashboard to visit first. No API key to grab before you can write a line of code.
+
+## Create your first inbox
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create();
+const inbox = await lm.createSmartInbox({ name: 'My Agent' });
+
+console.log(inbox.address); // my-agent@lobstermail.ai
+```
+
+`LobsterMail.create()` checks for an existing token at `~/.lobstermail/token`. If nothing's there, it signs up for a free account and saves the token. No browser, no CAPTCHA, no credit card. The agent handles the entire account creation step on its own.
+
+`createSmartInbox()` turns a name into a clean address. It tries `my-agent@lobstermail.ai` first, then variations (`my-agent1`, `m-agent`) if that's taken. You get a readable, collision-free address without writing any fallback logic yourself.
+
+If you just want a throwaway address with no particular name, `createInbox()` returns something like `lobster-a3b9@lobstermail.ai`.
+
+## Receive emails
+
+```typescript
+const emails = await inbox.receive();
+
+for (const email of emails) {
+  console.log(email.from);
+  console.log(email.subject);
+  console.log(email.body);
+  console.log(email.injectionRisk); // 0.0 to 1.0
+}
+```
+
+`receive()` returns whatever's currently in the inbox. Each email includes the standard fields (from, subject, preview, body) plus a built-in security score.
+
+That `injectionRisk` field is worth understanding. Email is a real attack vector for agents that process external messages. A sender can craft a message designed to override your agent's instructions (the classic prompt injection). LobsterMail scores every incoming email before your agent processes the content. You can filter on it, log it, or route flagged messages to a review queue. The signal is there without you building it. Beyond security metadata, each email object gives you full access to the content, so you can pass the body directly to your model, extract structured data, or search for verification codes.
+
+## Send an email
+
+```typescript
+await inbox.send({
+  to: 'recipient@example.com',
+  subject: 'Following up',
+  body: 'This was sent autonomously.',
+});
+```
+
+Outbound sends from the address your agent created. No SMTP credentials to configure, no sender domain to verify before you can test locally. Free accounts include 1,000 emails per month. If you're running a higher-volume agent, the Builder plan at $9/month raises those limits. See [how LobsterMail pricing works](/blog/lobstermail-pricing-explained) for the full breakdown.
+
+## Disposable vs persistent inboxes
+
+Both `createSmartInbox()` and `createInbox()` create real inboxes that persist until you delete them. Neither is a 10-minute temp mail address.
+
+For one-off tasks (catching a verification code during a signup flow), create a fresh inbox per task. Free accounts give you 1,000 emails per month spread across as many inboxes as you need, so throwaway inboxes are cheap.
+
+For ongoing agents (a support agent, an assistant with a persistent identity), create one inbox and reuse it. Store the address somewhere durable, and reconnect on each run with `LobsterMail.create({ token: process.env.LOBSTERMAIL_TOKEN })`. The inbox keeps its address for as long as you want it.
+
+## A full example: signup and verification
+
+Here's the most common pattern in practice. An agent needs to register for an external service, receive the confirmation email, and extract the verification code before it can proceed:
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+async function signUpAndVerify() {
+  const lm = await LobsterMail.create();
+  const inbox = await lm.createSmartInbox({ name: 'signup-agent' });
+
+  // Agent fills in the registration form with inbox.address
+  console.log(`Registering with: ${inbox.address}`);
+
+  // Poll for the confirmation email
+  for (let i = 0; i < 10; i++) {
+    const emails = await inbox.receive();
+    const confirm = emails.find(e =>
+      e.subject.toLowerCase().includes('verify') ||
+      e.subject.toLowerCase().includes('confirm')
+    );
+
+    if (confirm) {
+      const code = confirm.body.match(/\b\d{6}\b/)?.[0];
+      if (code) return code;
+    }
+
+    await new Promise(r => setTimeout(r, 3000));
+  }
+
+  return null;
+}
+```
+
+No human touches this. The agent creates the inbox, uses it for registration, and completes the verification loop on its own. For a broader look at why agents need their own addresses in the first place, [what is agent email](/blog/what-is-agent-email) covers the use cases well.
+
+## Token handling in production
+
+The auto-signup path is designed for local development. In production, pass the token explicitly:
+
+```typescript
+const lm = await LobsterMail.create({ token: process.env.LOBSTERMAIL_TOKEN });
+```
+
+Tokens follow the format `lm_sk_test_*` for test environments and `lm_sk_live_*` for live. The SDK validates the format on initialization and throws immediately if something is wrong, so you catch credential issues early rather than mid-task. [Agent self-signup explained](/blog/agent-self-signup-explained) covers the full provisioning flow in detail.
+
+<Callout type="tip">
+  Add `~/.lobstermail/token` to your `.gitignore`. It's a live credential, not a config file.
+</Callout>
+
+## What to do next
+
+Polling with `receive()` covers most use cases. When you need real-time delivery, webhooks let you register a URL and get notified the instant an email arrives. No polling interval to tune. Custom domains let your agent send from `agent@yourdomain.com` instead of `@lobstermail.ai`, which is worth setting up when the sender address appears in customer-facing communication. If you're building on a model that supports the Model Context Protocol, the MCP server gives your agent email tools without writing any integration code. You install it, point it at your account, and your model can create inboxes and send email natively.
+
+Full API reference is in the [docs](https://api.lobstermail.ai/v1/docs/guides/getting-started).
+
+---
+
+<FAQ>
+  <FAQItem question="Is LobsterMail free to use?">
+    Yes. The free plan includes 1,000 emails per month and requires no credit card. You can send and receive email across as many inboxes as you need within that limit. The Builder plan ($9/month) is available when you need higher send limits or more inboxes.
+  </FAQItem>
+
+  <FAQItem question="Do I need to create an account before installing the SDK?">
+    No. The SDK handles account creation automatically the first time you call `LobsterMail.create()`. It signs up for a free account and saves the token to `~/.lobstermail/token`. No dashboard visit, no signup form.
+  </FAQItem>
+
+  <FAQItem question="How does auto-signup work exactly?">
+    When `LobsterMail.create()` runs and finds no existing token, it calls the LobsterMail API to register a new free account and writes the returned token locally. Every subsequent call reuses that token. You can read more in [agent self-signup explained](/blog/agent-self-signup-explained).
+  </FAQItem>
+
+  <FAQItem question="What's the difference between createSmartInbox and createInbox?">
+    `createSmartInbox({ name: 'My Agent' })` generates a human-readable address from your agent's name (like `my-agent@lobstermail.ai`) and handles name collisions automatically. `createInbox()` skips the naming step entirely and returns a random address like `lobster-a3b9@lobstermail.ai`. Use smart inboxes for persistent agents with a visible identity, and `createInbox()` for throwaway tasks.
+  </FAQItem>
+
+  <FAQItem question="What does the injectionRisk field actually return?">
+    A float between 0.0 and 1.0 representing the likelihood that an incoming email contains a prompt injection attempt. LobsterMail scores every email before your agent processes it. A score above 0.7 is generally worth flagging. How you act on it (filter, log, quarantine) is up to you.
+  </FAQItem>
+
+  <FAQItem question="Can I use LobsterMail in serverless functions or containers?">
+    Yes, but pass the token explicitly rather than relying on auto-signup. The auto-signup path writes to `~/.lobstermail/token`, which won't persist across cold starts. Set your token as an environment variable and pass it with `LobsterMail.create({ token: process.env.LOBSTERMAIL_TOKEN })`.
+  </FAQItem>
+
+  <FAQItem question="Is there a sandbox or test mode?">
+    Yes. Tokens prefixed with `lm_sk_test_*` operate in test mode. Test-mode emails don't count against your monthly quota and don't reach real inboxes. Switch to `lm_sk_live_*` tokens when you're ready to go live.
+  </FAQItem>
+
+  <FAQItem question="Can I use my own domain for agent email addresses?">
+    Yes. Custom domains let your agent send from `agent@yourdomain.com` instead of `@lobstermail.ai`. Setup is in the [docs](https://api.lobstermail.ai/v1/docs/guides/custom-domains) and available on the Builder plan.
+  </FAQItem>
+
+  <FAQItem question="How many inboxes can I create?">
+    Free accounts support multiple inboxes sharing the 1,000 emails/month quota. The Builder plan includes up to 10 inboxes with higher send limits. See [how LobsterMail pricing works](/blog/lobstermail-pricing-explained) for full limits by tier.
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail work with all JavaScript and TypeScript frameworks?">
+    The SDK is a plain Node.js package (`@lobsterkit/lobstermail`) with no framework dependencies. It works anywhere Node runs: Next.js, Express, serverless functions, standalone scripts, or agent frameworks like LangChain and AutoGen.
+  </FAQItem>
+
+  <FAQItem question="Can multiple agents share the same LobsterMail account?">
+    Yes. A single account can have multiple inboxes, each belonging to a different agent. Each inbox is independent with its own address and email history. You'd use the same API token but call `createSmartInbox()` or `createInbox()` separately for each agent.
+  </FAQItem>
+
+  <FAQItem question="What is agent email and why do agents need it?">
+    Agents that interact with external services often need an email address to receive verification codes, notifications, or replies from humans. Unlike a shared inbox, agent-owned email gives each agent its own identity and inbox without human involvement in the provisioning step. [What is agent email](/blog/what-is-agent-email) covers the full picture.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
