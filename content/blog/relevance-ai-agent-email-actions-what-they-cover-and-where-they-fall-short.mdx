@@ -1,0 +1,147 @@
+---
+title: 'relevance ai agent email actions: what they cover and where they fall short'
+description: >-
+  A practical breakdown of every email action Relevance AI agents can perform,
+  plus the gaps that matter when your agent needs its own inbox.
+date: '2026-03-03'
+author: Samuel Chenard
+tags:
+  - email
+  - automation
+  - infrastructure
+  - use-cases
+image: >-
+  /blog/relevance-ai-agent-email-actions-what-they-cover-and-where-they-fall-short.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — relevance ai
+  agent email actions
+publish_at: '2026-03-03T07:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: draft
+---
+Relevance AI has become one of the more popular no-code platforms for building AI agent workforces. If you're evaluating it specifically for email workflows, you're probably wondering what its agents can actually do with an inbox and where the limits are. I dug through their docs, marketplace, and pricing so you don't have to.
+
+## Email actions Relevance AI agents can perform
+
+Email actions in Relevance AI are tool steps that let an agent read, send, and organize email within automated workflows. Here's what's available through their native Gmail integration:
+
+- Read and parse incoming emails
+- Reply to threads with proper message threading
+- Send new emails from a connected Gmail account
+- Search emails by sender, subject, or date range
+- Extract attachments as downloadable URLs
+- Summarize email threads and pull out action items
+- Apply, create, or remove Gmail labels
+- Draft and save replies without sending
+- Forward messages to other recipients
+- Mark messages as read or unread
+- Trigger workflows when new emails match specific filters
+- Make direct Gmail API calls for custom operations
+
+That's a genuine list. Relevance AI also supports Outlook for basic triggers and sends, and you can extend reach through Zapier or n8n for providers that aren't natively covered.
+
+## How email triggers work
+
+Triggers are where Relevance AI's email integration gets useful. Inside the Agent Profile, you configure conditions that wake the agent up when a matching email arrives. Filters include specific senders, subject line keywords, Gmail labels, and unread status. Check frequency ranges from immediate to hourly.
+
+When a trigger fires, it counts as one action against your monthly quota. On the free plan, that's 200 actions per month total across everything. The Team plan ($234/month billed annually) bumps it to 7,000.
+
+The marketplace offers 28 pre-built Gmail agents: FAQ auto-responders, email triagers that auto-label incoming mail, calendar schedulers that parse meeting requests, cold outreach senders, and inbox research assistants. Most deploy in minutes, which is genuinely useful for teams prototyping fast. The Email FAQ Follow-Up Agent, for example, handles customer questions autonomously and escalates complex issues to Slack when it's unsure.
+
+You can also automate email responses without touching Relevance AI's native integration. Zapier workflows can trigger a message agent action whenever a new Gmail thread appears, passing the email content to your Relevance AI agent for processing and reply. It's an extra layer, but it works.
+
+## What's missing: the infrastructure layer
+
+Here's where the evaluation changes. Relevance AI is a generalist agent platform. Email is one of 2,000+ integrations, not the core product. That gap matters when your agent needs to do more than react to messages in someone else's Gmail.
+
+| Capability | Relevance AI | Dedicated agent email (e.g., LobsterMail) |
+|---|---|---|
+| Agent self-provisions inbox | No — human connects Gmail via OAuth | Yes — agent creates its own address |
+| Provider lock-in | Gmail or Outlook only | Provider-agnostic |
+| Deliverability controls | None (uses your Gmail reputation) | Per-agent reputation isolation |
+| Custom domains | No | Yes |
+| Prompt injection scanning | No | Built-in detection and scoring |
+| Inbox ownership | Human's inbox, agent has access | Agent owns the inbox |
+| Failure retry logic | Not documented | Exponential backoff with queue |
+| Send rate visibility | No | Dashboard with throttling controls |
+
+The biggest gap is ownership. In Relevance AI, your agent doesn't have an inbox. It borrows yours. You connect Gmail via OAuth, and the agent reads and sends from your account. That means it can see your entire email history, sends under your identity, and shares your sender reputation. We've covered [why that OAuth model creates real problems](/blog/oauth-gmail-agents-painful) as agents scale.
+
+There's also silence on what happens when email actions fail. If a send doesn't go through or an API call hits Gmail's rate limit, Relevance AI's docs don't describe retry behavior. Each action counts against your quota whether it succeeds or fails. For internal triage workflows, that's fine. For customer-facing email at volume, it's a gap.
+
+## When Relevance AI is the right call
+
+I don't want to overstate the negatives. If your use case fits these criteria, Relevance AI is a strong option:
+
+- Your agent reacts to emails in your existing Gmail or Outlook
+- The workflow is mostly inbound (triage, summarize, extract data, route to Slack)
+- You're connecting email to a broader stack involving CRM, calendars, or task management
+- You need something running this afternoon, not this quarter
+
+Where it stops making sense is when the agent needs its own identity. If your agent is [signing up for services, receiving verification codes, or operating under its own address](/blog/agent-self-signup-explained), it needs an inbox it owns. That's the line between an email integration and email infrastructure.
+
+## Pricing comparison for email-heavy workloads
+
+| | Relevance AI (Team) | LobsterMail (Builder) |
+|---|---|---|
+| Monthly cost | $234/month | $9/month |
+| Email actions included | 7,000 (shared across all tools) | 5,000 emails + 500 sends/day |
+| Agent-owned inboxes | None (uses your Gmail) | 10 |
+| Custom domains | No | 3 included |
+| Free tier | 200 actions/month | 1,000 emails/month |
+
+Relevance AI's 7,000 actions are shared across every tool your agents use. If your agent also queries a database, calls an API, and updates a CRM record on every email, those actions get diluted fast.
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
+
+<FAQ>
+  <FAQItem question="What email actions can a Relevance AI agent perform natively?">
+    Relevance AI agents can read, send, reply, forward, search, label, and draft emails through Gmail. They can also extract attachments, summarize threads, trigger workflows on new messages, and make direct Gmail API calls for custom operations. Outlook is supported for basic send and trigger actions.
+  </FAQItem>
+  <FAQItem question="How do I connect a Gmail account to a Relevance AI agent?">
+    Go to the Integrations & API Keys page in Relevance AI, select Gmail, and click Add Integration. You'll authorize via an OAuth pop-up. Multiple Gmail accounts can be connected at the same time.
+  </FAQItem>
+  <FAQItem question="Can a Relevance AI agent send emails on my behalf without manual approval?">
+    Yes. Once Gmail is connected and a trigger is configured, the agent can send emails autonomously. It sends from your Gmail account using your identity and sender reputation, not from an agent-owned address.
+  </FAQItem>
+  <FAQItem question="What events can trigger an email-based workflow in Relevance AI?">
+    You can trigger on new email arrival, emails with specific Gmail labels, emails from certain senders, emails matching subject line keywords, or unread message status. Check frequency is configurable from immediate to hourly.
+  </FAQItem>
+  <FAQItem question="Does Relevance AI support email providers other than Gmail, such as Outlook or custom SMTP?">
+    Natively, Relevance AI supports Gmail and Microsoft Outlook. For other providers like ProtonMail, Yahoo, or custom SMTP, you'd need to route through Zapier or n8n as an intermediary.
+  </FAQItem>
+  <FAQItem question="How does Relevance AI extract meeting details and action items from email threads?">
+    Agents use NLP to parse email content and identify dates, times, locations, and attendee names. The Calendar Bookings Scheduler template demonstrates this by detecting demo requests and handling scheduling negotiation automatically.
+  </FAQItem>
+  <FAQItem question="Can Relevance AI agents automatically summarize long email chains?">
+    Yes. Agents can process full email threads and produce summaries, extract key action items, or identify the most recent decision in a conversation. This works through the Get Email Thread tool step combined with the agent's language model.
+  </FAQItem>
+  <FAQItem question="What is a message agent action in Relevance AI?">
+    A message agent action is when an external trigger (like a Zapier workflow or API call) sends a message to a Relevance AI agent, prompting it to process content and take action. For email, this means a new Gmail message can trigger the agent to read, classify, and respond.
+  </FAQItem>
+  <FAQItem question="What happens if a Relevance AI agent email action fails?">
+    Relevance AI's documentation doesn't describe retry logic or fallback behavior for failed email actions. Each action counts against your monthly quota whether it succeeds or fails, so a failed send still costs one action credit.
+  </FAQItem>
+  <FAQItem question="Can Relevance AI agents handle outbound email marketing campaigns at scale?">
+    Technically, but with significant caveats. There are no built-in deliverability controls, domain warming, or IP rotation. Your agent sends from your personal Gmail, so high-volume outbound risks your sender reputation. Dedicated email infrastructure is better suited for outbound at scale.
+  </FAQItem>
+  <FAQItem question="What are the deliverability implications of using an AI agent to send emails?">
+    When an agent sends through your Gmail, it uses your personal sender reputation. High send volumes, bounces, or spam complaints from agent-sent email affect your human inbox deliverability. Agent-first infrastructure like [LobsterMail](/) isolates agent reputation so your personal email stays clean.
+  </FAQItem>
+  <FAQItem question="How does agent-first email infrastructure differ from using Gmail actions bolted onto an AI agent platform?">
+    Agent-first infrastructure gives each agent its own inbox, identity, and sender reputation. Gmail-based integrations share a human's inbox and deliverability history. The difference matters when agents send at volume, need isolated identities, or have to receive verification emails autonomously.
+  </FAQItem>
+  <FAQItem question="What is the Gmail API Call tool step in Relevance AI and when should I use it?">
+    It's an advanced tool step that lets agents make direct GET, POST, PUT, DELETE, or PATCH requests against the Gmail API. Use it when pre-built email actions don't cover your use case, like managing filters or accessing email metadata not exposed by default tools.
+  </FAQItem>
+  <FAQItem question="How do I use Zapier to trigger a Relevance AI agent when a new email arrives?">
+    Create a Zap with Gmail as the trigger (new email) and Relevance AI as the action (send message to agent). The email content is passed to your agent, which processes it according to its configured tools and instructions. This approach works for any email provider Zapier supports, not just Gmail.
+  </FAQItem>
+  <FAQItem question="Is LobsterMail free?">
+    Yes. The free tier includes 1,000 emails per month with up to 5 inboxes and no credit card required. Your agent creates its own inbox with a single function call using the [SDK](/docs/getting-started).
+  </FAQItem>
+</FAQ>
