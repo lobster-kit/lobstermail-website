@@ -1,0 +1,138 @@
+---
+title: how to sanitize email content before it hits your LLM's context window
+description: >-
+  Email carries more PII per message than any other data source your agent
+  touches. Here's how to strip it out before your LLM sees it.
+date: '2026-03-03'
+author: Samuel Chenard
+tags:
+  - security
+  - email
+  - privacy
+  - guides
+image: >-
+  /blog/how-to-sanitize-email-content-before-it-hits-your-llm-s-context-window.png
+imageAlt: >-
+  Pixel art lobster mascot illustration for email infrastructure — sanitize
+  email content LLM context window
+publish_at: '2026-03-03T14:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: draft
+---
+Email is the densest source of personal information your agent will ever process. A single forwarded thread can carry names, addresses, phone numbers, and company details from six or seven people scattered across headers, signatures, quoted replies, and HTML markup. Feed that raw into an LLM context window and you're handing the model a directory of personal data it never needed to see.
+
+If your agent reads email and passes content to a language model, you're running a PII pipeline whether you designed one or not. The question is whether you're sanitizing what goes in.
+
+## What makes email content so dangerous for LLMs
+
+Most data sources have one layer. A database query returns structured fields. A web page has a body. Email has at least five layers, each hiding PII in a different format.
+
+**Headers** contain full names and email addresses in From, To, CC, and BCC fields. Reply-To and X-Forwarded-For can expose internal infrastructure. **Body text** holds the actual message, often with account numbers, addresses, and sensitive context. **HTML markup** includes tracking pixels and embedded links with query parameters that encode user identifiers. **Signatures** are the highest-density PII zone in any email: full name, title, phone number, company address, LinkedIn URL, all in a block your agent probably doesn't need. **Quoted reply chains** are accordions of previous messages, each carrying its own headers, signatures, and body content from different senders.
+
+None of the standard LLM sanitization guides address this layered structure. They assume you're sanitizing a flat string. Email isn't flat.
+
+## How to sanitize email content before adding to LLM context window
+
+Here's the process, step by step:
+
+1. Parse and isolate email fields: separate headers, body, signature, and quoted replies.
+2. Run NER and regex to detect PII: email addresses, names, phone numbers, physical addresses.
+3. Replace detected PII with typed placeholder tokens (`[EMAIL_0]`, `[NAME_1]`, `[PHONE_2]`).
+4. Strip HTML markup, tracking pixels, and executable content from the body.
+5. Scan subject and body text for [prompt injection patterns](/blog/prompt-injection-email-agents).
+6. Truncate or chunk the sanitized content to fit your model's context window.
+7. Store a token map so you can restore original values in the LLM's output.
+
+The order matters. If you chunk before sanitizing, you risk splitting a PII token across chunk boundaries and leaking half an email address into one chunk and the domain into another. If you strip HTML before detecting entities, you lose structural clues that help NER models distinguish names from regular nouns.
+
+Input validation and input sanitization are related but different. Validation checks whether the content is safe to process at all (rejecting emails with known exploit patterns). Sanitization transforms the content so it's safe even if something slips through validation. You need both.
+
+## The cloak-and-restore pattern for agent email
+
+Token replacement sounds simple until your agent needs to reply. If the LLM generates "I'll follow up with [EMAIL_0] on Tuesday," that placeholder needs to become a real address before the reply goes out.
+
+This is the cloak-and-restore pattern:
+
+1. **Sanitize**: Replace all PII with typed tokens. Store a bidirectional map: `{ "[EMAIL_0]": "sarah@example.com" }`.
+2. **Process**: Send the sanitized content to your LLM. The model works with placeholders and never sees real data.
+3. **Restore**: Scan the model's output for tokens and swap them back using the map.
+
+For a single LLM call, this works well. For multi-turn agentic workflows where your agent reads, classifies, drafts, and sends across multiple model calls, you need to persist the token map across the entire conversation. Every turn that touches the same thread should use consistent mappings, or your agent loses track of who `[NAME_1]` actually is.
+
+This is where DIY sanitization pipelines fall apart. The regex isn't the hard part. Maintaining consistent state across an agent's full email lifecycle is.
+
+## What regex misses
+
+Pattern matching handles the obvious targets: email addresses, phone numbers with standard formatting, URLs. But email content is full of context-dependent PII that only a language model can identify:
+
+"Please send the contract to my assistant Maria." The name "Maria" is PII here, but only because of context. "Our office moved to 455 Market Street last month." An address embedded in conversational prose. "Here's my cell: five five five, oh one two three." Spelled-out digits bypass every regex you'll write.
+
+Catching these requires a local NER model or a sanitization-specific LLM running on infrastructure you control. Sending PII to a cloud model to detect PII defeats the purpose.
+
+If you're building on LobsterMail, the SDK's `email.safeBodyForLLM()` method handles this. It runs injection scanning across [six threat categories](/blog/openclaw-agent-email-security) and strips content that shouldn't reach your model. Your agent calls a method instead of building a pipeline.
+
+## Compliance isn't a feature you add later
+
+GDPR, CCPA, and the EU AI Act all have provisions about processing personal data through AI systems. If your agent ingests email from EU residents and passes unsanitized content to a US-hosted LLM, you may be transferring personal data across jurisdictions without a legal basis. That's not a theoretical risk. It's what regulators are actively looking for.
+
+The [X verification gate](/blog/x-verification-gate-explained) is one example of building compliance into the agent's workflow rather than bolting it on afterward. Sanitization is another. Both need to happen before data leaves your controlled environment.
+
+## Start with the email layer
+
+Sanitization isn't something you retrofit. Every email your agent processes should pass through a sanitization pipeline before any LLM sees it. You can build this yourself with regex, NER models, and careful state management across turns. Or you can use an email layer that handles it natively, so your agent focuses on what the email means rather than scrubbing what it contains.
+
+The agents that get this right will process email safely at scale. The ones that don't will end up in a breach disclosure.
+
+<FAQ>
+  <FAQItem question="What does it mean to sanitize email content for an LLM context window?">
+    It means removing or replacing personally identifiable information (names, email addresses, phone numbers, addresses) and potentially dangerous content (prompt injections, executable markup) before the email text is included in a prompt sent to a language model.
+  </FAQItem>
+  <FAQItem question="Why is raw email content particularly dangerous to pass directly into an LLM prompt?">
+    Email has multiple layers of PII (headers, body, signatures, quoted reply chains) from multiple people. A single forwarded thread can expose personal data from several individuals who never consented to LLM processing. Other data sources are typically single-layer and single-author.
+  </FAQItem>
+  <FAQItem question="Which parts of an email contain the most PII that must be redacted before LLM processing?">
+    Signatures are the highest-density PII zone (name, title, phone, address, social links). Quoted reply chains are second because they multiply PII across every previous sender. Headers expose email addresses and sometimes internal infrastructure details.
+  </FAQItem>
+  <FAQItem question="How do email-based prompt injection attacks differ from standard web prompt injection?">
+    Email injections arrive through a channel your agent trusts by default. An attacker can embed instructions in an email body or subject line that hijack your agent's behavior when the content is fed to an LLM. We covered this in detail in [prompt injection through email: what agents need to watch for](/blog/prompt-injection-email-agents).
+  </FAQItem>
+  <FAQItem question="What is the token replacement technique and how does it work for email addresses?">
+    You replace each detected email address with a typed placeholder like `[EMAIL_0]` and store the mapping in a lookup table. The LLM processes the placeholder. After the model responds, you swap placeholders back to real values using the same table.
+  </FAQItem>
+  <FAQItem question="How do I sanitize quoted reply chains without losing conversational context for the LLM?">
+    Parse each quoted message separately, sanitize it individually, then reassemble the thread with clear boundaries between messages. This preserves the conversation flow while ensuring each layer is cleaned. Truncate older messages if the thread exceeds your context window budget.
+  </FAQItem>
+  <FAQItem question="How should I handle email subject lines and To/From/CC fields in an LLM context window?">
+    Subject lines should be scanned for injection patterns and PII. To/From/CC fields should have email addresses replaced with tokens. Only include these fields if your agent actually needs them for the task. Most summarization and classification tasks work fine with just the sanitized body.
+  </FAQItem>
+  <FAQItem question="How do I restore original email addresses in an LLM-generated reply draft after sanitization?">
+    Maintain a bidirectional token map across the agent's session. After the LLM generates a response containing placeholders like `[EMAIL_0]`, scan the output and replace each token with its original value from the map before sending.
+  </FAQItem>
+  <FAQItem question="Does redacting PII from email content reduce the quality of LLM summarization or classification?">
+    For most tasks, no. LLMs summarize and classify based on semantic content, not on whether the sender's name is "Sarah" or `[NAME_0]`. Sentiment analysis, topic extraction, and intent classification all work with tokenized content. Reply drafting is the main case where you need the restore step.
+  </FAQItem>
+  <FAQItem question="How should I chunk long email threads to stay within a model's context window while maintaining sanitization?">
+    Always sanitize before chunking. If you chunk first, you risk splitting a PII token across boundaries. Prioritize recent messages, summarize older ones, and keep the token map consistent across all chunks so the same person always maps to the same placeholder.
+  </FAQItem>
+  <FAQItem question="What compliance regulations require sanitizing email data before LLM use?">
+    GDPR (EU), CCPA (California), and the EU AI Act all have provisions about processing personal data through AI systems. If your agent processes email from EU residents through a US-hosted LLM without sanitization, you may lack a legal basis for the data transfer.
+  </FAQItem>
+  <FAQItem question="What is the difference between client-side sanitization and using an AI gateway for email PII redaction?">
+    Client-side sanitization runs in your application before data leaves your infrastructure. An AI gateway sits between your app and the LLM API, intercepting and scrubbing requests in transit. Client-side gives you more control. Gateways are easier to deploy but add a dependency and another point where data is processed.
+  </FAQItem>
+  <FAQItem question="How do multi-turn agentic email workflows complicate sanitization compared to single LLM calls?">
+    In multi-turn workflows, your agent makes several LLM calls against the same email thread (read, classify, draft, refine). The token map must persist across all turns so `[NAME_1]` consistently refers to the same person. Single calls don't have this state management problem.
+  </FAQItem>
+  <FAQItem question="Are there open-source libraries for detecting and redacting PII from email content before LLM ingestion?">
+    Microsoft Presidio, spaCy with custom NER models, and Stanza all handle entity detection. For email-specific parsing, libraries like `mailparser` (Node.js) or Python's `email` module help isolate headers, body, and signatures before you run detection. None of these handle the full cloak-and-restore lifecycle out of the box.
+  </FAQItem>
+  <FAQItem question="How does LobsterMail handle email sanitization for agents?">
+    LobsterMail's SDK includes `email.safeBodyForLLM()`, which strips injection patterns across six threat categories, removes high-risk content, and returns text that's safe to include in a prompt. It also exposes `email.isInjectionRisk` for quick checks. The sanitization runs before your agent's LLM ever sees the content.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
