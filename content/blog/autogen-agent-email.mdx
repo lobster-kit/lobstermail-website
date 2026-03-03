@@ -1,10 +1,15 @@
 ---
-title: "send and receive email from AutoGen agents"
-description: "Wire LobsterMail's REST API into AutoGen's tool system so your multi-agent workflows can send, receive, and react to real email."
-date: "2026-02-23"
-author: "Samuel Chenard"
-tags: ["guides", "email", "automation"]
-image: "/blog/autogen-agent-email.png"
+title: send and receive email from AutoGen agents
+description: >-
+  Wire LobsterMail's REST API into AutoGen's tool system so your multi-agent
+  workflows can send, receive, and react to real email.
+date: '2026-02-23'
+author: Ian Bussières
+tags:
+  - guides
+  - email
+  - automation
+image: /blog/autogen-agent-email.png
 ---
 
 AutoGen is built for multi-agent systems. You spin up a group of agents, give them roles, and let them collaborate on tasks. But when those agents need to interact with the outside world through email, the options are thin. You either hack together SMTP credentials and hope your agent doesn't leak them in a tool call, or you bolt on a Gmail OAuth flow that takes longer to configure than the rest of your project combined.

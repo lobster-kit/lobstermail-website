@@ -199,6 +199,7 @@ Create a file at `content/blog/{slug}.mdx` with the article from Step 2, structu
 title: "lowercase title here, not Title Case"
 description: "SEO meta description, roughly 150 characters"
 date: "YYYY-MM-DD"
+author: "Author Name"
 tags: ["tag1", "tag2"]
 image: "/blog/{slug}.png"
 ---
@@ -207,6 +208,7 @@ image: "/blog/{slug}.png"
 - **title**: Sentence case. No quotes within the title. Used as `<title>`, OpenGraph title, Twitter card title, and JSON-LD headline.
 - **description**: Under 160 chars. Appears in OpenGraph, Twitter cards, JSON-LD, Google search snippets, and blog card previews. Write it as a compelling one-liner.
 - **date**: ISO format. Use today's date.
+- **author**: Exact name from `src/lib/authors.ts`. Use **"Ian Bussières"** for technical/developer-focused articles (SDK tutorials, API guides, architecture, security, framework integrations, troubleshooting). Use **"Samuel Chenard"** for business, marketing, thought-leadership, comparisons, and general audience articles.
 - **tags**: Array of lowercase strings. Check existing tags first by reading a few files in `content/blog/`. Common tags: getting-started, email, security, privacy, automation, use-cases, guides, infrastructure, openclaw, cost, troubleshooting, business, freelancers
 - **image**: Required. Path to hero image in `/public/blog/`.
 
@@ -370,7 +372,7 @@ Tags are extracted automatically from frontmatter. Each unique tag generates a `
 ## Checklist before finishing
 
 - [ ] Step 1 complete: read website components, relevant docs, knowledge base files, and did external research
-- [ ] Frontmatter is complete (title, description, date, tags, image)
+- [ ] Frontmatter is complete (title, description, date, author, tags, image)
 - [ ] Title is lowercase (sentence case, not Title Case)
 - [ ] Content passes humanizer review (no AI patterns from the table)
 - [ ] Tone matches brand voice (knowledgeable, direct, real, agent-first)

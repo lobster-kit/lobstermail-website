@@ -21,6 +21,17 @@ export const authors: Record<string, Author> = {
       },
     ],
   },
+  "Ian Bussières": {
+    name: "Ian Bussières",
+    title: "CTO & Co-founder",
+    avatar: "/authors/ian-bussieres.png",
+    socials: [
+      {
+        platform: "linkedin",
+        url: "https://www.linkedin.com/in/ianbussieres/",
+      },
+    ],
+  },
 };
 
 export function getAuthor(name: string): Author | null {
