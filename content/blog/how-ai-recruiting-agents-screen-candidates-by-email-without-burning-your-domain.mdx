@@ -1,0 +1,125 @@
+---
+title: >-
+  how AI recruiting agents screen candidates by email (without burning your
+  domain)
+description: >-
+  AI recruiting agents screen candidates at scale through email, but most
+  destroy their sender reputation doing it. Here's what actually works.
+date: '2026-03-03'
+author: Ian Bussières
+tags:
+  - use-cases
+  - email
+  - automation
+  - business
+image: >-
+  /blog/how-ai-recruiting-agents-screen-candidates-by-email-without-burning-your-domain.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — AI recruiting
+  agent email screening
+publish_at: '2026-03-03T09:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: draft
+---
+Fifty-two percent of talent acquisition leaders plan to deploy autonomous AI agents in their recruiting pipelines this year. That number comes from a Korn Ferry survey of people already writing the purchase orders. AI use across HR tasks climbed to 43% in 2026, up from 26% two years ago.
+
+The use case driving most of this adoption is AI recruiting agent email screening. An agent sources candidates, drafts personalized outreach, sends the emails, reads responses, and decides who moves to the next stage. Humans handle the parts that require judgment: evaluating culture fit, negotiating offers, making the case for why this role matters.
+
+Companies already doing this report 31% faster time-to-hire. Juicebox says their AI-crafted multi-step sequences triple reply rates compared to human-written templates. The technology works. The email infrastructure underneath it usually doesn't.
+
+## What the pipeline actually looks like
+
+A recruiting agent runs a multi-step email workflow. On the outbound side, it sources candidates from LinkedIn or job boards, drafts personalized outreach based on each person's background and the job requirements, then sends the email. Platforms like Tezi and GoPerfect handle this entire flow autonomously. Tezi's agent identifies, emails, and manages candidates end-to-end. GoPerfect scores and ranks from a pool of 800 million profiles.
+
+The screening happens on the inbound side. When a candidate replies, the agent reads the response and classifies it: interested, not interested, asking questions, out of office. It extracts relevant details (availability, salary expectations, follow-up questions) and decides what to do next. Some agents handle Q&A on their own. Others escalate anything beyond a straightforward "yes, I'm interested" to a human recruiter.
+
+This mirrors how [support triage agents](/blog/agent-triage-support-inbox) work, just with different classification categories. Classify intent, route by urgency, auto-reply where confidence is high, escalate everything else.
+
+## Where the email breaks
+
+AI recruiting agents create four email problems at once. Most teams discover them after the damage is done.
+
+A recruiting agent sending 200 outreach emails per day from a fresh domain looks identical to a spam operation. Gmail and Outlook don't care that your messages are personalized. They see a new sender pushing high volume and they throttle it. Keep pushing and the domain gets blocked entirely. We covered this pattern in our [sales outreach guide](/blog/ai-sales-outreach-agent-email), and recruiting email hits the same walls.
+
+Many agents send from the recruiter's personal email through connected credentials. When the agent sends a bad batch (wrong tone, broken links, high bounce rate) the reputation damage hits every email from that account. Including offer letters. Including client communications. One bad outreach campaign can poison the whole account.
+
+Then there's the mechanical sending pattern. Humans don't send 50 perfectly spaced emails between 9:00 and 10:00 AM. Agents do. Inbox providers detect this cadence and treat it as bulk mail. Nearly 46% of outreach emails already end up in spam folders. Rigid sending loops make it worse.
+
+Email data decays at 22% per year. A candidate reachable in January may have changed companies by March. Without pre-send validation, the agent fires messages at dead addresses, racking up hard bounces that compound reputation damage over time.
+
+## The compliance piece
+
+Recruiting email isn't just a [deliverability](/blog/email-deliverability-ai-agents) problem. It's a legal one.
+
+The EU AI Act classifies AI tools used in recruiting as high-risk systems. The provisions requiring strict compliance for hiring-related AI come into force August 2, 2026. If your agent screens candidates through email, you need transparency about how decisions are made and human oversight at critical points.
+
+GDPR Article 22 gives individuals the right not to be subjected to purely automated decisions with significant effects. That includes getting rejected because an AI misclassified a candidate's email response as "not interested" when they were actually asking for clarification.
+
+CAN-SPAM requires a physical address and working unsubscribe mechanism in every outreach email. GDPR requires explicit consent or legitimate interest for contacting EU candidates. Your agent needs to handle opt-out requests immediately, not eventually.
+
+I'm not a lawyer, and the regulatory picture is shifting fast. But building a recruiting agent that ignores compliance is a bet with terrible odds.
+
+## How to build this without wrecking your reputation
+
+If you're building a recruiting agent that screens candidates through email, the infrastructure choices matter more than the prompt engineering.
+
+Give your agent its own email address. Don't let it borrow a recruiter's personal account. A dedicated address means a contained blast radius. If something goes wrong, the damage stays with the agent's inbox and your recruiter's account keeps working normally. This is the same principle behind [inbox isolation](/blog/inbox-isolation-what-it-means-and-why-every-ai-agent-needs-its-own-dedicated-inbox).
+
+Send from a [custom domain](/blog/custom-domains-agent-email) so candidates see `recruiting@yourcompany.com` instead of a third-party address. Candidates check the from field before they open anything. A branded domain builds the trust that cold outreach desperately needs.
+
+Warm the domain before you scale. Start with 10-20 emails per day to engaged contacts, then ramp 20-30% per week over four to eight weeks. No shortcuts exist for this step, and trying to skip it is the single most common reason recruiting domains get blacklisted.
+
+Validate addresses before sending. Pre-send MX validation catches domains that don't exist. LobsterMail runs these lookups before every message leaves, so the bounce never happens. Bouncing off dead addresses is the fastest way to get flagged.
+
+Isolate reputation between campaigns. Warm outreach to candidates who applied should have separate reputation tracking from cold sourcing to passive candidates. LobsterMail uses per-account configuration sets so a problem in one campaign can't bleed into the other.
+
+Build opt-out handling on day one. Your agent needs to process unsubscribe requests immediately and never contact that candidate again.
+
+The AI recruitment market hit $752 million this year. A meaningful chunk of that is being spent on agents whose outreach emails never reach anyone's inbox. The recruiting agents that actually work aren't the ones with the fanciest prompts. They're the ones with email infrastructure that keeps them out of spam folders and out of regulatory trouble.
+
+Give your recruiting agent proper infrastructure. That's the difference between screening candidates and shouting into the void.
+
+<FAQ>
+  <FAQItem question="What is AI recruiting agent email screening?">
+    It's the process where an AI agent autonomously sends outreach emails to candidates, reads their replies, classifies responses by intent (interested, not interested, asking questions), and routes qualified candidates to the next step. The agent handles the repetitive screening so recruiters focus on conversations that matter.
+  </FAQItem>
+  <FAQItem question="Can I let my recruiting agent send from my personal email?">
+    You can, but you shouldn't. If the agent sends a bad batch, the reputation damage hits every email from your account, including offer letters and client communication. Give the agent its own dedicated address so problems stay contained. Learn more about [inbox isolation](/blog/inbox-isolation-what-it-means-and-why-every-ai-agent-needs-its-own-dedicated-inbox).
+  </FAQItem>
+  <FAQItem question="How long does it take to warm a domain for recruiting outreach?">
+    Four to eight weeks of gradual volume increases. Start with 10-20 emails per day to engaged contacts and ramp by 20-30% per week. Trying to skip warmup is the single most common reason recruiting domains get blacklisted.
+  </FAQItem>
+  <FAQItem question="Is AI recruiting email compliant with GDPR?">
+    It can be, but you need to get it right. GDPR requires explicit consent or legitimate interest as a legal basis for contacting EU candidates, and Article 22 gives individuals the right not to be subjected to purely automated decisions with significant effects. Your agent also needs to handle opt-out requests immediately.
+  </FAQItem>
+  <FAQItem question="What is the EU AI Act and how does it affect recruiting agents?">
+    The EU AI Act classifies AI tools used in recruiting and hiring as high-risk systems. Provisions requiring strict compliance for hiring-related AI come into force August 2, 2026. If your agent screens candidates through email, you'll need transparency about how decisions are made and human oversight at critical points.
+  </FAQItem>
+  <FAQItem question="How many recruiting emails can my agent send per day?">
+    It depends on your domain's warmup stage and your infrastructure. LobsterMail's Builder tier supports up to 500 sends per day with custom domains. During warmup, keep volume much lower (10-50 per day) regardless of what your platform allows.
+  </FAQItem>
+  <FAQItem question="Why do recruiting agent emails land in spam?">
+    Four common reasons: sending high volume from a new domain, mechanical sending intervals that look automated, high bounce rates from unverified email lists, and shared infrastructure where other senders' bad behavior drags your reputation down. Nearly 46% of outreach emails end up in spam folders.
+  </FAQItem>
+  <FAQItem question="What is reputation isolation and why does it matter?">
+    Reputation isolation means each sending account has its own deliverability metrics tracked independently by inbox providers. Without it, a bad outreach campaign damages the sender reputation for all your other email. LobsterMail uses per-account configuration sets to keep campaign reputations separate.
+  </FAQItem>
+  <FAQItem question="Can a recruiting agent handle candidate responses autonomously?">
+    For straightforward responses, yes. An agent can parse "I'm interested, here's my availability" and move the candidate forward. For ambiguous replies, salary negotiations, or nuanced questions about the role, the agent should escalate to a human recruiter. Start with a high escalation threshold and lower it as you build confidence.
+  </FAQItem>
+  <FAQItem question="What's pre-send MX validation?">
+    It's a check that verifies whether a recipient's domain has valid mail server records before your message is sent. This catches invalid or nonexistent domains early, preventing bounces that would hurt your sender reputation. LobsterMail runs MX lookups automatically before every send.
+  </FAQItem>
+  <FAQItem question="Can I use LobsterMail for recruiting agent email?">
+    Yes. Your agent can provision its own inbox in seconds, send from a custom domain like `recruiting@yourcompany.com`, and benefit from per-account reputation isolation, pre-send validation, and adaptive throttling. The Builder tier at $9/month includes custom domains and up to 500 sends per day.
+  </FAQItem>
+  <FAQItem question="How do I prevent my recruiting agent from getting blacklisted?">
+    Warm your domain for four to eight weeks before scaling, randomize send times, validate recipient addresses before sending, keep bounce rates under 2% and spam complaints under 0.3%, and never send from a recruiter's personal account. Our [sales outreach guide](/blog/ai-sales-outreach-agent-email) covers these patterns in detail.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
