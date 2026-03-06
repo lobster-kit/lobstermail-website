@@ -1,0 +1,328 @@
+{
+  "generated_at": "2026-03-06T19:14:48.480Z",
+  "kpis": {
+    "mrr_usd": 0,
+    "paid_accounts": 1,
+    "free_accounts": 17,
+    "total_accounts": 23,
+    "npm_installs_7d": 1,
+    "seo_clicks_7d": 38,
+    "seo_impressions_7d": 3496,
+    "seo_avg_position": 6.1,
+    "total_emails_sent": 9,
+    "total_emails_received": 62,
+    "total_inboxes": 29,
+    "daily_visitors": 720,
+    "daily_visitors_human": 606,
+    "daily_visitors_bot": 90,
+    "github_stars": 0,
+    "x_followers": 2,
+    "clawhub_skill_installs": 0
+  },
+  "market": {
+    "openclaw_github_stars": 267261,
+    "openclaw_npm_weekly": 0,
+    "openclaw_twitter_followers": 416426
+  },
+  "sparklines": {
+    "mrr_usd": [
+      {
+        "date": "2026-02-23",
+        "value": 0
+      },
+      {
+        "date": "2026-02-24",
+        "value": 0
+      },
+      {
+        "date": "2026-02-25",
+        "value": 0
+      },
+      {
+        "date": "2026-02-26",
+        "value": 0
+      },
+      {
+        "date": "2026-02-27",
+        "value": 0
+      },
+      {
+        "date": "2026-02-28",
+        "value": 0
+      },
+      {
+        "date": "2026-03-01",
+        "value": 0
+      },
+      {
+        "date": "2026-03-02",
+        "value": 0
+      },
+      {
+        "date": "2026-03-03",
+        "value": 0
+      },
+      {
+        "date": "2026-03-04",
+        "value": 0
+      },
+      {
+        "date": "2026-03-06",
+        "value": 0
+      }
+    ],
+    "paid_accounts": [
+      {
+        "date": "2026-02-23",
+        "value": 0
+      },
+      {
+        "date": "2026-02-24",
+        "value": 0
+      },
+      {
+        "date": "2026-02-25",
+        "value": 0
+      },
+      {
+        "date": "2026-02-26",
+        "value": 0
+      },
+      {
+        "date": "2026-02-27",
+        "value": 0
+      },
+      {
+        "date": "2026-02-28",
+        "value": 0
+      },
+      {
+        "date": "2026-03-01",
+        "value": 0
+      },
+      {
+        "date": "2026-03-02",
+        "value": 0
+      },
+      {
+        "date": "2026-03-03",
+        "value": 0
+      },
+      {
+        "date": "2026-03-04",
+        "value": 1
+      },
+      {
+        "date": "2026-03-06",
+        "value": 1
+      }
+    ],
+    "seo_clicks": [
+      {
+        "date": "2026-02-23",
+        "value": 0
+      },
+      {
+        "date": "2026-02-24",
+        "value": 0
+      },
+      {
+        "date": "2026-02-25",
+        "value": 0
+      },
+      {
+        "date": "2026-02-26",
+        "value": 1
+      },
+      {
+        "date": "2026-02-27",
+        "value": 8
+      },
+      {
+        "date": "2026-02-28",
+        "value": 8
+      },
+      {
+        "date": "2026-03-01",
+        "value": 11
+      },
+      {
+        "date": "2026-03-02",
+        "value": 5
+      },
+      {
+        "date": "2026-03-03",
+        "value": 5
+      },
+      {
+        "date": "2026-03-04",
+        "value": 0
+      },
+      {
+        "date": "2026-03-06",
+        "value": 0
+      }
+    ],
+    "seo_impressions": [
+      {
+        "date": "2026-02-23",
+        "value": 0
+      },
+      {
+        "date": "2026-02-24",
+        "value": 9
+      },
+      {
+        "date": "2026-02-25",
+        "value": 7
+      },
+      {
+        "date": "2026-02-26",
+        "value": 224
+      },
+      {
+        "date": "2026-02-27",
+        "value": 726
+      },
+      {
+        "date": "2026-02-28",
+        "value": 872
+      },
+      {
+        "date": "2026-03-01",
+        "value": 692
+      },
+      {
+        "date": "2026-03-02",
+        "value": 440
+      },
+      {
+        "date": "2026-03-03",
+        "value": 535
+      },
+      {
+        "date": "2026-03-04",
+        "value": 0
+      },
+      {
+        "date": "2026-03-06",
+        "value": 0
+      }
+    ],
+    "daily_visitors": [
+      {
+        "date": "2026-02-23",
+        "value": 0
+      },
+      {
+        "date": "2026-02-24",
+        "value": 0
+      },
+      {
+        "date": "2026-02-25",
+        "value": 0
+      },
+      {
+        "date": "2026-02-26",
+        "value": 0
+      },
+      {
+        "date": "2026-02-27",
+        "value": 0
+      },
+      {
+        "date": "2026-02-28",
+        "value": 0
+      },
+      {
+        "date": "2026-03-01",
+        "value": 0
+      },
+      {
+        "date": "2026-03-02",
+        "value": 0
+      },
+      {
+        "date": "2026-03-03",
+        "value": 0
+      },
+      {
+        "date": "2026-03-04",
+        "value": 1005
+      },
+      {
+        "date": "2026-03-06",
+        "value": 720
+      }
+    ],
+    "total_accounts": [
+      {
+        "date": "2026-02-23",
+        "value": 0
+      },
+      {
+        "date": "2026-02-24",
+        "value": 0
+      },
+      {
+        "date": "2026-02-25",
+        "value": 0
+      },
+      {
+        "date": "2026-02-26",
+        "value": 0
+      },
+      {
+        "date": "2026-02-27",
+        "value": 0
+      },
+      {
+        "date": "2026-02-28",
+        "value": 0
+      },
+      {
+        "date": "2026-03-01",
+        "value": 0
+      },
+      {
+        "date": "2026-03-02",
+        "value": 0
+      },
+      {
+        "date": "2026-03-03",
+        "value": 16
+      },
+      {
+        "date": "2026-03-04",
+        "value": 20
+      },
+      {
+        "date": "2026-03-06",
+        "value": 23
+      }
+    ]
+  },
+  "pipeline": {
+    "drafts": 27,
+    "approved": 6,
+    "published": 168
+  },
+  "content": {
+    "total_topics": 300,
+    "roadmap_progress": {
+      "total": 300,
+      "planned": 217,
+      "targeted": 10,
+      "drafted": 30,
+      "approved": 0,
+      "published": 43,
+      "refreshing": 0
+    }
+  },
+  "agents": {
+    "agent_2_last_run": "2026-03-06T09:08:28.242Z",
+    "agent_3_last_run": "2026-03-06T16:17:19.201Z",
+    "agent_6_last_run": "2026-03-06T07:00:07.632Z"
+  },
+  "latest_date": "2026-03-06"
+}
