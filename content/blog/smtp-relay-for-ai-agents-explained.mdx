@@ -1,0 +1,169 @@
+---
+title: 'SMTP relay for AI agents, explained'
+description: >-
+  How SMTP relay works, why it matters for AI agents, and what changes when the
+  sender isn't a human but an autonomous program.
+date: '2026-03-06'
+author: Samuel Chenard
+tags:
+  - email
+  - infrastructure
+  - guides
+image: /blog/smtp-relay-for-ai-agents-explained.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — SMTP relay AI
+  agents explained
+publish_at: '2026-03-06T09:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-06T21:10:03.664Z'
+---
+Most developers building AI agents hit email eventually. The agent needs to send a confirmation, follow up with a lead, or register for a service. And the moment you start looking into how email actually gets delivered, you run into a term that sounds like it belongs in 1998: SMTP relay.
+
+It does belong in 1998. It also belongs in 2026. SMTP relay is the backbone of every email you've ever sent, and understanding it matters more when the sender is an autonomous agent instead of a person clicking "Send" in Gmail.
+
+## What is SMTP relay for AI agents?
+
+SMTP relay for AI agents is the process by which an agent's outbound email is routed through one or more intermediate mail servers (called Mail Transfer Agents) before reaching the recipient's inbox. Unlike traditional email clients operated by humans, AI agents use SMTP relay to send email programmatically at scale, often without a human ever touching the message. This enables agents to handle tasks like account verification, outreach, and inter-agent communication autonomously.
+
+That's the textbook answer. Here's what it means in practice.
+
+When your agent sends an email, it doesn't deliver the message directly to the recipient's mail server. It hands the message to a relay server. That relay server authenticates the sender, checks the message against spam policies, applies DKIM and SPF signatures, and then forwards it to the next server in the chain. Eventually the message reaches the recipient's MTA, which drops it into their inbox (or spam folder, if something went wrong along the way).
+
+The whole process takes seconds. But a lot can go wrong in those seconds, especially when the sender is software that runs 24/7 with no human reviewing what goes out.
+
+## How SMTP relay actually works, step by step
+
+Let me walk through the chain:
+
+1. **Your agent composes an email.** It has a subject, body, recipient address, and a "from" address tied to an inbox it controls.
+2. **The agent connects to an SMTP server on port 587** (the standard submission port for authenticated senders). Port 465 handles implicit TLS. Port 25 is for server-to-server relay, and most cloud providers block it by default now.
+3. **The SMTP handshake happens.** The agent's mail client sends an EHLO command, the server responds with its capabilities, and they negotiate encryption (STARTTLS on 587, or direct TLS on 465).
+4. **Authentication.** The agent provides credentials. For traditional setups, this means a username and password or an OAuth token. For agent-first infrastructure like LobsterMail, the SDK handles this automatically with API tokens.
+5. **The message is accepted for relay.** The server validates the sender, checks rate limits, and queues the message.
+6. **The relay server forwards to the recipient's MTA.** DNS MX record lookups determine where to deliver. DKIM signatures and SPF records are checked by the receiving server.
+7. **Delivery or bounce.** The message lands in the inbox, gets filtered to spam, or bounces back. If it bounces, the relay server generates a bounce notification.
+
+For a human using Outlook, steps 2 through 7 are invisible. For an AI agent, every one of these steps is a potential failure point that your code needs to handle.
+
+## MTAs, MSAs, and MUAs: the pieces of the puzzle
+
+Three acronyms show up constantly in SMTP documentation, and they're worth understanding because they map directly to the components in your agent's email stack.
+
+A **Mail User Agent (MUA)** is the client. In a human workflow, that's Outlook or Thunderbird. In an agent workflow, it's whatever code your agent uses to compose and submit email. If you're using LobsterMail's SDK, the SDK is your MUA.
+
+A **Mail Submission Agent (MSA)** is the server that accepts outbound email from authenticated clients. It listens on port 587, enforces authentication, and hands messages off to the MTA. Think of it as the front door.
+
+A **Mail Transfer Agent (MTA)** is the server that routes email between domains. It receives messages from the MSA (or from other MTAs) and figures out where to deliver them using DNS MX records. Postfix, Sendmail, and Exim are all MTAs. When people say "SMTP relay server," they usually mean an MTA configured to accept and forward email from trusted sources.
+
+For AI agents, the distinction matters because you need to know what you're responsible for (the MUA layer) and what your infrastructure handles (MSA and MTA). If you're [self-hosting agent email vs using a managed service](/blog/self-hosted-vs-managed-agent-email), you're taking ownership of all three layers. If you're using a managed service, you only worry about the MUA.
+
+## SMTP relay vs. direct send
+
+Direct send means your agent connects straight to the recipient's mail server and delivers the message without an intermediary relay. It sounds simpler. It's actually harder.
+
+With direct send, your agent's IP address is the sending IP. If that IP has no reputation, no SPF record, and no DKIM key, the recipient server will almost certainly reject or spam-folder your message. You also need to handle bounces, retries, connection timeouts, and TLS negotiation yourself.
+
+SMTP relay offloads all of that. The relay server has an established IP reputation, preconfigured authentication records, and retry logic built in. Your agent just submits the message and moves on.
+
+For agents that send more than a handful of emails, relay is the only realistic option.
+
+## What changes when the sender is an AI agent
+
+Here's where SMTP relay gets interesting for agent builders. Traditional relay services assume a human is behind the sending. The human creates an account, verifies a domain, sets up DKIM records in their DNS, and configures sending limits. The relay service trusts the human to behave responsibly.
+
+AI agents break these assumptions in a few ways:
+
+**Dynamic identities.** An agent might need multiple sending addresses. Maybe it's handling inquiries for different clients, or it's spawning sub-agents that each need their own inbox. Traditional relay services require manual domain verification for each sender identity. Agent-first infrastructure provisions inboxes programmatically.
+
+**No human in the loop for bounces.** When a human's email bounces, they see a notification and adjust. When an agent's email bounces, the bounce has to be parsed, interpreted, and acted on by code. If the agent doesn't handle bounces, it keeps sending to dead addresses, which tanks its sender reputation.
+
+**Volume unpredictability.** A human sends maybe 50 emails a day. An agent might send 5 in one hour and 500 in the next, depending on what tasks it's running. Relay services with rigid hourly limits don't fit well. Per-agent sending limits with flexible burst capacity work better.
+
+**Inbound processing.** Agents don't just send email. They receive it. Verification codes, reply threads, automated responses from other systems. The relay infrastructure needs to handle inbound delivery, not just outbound routing. We compared how different services handle this in our [agent email API comparison](/blog/agent-email-api-comparison).
+
+**Security on inbound messages.** This is the one most people miss. When an agent receives email, the content of that email becomes input to the agent's reasoning. That's a prompt injection vector. A malicious email could contain instructions that trick the agent into performing unintended actions. SMTP relay infrastructure for agents needs to include content scanning and injection risk scoring on the inbound side, not just spam filtering.
+
+## DKIM, SPF, and DMARC for agent-sent email
+
+These three authentication protocols determine whether your agent's email lands in the inbox or the spam folder.
+
+**SPF** (Sender Policy Framework) is a DNS record that lists which IP addresses are authorized to send email for your domain. If your relay server's IP isn't in the SPF record, receiving servers flag the message.
+
+**DKIM** (DomainKeys Identified Mail) is a cryptographic signature attached to each outgoing message. The relay server signs the message with a private key, and the recipient verifies it against a public key published in DNS.
+
+**DMARC** (Domain-based Message Authentication, Reporting, and Conformance) ties SPF and DKIM together with a policy. It tells receiving servers what to do when authentication fails: nothing, quarantine, or reject.
+
+For agents using `@lobstermail.ai` addresses, all three are preconfigured. If you bring a custom domain, you'll need to add the DNS records yourself. The docs walk through this.
+
+## When your relay IP gets blacklisted
+
+It happens. If an agent (yours or someone else sharing the same relay service) sends too much spam or hits too many spam traps, the relay server's IP can end up on a blacklist like Spamhaus or Barracuda.
+
+When that happens, every email from that IP gets rejected or spam-foldered. For shared relay services, one bad actor can poison deliverability for everyone.
+
+This is why per-agent reputation isolation matters. Agent-first infrastructure can track sending behavior per agent and throttle or suspend agents that trigger spam signals before they damage the shared IP pool.
+
+## What this means for your agent
+
+If you're building an agent that sends or receives email, you have three options:
+
+1. **Run your own SMTP relay.** Full control. Full responsibility. You manage Postfix or Haraka, configure DNS records, monitor blacklists, handle bounces, and build retry logic. Good if you have the ops team. Painful if you don't.
+2. **Use a general-purpose relay service** (SendGrid, Mailgun, Amazon SES). They handle infrastructure but assume a human admin. You'll manage API keys, domain verification, and bounce webhooks manually. Works, but your agent can't self-provision anything.
+3. **Use agent-first email infrastructure.** Your agent provisions its own inbox, sends and receives without manual setup, and gets built-in protections against inbound prompt injection. That's what LobsterMail does.
+
+The right choice depends on your situation. If you're running one agent that sends a few emails a week, a general relay service is fine. If you're building agents that need to autonomously manage their own email, the manual setup becomes a bottleneck.
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
+
+<FAQ>
+  <FAQItem question="What is SMTP relay and why do AI agents need it?">
+    SMTP relay is the process of routing outbound email through intermediate mail servers before it reaches the recipient. AI agents need it because delivering email directly from an application server results in poor deliverability, no authentication (SPF/DKIM), and no bounce handling.
+  </FAQItem>
+  <FAQItem question="How does an AI agent authenticate with an SMTP relay server?">
+    The agent connects to the relay on port 587 or 465 and provides credentials during the SMTP handshake. With traditional services, this means a username and password or OAuth token. With agent-first services like LobsterMail, the SDK authenticates using an API token automatically.
+  </FAQItem>
+  <FAQItem question="What is the difference between SMTP port 25, 465, and 587?">
+    Port 25 is for server-to-server relay (and usually blocked by cloud providers). Port 587 is the standard submission port for authenticated clients using STARTTLS. Port 465 uses implicit TLS from the start. For AI agents, port 587 or 465 are the right choices.
+  </FAQItem>
+  <FAQItem question="Can multiple AI agents share a single SMTP relay?">
+    Yes, but there are risks. If one agent sends spam or triggers blacklisting, it damages deliverability for every agent on that relay. Per-agent reputation tracking and sending limits help isolate bad behavior.
+  </FAQItem>
+  <FAQItem question="How does SMTP relay handle email bounces when an AI agent is the sender?">
+    The relay server generates a bounce notification (a DSN) when delivery fails. Your agent needs code to parse these notifications and stop sending to invalid addresses. Ignoring bounces destroys sender reputation over time.
+  </FAQItem>
+  <FAQItem question="What is an MTA and how does it fit into an AI agent's email stack?">
+    A Mail Transfer Agent (MTA) is the server software that routes email between domains. In an agent's stack, the MTA sits between the agent's mail client (MUA) and the recipient's server. Examples include Postfix and Sendmail. If you use a managed relay, the MTA is handled for you.
+  </FAQItem>
+  <FAQItem question="How do I configure DKIM and SPF for emails sent by an AI agent?">
+    Add an SPF TXT record to your domain's DNS listing your relay server's IP as an authorized sender. For DKIM, your relay provider gives you a public key to publish as a DNS TXT record. If you use `@lobstermail.ai` addresses, both are preconfigured.
+  </FAQItem>
+  <FAQItem question="What happens if an AI agent's SMTP relay IP gets blacklisted?">
+    All email from that IP will be rejected or spam-foldered by receiving servers. You'll need to identify the cause (spam complaints, spam trap hits), fix it, and submit delisting requests to blacklist operators. Agent-first infrastructure monitors this per-agent to prevent it.
+  </FAQItem>
+  <FAQItem question="How is agent-first SMTP infrastructure different from traditional relay services?">
+    Agent-first infrastructure lets the agent self-provision inboxes, handles authentication automatically, includes inbound prompt injection scanning, and tracks reputation per agent rather than per account. Traditional services require manual setup by a human admin.
+  </FAQItem>
+  <FAQItem question="Can AI agents receive inbound email replies through SMTP relay?">
+    SMTP relay is primarily an outbound mechanism. Receiving email requires inbound mail server infrastructure (MX records pointing to a server that accepts delivery). Services like LobsterMail handle both sides so agents can send and receive from the same inbox.
+  </FAQItem>
+  <FAQItem question="What email sending volume limits should I set for an autonomous AI agent?">
+    Start conservative. A new sending identity should ramp up gradually: 50 emails on day one, increasing over weeks. LobsterMail's free tier allows 1,000 emails per month. The Builder tier ($9/mo) supports up to 500 per day across 10 inboxes.
+  </FAQItem>
+  <FAQItem question="What security risks exist when AI agents process inbound email?">
+    The main risk is prompt injection. A malicious email can contain hidden instructions that manipulate the agent's behavior. Good infrastructure scans inbound email content and assigns injection risk scores before the agent processes it.
+  </FAQItem>
+  <FAQItem question="What is the SMTP handshake and how does an AI agent initiate it?">
+    The SMTP handshake is the initial exchange between client and server. The agent's mail client sends an EHLO command, the server responds with supported features, and they negotiate encryption via STARTTLS. After that, the agent authenticates and submits the message.
+  </FAQItem>
+  <FAQItem question="How do I test whether my AI agent's SMTP relay is configured correctly?">
+    Send a test email to a service like mail-tester.com or use `swaks` (Swiss Army Knife for SMTP) to verify authentication, DKIM signatures, and SPF alignment. Check that the email doesn't land in spam and that headers show correct authentication results.
+  </FAQItem>
+  <FAQItem question="Is SMTP relay the same as a mail server?">
+    Not exactly. A mail server is a broader term that covers receiving, storing, and serving email to clients. SMTP relay specifically refers to the forwarding of outbound email from one server to another. A relay server is one type of mail server.
+  </FAQItem>
+</FAQ>
