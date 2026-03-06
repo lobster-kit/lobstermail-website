@@ -22,6 +22,7 @@ export interface KpiSnapshot {
     x_followers: number;
     clawhub_skill_installs: number;
   };
+  deltas?: Record<string, number | null>;
   market: {
     openclaw_github_stars: number;
     openclaw_npm_daily: number;
