@@ -66,6 +66,18 @@ function getRedis(): Redis | null {
 const TTL = 90 * 86400; // 90 days
 
 export function middleware(request: NextRequest) {
+  // ── Dashboard auth gate (password cookie) ───────────────────────────────
+  const { pathname } = request.nextUrl;
+  if (pathname.startsWith("/dashboard") && !pathname.startsWith("/dashboard/login")) {
+    const expected = process.env.DASHBOARD_PASSWORD;
+    if (expected) {
+      const token = request.cookies.get("dashboard_auth")?.value;
+      if (token !== expected) {
+        return NextResponse.redirect(new URL("/dashboard/login", request.url));
+      }
+    }
+  }
+
   const response = NextResponse.next();
   const r = getRedis();
   if (!r) return response;
