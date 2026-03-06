@@ -1,0 +1,169 @@
+---
+title: how to build an ai agent email scenario in make.com
+description: >-
+  Step-by-step guide to building a Make.com AI agent email scenario, from
+  triggers to tool descriptions, plus what to watch for at scale.
+date: '2026-03-06'
+author: Ian Bussières
+tags:
+  - email
+  - automation
+  - use-cases
+  - guides
+image: /blog/how-to-build-an-ai-agent-email-scenario-in-make-com.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — make.com ai
+  agent email scenario
+publish_at: '2026-03-06T10:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-06T13:43:01.102Z'
+---
+Make.com shipped a completely rebuilt AI Agents app in February 2026. It sits inside the scenario builder now, with a reasoning panel and multimodal inputs. If you've been using Make for automation, the pitch is obvious: connect your existing scenarios as tools and let an AI agent decide when to run them.
+
+Email is the first thing most people wire up. Triage inbound, draft replies, send follow-ups. The setup is straightforward, but there are a few sharp edges that the docs don't cover, especially around deliverability, rate limits, and what happens when your agent starts sending at scale.
+
+Here's the full walkthrough.
+
+## How to build an AI agent email scenario in Make.com (step-by-step)
+
+1. Create a new scenario with a Gmail or Outlook email module
+2. Set the scenario trigger to **On Demand** (not scheduled)
+3. Define clear input and output parameters for the scenario
+4. Activate the scenario so the agent can call it
+5. Open the AI Agents app and create a new agent
+6. Add the email scenario as a **Tool** with a descriptive name
+7. Write a tool description that tells the agent exactly when to use it
+8. Test the agent in the built-in chat before going live
+
+That's the skeleton. Let me walk through the parts that actually matter.
+
+## Setting up the email scenario
+
+The scenario itself is a normal Make scenario. You pick your email module (Gmail, Outlook, SMTP, or a transactional API like SendGrid) and build the flow. The difference is the trigger. Instead of running on a schedule or responding to a webhook, you set it to **On Demand**. This turns the scenario into a callable function that the AI agent can invoke when it decides to.
+
+You also need to define the scenario's inputs and outputs explicitly. Unlike regular module-to-module data passing, the AI agent needs a schema: what fields does it send in, what fields come back. For an email-sending scenario, that might be `to`, `subject`, and `body` as inputs, with `messageId` and `status` as outputs.
+
+Be specific with field descriptions. The agent reads them to understand what each parameter does. "The recipient's email address" is better than "to." This isn't just UX polish; it directly affects whether the agent calls the right tool with the right data.
+
+## Writing tool descriptions that actually work
+
+The tool description is the single most important thing you'll write. It tells the agent when (and when not) to invoke the scenario. A vague description like "Sends an email" will get triggered constantly. A precise one like "Send a follow-up email to a lead who hasn't responded within 48 hours. Use only when the user explicitly asks to follow up with a specific contact" gives the agent real constraints.
+
+Think of it as a system prompt for one specific action. Include the use case, the expected inputs, and any guardrails. If you don't want the agent sending emails to people who haven't opted in, say so in the description. The agent won't infer boundaries you haven't stated.
+
+<Callout type="tip">
+  Test your tool description by asking the agent ambiguous questions. If it reaches for the email tool when it shouldn't, tighten the description. If it doesn't use the tool when it should, broaden the trigger conditions.
+</Callout>
+
+## The deliverability problem nobody mentions
+
+Here's where Make.com tutorials usually stop. They show you the setup, maybe a demo with a test email, and call it done. But if your agent sends more than a handful of emails, you're going to hit deliverability issues that have nothing to do with Make itself.
+
+When a Make AI agent sends emails through Gmail, it's using your personal or workspace Gmail account. Google enforces sending limits: 500 emails per day for personal accounts, 2,000 for Workspace. Hit those limits and Google throttles you. Worse, if recipients start marking your AI-drafted emails as spam, your domain reputation tanks. That reputation takes months to rebuild.
+
+SMTP and transactional APIs give you more headroom, but they come with their own requirements. SPF, DKIM, and DMARC records need to be configured correctly on your domain. Without them, inbox providers silently drop your messages or route them to spam. Your agent thinks the email was sent successfully (Make reports a 200 status) but it never arrives.
+
+This is the gap between "the scenario works" and "the emails actually land."
+
+## Rate limits and runaway agents
+
+A Make AI agent can call multiple tools in a single session. If your email scenario doesn't have guardrails, the agent can fire off dozens of emails in seconds. Each invocation costs Make operations (credits), and each email hits your sending provider's rate limits.
+
+Two things help here. First, add a confirmation step in your scenario; a router that checks whether the recipient has been emailed in the last 24 hours, for example. Second, set explicit operation limits in Make's agent settings so a single session can't burn through your monthly quota.
+
+<Callout type="warning">
+  Make AI agent sessions consume operations for every tool call. A chatty agent with three email scenarios as tools can burn 50+ operations in a single conversation. Monitor usage during testing.
+</Callout>
+
+## When Make's email modules aren't enough
+
+Make's built-in email modules work well for personal-scale automation. You're a founder triaging your inbox, a freelancer auto-replying to leads, a small team routing support emails. That's the sweet spot.
+
+It gets harder when the agent itself needs to own the email address. If your agent needs to [sign up for services autonomously](/blog/agent-self-signup-explained), receive verification codes, or maintain its own inbox identity separate from yours, you're outside what Gmail modules were designed for. You'd need to create a dedicated email account, authenticate it, manage its credentials, and handle token refresh. That's all the friction that Make was supposed to eliminate.
+
+This is the exact problem agent-first email infrastructure solves. With something like LobsterMail, the agent provisions its own inbox programmatically. No human account creation, no OAuth tokens to refresh, no shared credentials. The agent gets an address, sends and receives through it, and you don't have to configure anything. It pairs well with Make, too. You can call LobsterMail's API from an HTTP module inside a Make scenario, giving your agent a dedicated sending identity while keeping Make's orchestration layer.
+
+## Choosing your email model
+
+Make's AI Agents app supports GPT-4o, Gemini, and Claude as the reasoning engine. For email drafting specifically, the model matters less than the prompt. All three can write a competent email. The real variable is how well the model follows your tool descriptions and respects boundaries.
+
+In my testing, Claude tends to be more conservative about tool invocation; it asks for confirmation more often, which is what you want for email. GPT-4o is faster but more trigger-happy. Gemini sits somewhere in between. Pick based on your tolerance for false positives (unwanted emails sent) versus false negatives (emails the agent should have sent but didn't).
+
+## Real-world patterns worth building
+
+**Email triage:** Agent reads your inbox via a Gmail "Watch" trigger, categorizes each email (urgent, FYI, spam, needs reply), and routes them to different Slack channels or Notion databases. This is the highest-value, lowest-risk pattern because the agent reads but doesn't send.
+
+**Meeting follow-ups:** After a calendar event ends, the agent drafts a follow-up email with notes from the meeting. It queues the draft for your review rather than sending automatically. Human-in-the-loop, but the tedious part is handled.
+
+**Lead response:** When a form submission arrives, the agent evaluates it against criteria (budget, timeline, fit) and either sends a templated response or flags it for manual review. Works well for freelancers and small agencies.
+
+For any pattern involving [receiving emails in real time](/blog/webhooks-vs-polling-email), consider whether polling on a schedule is good enough or whether you need instant delivery via webhooks. Make's Gmail module polls every 15 minutes by default. That's fine for triage, but too slow for verification codes.
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
+
+<FAQ>
+  <FAQItem question="What is a Make.com AI agent email scenario and how does it work?">
+    It's a Make scenario with an email module (Gmail, Outlook, or SMTP) set to "On Demand" trigger, then added as a tool to a Make AI Agent. The agent calls the scenario when it decides an email action is needed, passing in parameters like recipient, subject, and body.
+  </FAQItem>
+
+  <FAQItem question="How do I set a Make scenario to 'on demand' so an AI agent can trigger it?">
+    In the scenario editor, click the trigger module and change its type to "On Demand." Then define your input and output parameters so the agent knows what data to pass and what to expect back. Save and activate the scenario before adding it as a tool.
+  </FAQItem>
+
+  <FAQItem question="Can a Make AI agent read, triage, and reply to emails automatically?">
+    Yes. You'd build separate scenarios for reading (Gmail Watch module) and replying (Gmail Send module), then add both as tools. The agent can read incoming emails, categorize them, and decide whether to reply, forward, or flag for human review.
+  </FAQItem>
+
+  <FAQItem question="How do I add a Gmail or Outlook send action as an AI agent tool in Make?">
+    Create a scenario with the Gmail or Outlook "Send Email" module, set the trigger to On Demand, define inputs (to, subject, body), activate it, then go to the AI Agents app and add the scenario as a tool with a clear description of when to use it.
+  </FAQItem>
+
+  <FAQItem question="What happens to email deliverability when a Make AI agent sends emails at scale?">
+    Gmail limits personal accounts to 500 emails/day and Workspace to 2,000. Exceeding limits causes throttling, and spam complaints damage your domain reputation. For scale sending, use a transactional email API with proper SPF, DKIM, and DMARC records instead of Gmail modules.
+  </FAQItem>
+
+  <FAQItem question="How do I write a good tool description so the AI agent knows when to send an email?">
+    Be specific about the use case, expected inputs, and constraints. Instead of "Sends an email," write something like "Send a follow-up email to a lead who hasn't responded in 48 hours. Only use when the user explicitly requests a follow-up." Include guardrails directly in the description.
+  </FAQItem>
+
+  <FAQItem question="Can I use Make AI agents with transactional email APIs like SendGrid or LobsterMail?">
+    Yes. Use Make's HTTP module to call any email API directly from a scenario. This gives you better deliverability, higher sending limits, and proper authentication (SPF/DKIM) compared to sending through personal Gmail accounts.
+  </FAQItem>
+
+  <FAQItem question="How do I prevent a Make AI agent from sending duplicate or unintended emails?">
+    Add a router in your email scenario that checks a data store for recent sends to the same recipient. Also set operation limits on the agent session, and write tight tool descriptions that specify exactly when the email tool should be invoked.
+  </FAQItem>
+
+  <FAQItem question="What AI models work best for email drafting in Make agents?">
+    GPT-4o, Gemini, and Claude all handle email drafting well. Claude tends to be more conservative about tool invocation (fewer accidental sends), GPT-4o is faster but more trigger-happy. The model matters less than your tool descriptions and prompt quality.
+  </FAQItem>
+
+  <FAQItem question="What are the credit and operation costs of running an AI agent email scenario in Make?">
+    Each tool call in an AI agent session consumes Make operations. A single conversation can use 10-50+ operations depending on how many tools the agent invokes. Monitor usage during testing to avoid burning through your monthly quota.
+  </FAQItem>
+
+  <FAQItem question="How many tools can a Make AI agent use in a single session?">
+    Make doesn't publish a hard limit on tools per agent, but each tool call costs operations. In practice, agents work best with 3-7 focused tools. Too many tools and the agent gets confused about which one to pick.
+  </FAQItem>
+
+  <FAQItem question="Can Make AI agents handle email threading and reply-to context correctly?">
+    Gmail and Outlook modules support threading via Message-ID and In-Reply-To headers. Your scenario needs to pass the original message ID as an input so the reply lands in the same thread. Without this, each agent reply starts a new conversation.
+  </FAQItem>
+
+  <FAQItem question="How do I test an AI agent email scenario before going live in Make?">
+    Use Make's built-in agent chat to send test queries. Start with edge cases: ambiguous requests, missing data, requests that shouldn't trigger an email. Check that the agent calls the right tool with correct parameters before connecting to a live email account.
+  </FAQItem>
+
+  <FAQItem question="Can a Make AI agent send emails using a custom domain?">
+    Yes, if you use an SMTP module or transactional API connected to your domain. Gmail modules send from your Gmail address only. For custom domain sending, configure SPF, DKIM, and DMARC records and use an HTTP module with an email API that supports your domain.
+  </FAQItem>
+
+  <FAQItem question="Can a Make AI agent compose and send emails without any human input?">
+    Technically yes, but it's risky. Fully autonomous sending means the agent could email the wrong person or send incorrect content. Start with a human-in-the-loop pattern where the agent drafts emails for your approval, then gradually increase autonomy as you build confidence in the tool descriptions and guardrails.
+  </FAQItem>
+</FAQ>
