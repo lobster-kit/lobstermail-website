@@ -1,0 +1,208 @@
+---
+title: how to build an email tool for a hugging face transformers agent
+description: >-
+  Step-by-step guide to creating a custom email tool for Hugging Face
+  smolagents. Subclass Tool, wire up email sending, and register it with
+  CodeAgent.
+date: '2026-03-06'
+author: Ian Bussières
+tags:
+  - email
+  - guides
+  - automation
+  - infrastructure
+image: /blog/how-to-build-an-email-tool-for-a-hugging-face-transformers-agent.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — hugging face
+  transformers agent email tool
+publish_at: '2026-03-06T09:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-06T13:43:01.104Z'
+---
+Hugging Face's agent framework gives your LLM the ability to call tools: web search, image generation, code execution. But there's no built-in tool for email. If your agent needs to send a verification request, dispatch a report, or notify a human, you have to build that yourself.
+
+The good news: it takes about 40 lines of Python. The less-good news: most tutorials skip the parts that matter in production, like deliverability, security, and what happens when your agent decides to email someone it shouldn't.
+
+Here's how to build an email tool that actually works, from subclassing `Tool` to handling the sharp edges.
+
+## How to build an email tool for a Hugging Face Transformers agent
+
+A Hugging Face Transformers agent tool is a Python class that wraps any capability (API call, computation, side effect) so an LLM can invoke it by name. Here's how to build one that sends email:
+
+1. Install smolagents and your email library: `pip install smolagents lobstermail`
+2. Subclass `Tool` and set `name`, `description`, `inputs`, and `output_type`
+3. Define the `forward()` method with your email-sending logic
+4. Instantiate the tool and pass it to `CodeAgent(tools=[...])`
+5. Set your LLM engine with `HfApiModel` or any supported provider
+6. Call `agent.run("Send an email to...")` and let the agent invoke your tool
+
+That's the skeleton. Let's fill it in.
+
+## Subclassing Tool for email
+
+The `smolagents` library (which replaced the older `HfAgent` and `transformers.agents` classes) expects every tool to follow the same interface. Here's a minimal email tool:
+
+```python
+from smolagents import Tool
+
+class EmailTool(Tool):
+    name = "send_email"
+    description = "Sends an email to a recipient with a subject and body."
+    inputs = {
+        "to": {"type": "string", "description": "Recipient email address"},
+        "subject": {"type": "string", "description": "Email subject line"},
+        "body": {"type": "string", "description": "Email body text"},
+    }
+    output_type = "string"
+
+    def forward(self, to: str, subject: str, body: str) -> str:
+        # Your email-sending logic here
+        return f"Email sent to {to}"
+The agent reads `name` and `description` to decide when to call your tool. Be specific in the description. Vague descriptions lead to the agent invoking it at weird times or not at all.
+
+## Wiring up the email backend
+
+Inside `forward()`, you need something that actually delivers mail. You have two options: raw SMTP or an API.
+
+Raw SMTP means importing `smtplib`, managing credentials, handling TLS, and praying your emails don't land in spam. It works, but you're now responsible for deliverability, bounce handling, and SPF/DKIM alignment. For a prototype, fine. For anything an agent runs unsupervised, it's a maintenance headache.
+
+The alternative is an agent-first email API. With LobsterMail, the `forward()` method looks like this:
+
+```python
+from lobstermail import LobsterMail
+
+class EmailTool(Tool):
+    name = "send_email"
+    description = "Sends an email from the agent's own inbox."
+    inputs = {
+        "to": {"type": "string", "description": "Recipient email address"},
+        "subject": {"type": "string", "description": "Email subject line"},
+        "body": {"type": "string", "description": "Email body text"},
+    }
+    output_type = "string"
+
+    def __init__(self):
+        super().__init__()
+        self.lm = None
+
+    def forward(self, to: str, subject: str, body: str) -> str:
+        if not self.lm:
+            self.lm = LobsterMail.create_sync()
+            self.inbox = self.lm.create_smart_inbox_sync(name="hf-agent")
+        self.inbox.send_sync(to=to, subject=subject, body=body)
+        return f"Email sent to {to} from {self.inbox.address}"
+The agent gets its own `@lobstermail.ai` address. No human account creation, no OAuth dance, no SMTP credentials in your environment variables. The agent [creates its own inbox](/blog/agent-self-signup-explained) the first time it sends.
+
+## Registering the tool with CodeAgent
+
+Once your tool class exists, hand it to the agent:
+
+```python
+from smolagents import CodeAgent, HfApiModel
+
+model = HfApiModel("Qwen/Qwen2.5-Coder-32B-Instruct")
+email_tool = EmailTool()
+
+agent = CodeAgent(tools=[email_tool], model=model)
+agent.run("Send an email to ops@example.com summarizing today's build results.")
+```
+
+`CodeAgent` generates Python code that calls your tool. It can combine the email tool with other tools in a single run, fetching data from an API, formatting it, then emailing the result. `ToolCallingAgent` is the alternative if you prefer structured JSON calls over code generation, but `CodeAgent` handles multi-step workflows more naturally.
+
+For the model, anything that can follow tool-calling instructions works. Qwen2.5-Coder-32B is solid for code generation. Mistral and Llama 3 models work too. If you're using a proprietary model, smolagents supports OpenAI-compatible and Anthropic endpoints through `LiteLLMModel`.
+
+## The security problem nobody mentions
+
+Here's where most tutorials stop, and where real problems start. Your agent can now email anyone. What if a prompt injection in an upstream input tricks it into emailing `ceo@bigcorp.com` with fabricated content? What if it loops and sends 500 emails in a minute?
+
+You need guardrails:
+
+**Allowlists.** Restrict `to` addresses in your `forward()` method. If the agent should only email internal addresses, enforce that before sending.
+
+**Rate limits.** Track sends per minute. A simple counter in `__init__` with a timestamp check in `forward()` prevents runaway loops.
+
+**Content scanning.** If your agent composes email bodies from external data (scraped content, user input, other tool outputs), that content could contain injection attempts. LobsterMail's SDK includes prompt injection scoring on inbound email, but for outbound, you should validate the body before sending. There's a whole category of attacks where [agents with email access](/blog/what-agents-do-with-email) become vectors for phishing if left unchecked.
+
+**Audit logging.** Log every `forward()` call with timestamp, recipient, subject, and the agent's reasoning trace. When something goes wrong (and eventually it will), you'll want the paper trail.
+
+## Testing without sending live emails
+
+For development, mock the email backend in your tool:
+
+```python
+class EmailTool(Tool):
+    # ... same as above ...
+
+    def forward(self, to: str, subject: str, body: str) -> str:
+        if self.dry_run:
+            print(f"[DRY RUN] To: {to}, Subject: {subject}")
+            return f"[DRY RUN] Would send to {to}"
+        # actual send logic
+```
+
+Set `dry_run=True` in your test harness. You can also use LobsterMail's test tokens (prefixed `lm_sk_test_`) which accept API calls without delivering real email.
+
+## CodeAgent vs. ToolCallingAgent for email
+
+`CodeAgent` writes Python that calls your tools, which means it can build the email body programmatically, pulling data from other tools, formatting tables, handling conditionals. `ToolCallingAgent` emits a JSON blob with the tool name and arguments, which is simpler but less flexible.
+
+For email, I'd pick `CodeAgent` unless you need strict output control. The ability to compose multi-step logic (fetch data → transform → email) in a single turn is worth the slightly higher error rate from code generation.
+
+<Callout type="tip">
+  You can add tools to a running agent with `agent.tools["send_email"] = EmailTool()` without reinitializing the whole agent. Useful for dynamically enabling email access based on context.
+</Callout>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
+
+<FAQ>
+  <FAQItem question="What is a Hugging Face Transformers agent tool and how does it work?">
+    A tool is a Python class that exposes a `name`, `description`, `inputs` schema, and a `forward()` method. The agent's LLM reads the description to decide when to call the tool, then passes arguments to `forward()` and uses the return value in its reasoning.
+  </FAQItem>
+  <FAQItem question="How do I define a custom Tool subclass that sends email from a Transformers agent?">
+    Subclass `smolagents.Tool`, set `name` to something like `"send_email"`, define `inputs` with `to`, `subject`, and `body` fields, and implement `forward()` with your SMTP or API-based email logic. Pass the instance to `CodeAgent(tools=[...])`.
+  </FAQItem>
+  <FAQItem question="Which LLM models work best for powering an email-capable Hugging Face agent?">
+    Qwen2.5-Coder-32B-Instruct is a strong open-source choice for `CodeAgent` since it handles code generation well. Mistral, Llama 3, and proprietary models via `LiteLLMModel` (OpenAI, Anthropic) also work. The model needs to follow tool-calling instructions reliably.
+  </FAQItem>
+  <FAQItem question="What Python libraries do I need to build an email tool for a Transformers agent?">
+    At minimum, `smolagents` for the agent framework. For email delivery, either `smtplib` (standard library) for raw SMTP, or `lobstermail` for an agent-first API. Install with `pip install smolagents lobstermail`.
+  </FAQItem>
+  <FAQItem question="How do I register a custom email tool with CodeAgent so the LLM can call it?">
+    Pass it in the `tools` list: `CodeAgent(tools=[EmailTool()], model=model)`. You can also add tools at runtime with `agent.tools["send_email"] = EmailTool()`.
+  </FAQItem>
+  <FAQItem question="Can a Hugging Face agent send emails without human confirmation?">
+    Yes, by default `forward()` executes without human approval. To add a confirmation step, check for a flag in `forward()` and prompt the user before sending, or use smolagents' built-in `human_approval` callback if available.
+  </FAQItem>
+  <FAQItem question="What is smolagents and how is it different from the older HfAgent?">
+    `smolagents` is Hugging Face's current agent library, replacing the older `transformers.agents` module. It's lighter, supports `CodeAgent` and `ToolCallingAgent` patterns, works with any LLM provider, and has better tool management including MCP server support.
+  </FAQItem>
+  <FAQItem question="How do I pass dynamic recipient addresses and email body content to an agent tool at runtime?">
+    The agent extracts arguments from the user's natural language prompt and maps them to your tool's `inputs` schema. If you ask it to "email ops@example.com about the build results," it fills in `to`, `subject`, and `body` from context.
+  </FAQItem>
+  <FAQItem question="How can I use LobsterMail instead of raw SMTP inside a Transformers tool?">
+    Replace your SMTP logic in `forward()` with `LobsterMail.create_sync()` and `inbox.send_sync()`. The agent gets its own email address without credentials or human signup. See the [getting started guide](/docs/getting-started) for full setup.
+  </FAQItem>
+  <FAQItem question="What are the deliverability risks of letting an LLM agent send emails autonomously?">
+    Without proper SPF/DKIM alignment, emails land in spam. Without rate limiting, a looping agent can trigger provider throttling. Without content validation, the agent might compose messages that trip spam filters. Using a managed service handles alignment and reputation automatically.
+  </FAQItem>
+  <FAQItem question="How do I test an email tool without sending live emails?">
+    Add a `dry_run` flag to your tool that logs instead of sending. Alternatively, use LobsterMail's test tokens (prefixed `lm_sk_test_`) which accept API calls without real delivery.
+  </FAQItem>
+  <FAQItem question="What security measures prevent prompt injection attacks that trigger unauthorized emails?">
+    Implement recipient allowlists in `forward()`, rate-limit sends per minute, validate email body content for injection patterns, and log every send with the agent's reasoning trace. For inbound email, LobsterMail's SDK includes built-in injection risk scoring.
+  </FAQItem>
+  <FAQItem question="Is it possible to log or audit every email sent by a Hugging Face agent tool?">
+    Yes. Add logging in your `forward()` method with timestamp, recipient, subject, and the arguments received. For production, write to a persistent store. LobsterMail's API also maintains send logs accessible via the dashboard.
+  </FAQItem>
+  <FAQItem question="How does the agent decide when to invoke the email tool versus other available tools?">
+    The LLM reads each tool's `name` and `description` to match the user's request. A clear, specific description like "Sends an email to a recipient with a subject and body" helps the agent choose correctly. Vague descriptions cause misfires.
+  </FAQItem>
+  <FAQItem question="What is the difference between CodeAgent and ToolCallingAgent for email workflows?">
+    `CodeAgent` generates Python code that calls your tools, allowing multi-step logic like fetching data then emailing it. `ToolCallingAgent` outputs structured JSON tool calls, which is simpler but can't compose logic across steps in a single turn.
+  </FAQItem>
+</FAQ>
