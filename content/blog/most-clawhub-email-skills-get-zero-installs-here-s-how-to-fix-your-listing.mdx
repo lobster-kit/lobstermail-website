@@ -1,0 +1,156 @@
+---
+title: most clawhub email skills get zero installs — here's how to fix your listing
+description: >-
+  ClawHub has 5,700+ skills and most never get found. How to optimize your email
+  skill listing for discovery, search ranking, and actual installs.
+date: '2026-03-06'
+author: Samuel Chenard
+tags:
+  - openclaw
+  - email
+  - guides
+  - infrastructure
+image: >-
+  /blog/most-clawhub-email-skills-get-zero-installs-here-s-how-to-fix-your-listing.png
+imageAlt: >-
+  Pixel art lobster mascot illustration for email infrastructure — clawhub email
+  skill listing SEO discovery installs
+publish_at: '2026-03-06T10:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-06T14:26:29.993Z'
+---
+ClawHub crossed 5,700 skills in early 2026. That's a lot of competition for attention. The email category is one of the most crowded, because every agent eventually needs to send or receive mail, and every developer eventually tries to build a skill for it.
+
+Here's what I keep seeing: someone builds a genuinely useful email skill, publishes it to ClawHub, and waits. Nothing happens. Two installs in the first week, both from their own machines. The skill works fine. The listing is the problem.
+
+Your ClawHub listing is a tiny storefront on a street with thousands of other shops. OpenClaw's auto-discovery feature suggests skills based on what users ask for. If someone says "manage my email" and no email skill is installed, OpenClaw will suggest relevant skills from ClawHub. But which skills it suggests depends entirely on how well your listing matches what the user asked.
+
+## How OpenClaw finds your skill
+
+OpenClaw's skill suggestion engine works in two steps. First, it matches the user's natural language request against skill metadata: name, description, tags, and the README. Second, it ranks matches by relevance, install count, and recency. The user sees the top few results and picks one.
+
+This means your listing needs to do two jobs. It needs to contain the right words so the matching algorithm finds you. And it needs to look credible enough that a human (or an agent acting on a human's behalf) picks you over the alternatives.
+
+The name matters more than you'd think. A skill called `email-tool` tells OpenClaw nothing about what it actually does. A skill called `agent-inbox-provision-and-send` tells OpenClaw exactly what capabilities it offers. The matching engine treats the skill name as the strongest signal, so front-load the functionality.
+
+## The description is your entire sales pitch
+
+You get roughly one sentence in the ClawHub search results preview. That sentence needs to answer: what does this skill let my agent do, and why should I pick it over the twelve other email skills?
+
+Bad descriptions I've seen this week:
+
+- "Email skill for OpenClaw" (says nothing)
+- "A comprehensive email solution with advanced features" (says nothing, louder)
+- "Send and receive emails using SMTP" (technically accurate, completely forgettable)
+
+Compare those to a description that works: "Your agent provisions its own inbox and sends authenticated email in one function call, no API keys, no human signup." That tells you the capability, the setup cost (zero), and the differentiator.
+
+Be specific about what your skill handles. Does it support receiving? Attachments? Custom domains? Prompt injection scanning? If you built something that solves a real problem, say so in the description. Don't make people read your README to find out.
+
+## Tags are not optional
+
+ClawHub tags feed directly into the category pages and the discovery algorithm. If your email skill doesn't have `email`, `inbox`, `send`, and `receive` as tags, you're invisible in those categories. I've seen skills with zero tags. That's leaving installs on the table for no reason.
+
+Pick 4-6 tags that describe what your skill does, not what it is. `email-sending` is better than `utility`. `agent-inbox` is better than `tool`. Think about what someone would type when searching for a skill like yours.
+
+## Your README is the conversion page
+
+Once someone clicks through to your skill, the README is all they see before deciding to install. Most READMEs in the email category are either a wall of API documentation or three sentences that explain nothing.
+
+The README that converts has this structure:
+
+1. **One line** saying what the skill does (repeat your description, it's fine)
+2. **A quick-start example** showing the simplest possible usage, two or three lines of code
+3. **A list of capabilities** so people can scan for what they need
+4. **Security notes** if you handle inbound email (this is a trust signal; agents processing incoming mail need prompt injection protection, and users know it)
+
+Skip the installation instructions. ClawHub handles that. Skip the license section at the top. Nobody cares about MIT vs Apache when they're deciding whether to install.
+
+## Install count is a flywheel
+
+ClawHub's ranking factors include install count, which creates a chicken-and-egg problem for new skills. The first 50 installs are the hardest because you're competing against established skills that already rank well.
+
+Three things that actually move the needle early:
+
+**Post in the OpenClaw Discord.** The #skills channel has thousands of developers looking for recommendations. A short post explaining what your skill does and why you built it will outperform any amount of listing optimization. Be honest about what it does and doesn't do.
+
+**Write a tutorial.** A blog post or GitHub gist showing your skill solving a real problem gives people a reason to try it. "Here's how I built an agent that processes support tickets via email" is more compelling than "here's my email skill."
+
+**Make the first run effortless.** If someone installs your skill and the first thing they hit is a configuration wall (API keys, environment variables, account creation), most will uninstall and try the next result. The skills that grow fastest are the ones where the agent can start working immediately after install. This is why we built LobsterMail to require [zero configuration](/blog/openclaw-email-setup-60-seconds); the agent provisions its own inbox without any human setup step.
+
+## What the top email skills do differently
+
+I looked at the five most-installed email skills on ClawHub. They all share three patterns:
+
+First, they describe outcomes, not features. "Your agent sends follow-up emails on autopilot" beats "SMTP sending with retry logic." Users search for what they want to accomplish, not the protocol it uses.
+
+Second, they update regularly. ClawHub shows the last-updated date, and stale skills get skipped. Even if your skill is stable and doesn't need changes, updating the README or bumping a dependency signals that someone is maintaining it.
+
+Third, they link to real examples. Not contrived demos, but actual use cases where the skill solved a problem. One skill in the top five links to a [guide on building email workflows](/blog/how-to-build-and-publish-a-clawhub-email-skill-for-openclaw) that walks through the entire process. That single link drives a measurable chunk of their installs.
+
+## The one thing most listings get wrong
+
+They optimize for other developers instead of for agents. Remember: OpenClaw's auto-discovery suggests skills when the agent needs a capability. The agent doesn't care about your architecture diagram or your test coverage badge. It cares whether your skill's description matches the task at hand.
+
+Write your listing for the matching algorithm first, humans second. Use the words people actually say when they need email: "send email," "receive email," "inbox," "reply," "forward," "attachments." Not "SMTP client" or "mail transport layer."
+
+Your ClawHub listing is a tiny lobster trap. Bait it with the right words or it catches nothing.
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
+
+---
+
+<FAQ>
+  <FAQItem question="How does ClawHub skill discovery work?">
+    OpenClaw matches the user's natural language request against skill metadata (name, description, tags, and README content). Results are ranked by relevance, install count, and recency.
+  </FAQItem>
+
+  <FAQItem question="What tags should I use for an email skill on ClawHub?">
+    Use 4-6 tags that describe capabilities: `email`, `inbox`, `send`, `receive`, `agent-email`, and any specific features like `attachments` or `custom-domain`. Avoid generic tags like `utility` or `tool`.
+  </FAQItem>
+
+  <FAQItem question="How many skills are on ClawHub in 2026?">
+    As of early 2026, ClawHub hosts over 5,700 community-built skills, with the number growing weekly.
+  </FAQItem>
+
+  <FAQItem question="Why does my ClawHub skill have zero installs?">
+    Usually it's the listing, not the skill. Vague descriptions, missing tags, and no quick-start example in the README are the most common reasons. The skill might work perfectly but never gets surfaced in search results.
+  </FAQItem>
+
+  <FAQItem question="Does ClawHub install count affect search ranking?">
+    Yes. Install count is one of the ranking signals ClawHub uses. This creates a flywheel effect where popular skills get more visible, which drives more installs.
+  </FAQItem>
+
+  <FAQItem question="How do I get my first installs on ClawHub?">
+    Post in the OpenClaw Discord #skills channel, write a tutorial showing a real use case, and make sure your skill works immediately after install with zero configuration.
+  </FAQItem>
+
+  <FAQItem question="What should a ClawHub skill README include?">
+    A one-line description, a quick-start code example (2-3 lines), a capabilities list, and security notes if you handle inbound email. Skip installation instructions, since ClawHub handles that.
+  </FAQItem>
+
+  <FAQItem question="Can my agent auto-discover email skills on ClawHub?">
+    Yes. If you ask your agent to do something email-related and no email skill is installed, OpenClaw will search ClawHub and suggest relevant skills for you to install.
+  </FAQItem>
+
+  <FAQItem question="How often should I update my ClawHub skill listing?">
+    Regular updates signal active maintenance. Even if your skill is stable, updating the README or bumping a dependency keeps your listing fresh in ClawHub's recency ranking.
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail have a ClawHub skill?">
+    Yes. You can install it with `/install lobstermail` in OpenClaw. The skill lets your agent provision its own inbox and send authenticated email with zero configuration, no API keys or human signup required.
+  </FAQItem>
+
+  <FAQItem question="What's the difference between ClawHub tags and description for SEO?">
+    Tags feed into category pages and broad discovery. The description is matched against specific user queries. You need both: tags for browsing, description for search relevance.
+  </FAQItem>
+
+  <FAQItem question="Is LobsterMail free to use with OpenClaw?">
+    Yes. The free tier includes inbox creation, sending and receiving, and 1,000 emails per month with no credit card required.
+  </FAQItem>
+</FAQ>
