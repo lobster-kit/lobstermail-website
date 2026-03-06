@@ -21,11 +21,26 @@ async function checkAuth() {
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-function fmt(n: number, prefix = ""): string {
+function fmt(n: number | undefined | null, prefix = ""): string {
+  if (n == null) return "—";
   if (n >= 1_000_000) return `${prefix}${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 10_000) return `${prefix}${(n / 1_000).toFixed(1)}K`;
   if (n >= 1_000) return `${prefix}${(n / 1_000).toFixed(1)}K`;
   return `${prefix}${n}`;
+}
+
+function fmtDelta(n: number | null | undefined): string {
+  if (n == null || n === 0) return "—";
+  const sign = n > 0 ? "+" : "";
+  if (Math.abs(n) >= 1_000_000) return `${sign}${(n / 1_000_000).toFixed(1)}M`;
+  if (Math.abs(n) >= 10_000) return `${sign}${(n / 1_000).toFixed(1)}K`;
+  if (Math.abs(n) >= 1_000) return `${sign}${(n / 1_000).toFixed(1)}K`;
+  return `${sign}${n}`;
+}
+
+function deltaColor(n: number | null | undefined): string {
+  if (n == null || n === 0) return "var(--text-secondary)";
+  return n > 0 ? "#10B981" : "#EF4444";
 }
 
 function timeAgo(iso: string | null): string {
@@ -113,7 +128,7 @@ function KpiCard({
       className="rounded-xl border-2 p-4"
       style={{
         borderColor: "var(--edge)",
-        background: "var(--surface-1)",
+        background: "var(--background)",
       }}
     >
       <p className="mb-1 text-xs font-medium" style={{ color: "var(--text-secondary)" }}>
@@ -183,7 +198,8 @@ export default async function DashboardPage() {
     );
   }
 
-  const { kpis, market, sparklines, pipeline, content, agents, generated_at, latest_date } = data;
+  const { kpis, market, sparklines, pipeline, content, agents, generated_at, latest_date, deltas } = data;
+  const d = deltas ?? {} as Record<string, number | null>;
 
   return (
     <main className="relative z-10 mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
@@ -264,22 +280,34 @@ export default async function DashboardPage() {
           className="rounded-xl border-2 p-5"
           style={{ borderColor: "var(--edge)", background: "var(--surface-1)" }}
         >
-          <h2 className="h4 mb-4">Product</h2>
-          <div className="space-y-3">
-            {[
-              ["Total Inboxes", fmt(kpis.total_inboxes)],
-              ["Emails Sent", fmt(kpis.total_emails_sent)],
-              ["Emails Received", fmt(kpis.total_emails_received)],
-              ["Free Accounts", fmt(kpis.free_accounts)],
-              ["GitHub Stars", fmt(kpis.github_stars)],
-              ["X Followers", fmt(kpis.x_followers)],
-              ["ClawHub Installs", fmt(kpis.clawhub_skill_installs)],
-            ].map(([label, val]) => (
+          <h2 className="h4 mb-3">Product</h2>
+          <div className="mb-2 flex justify-between text-xs font-medium" style={{ color: "var(--text-secondary)" }}>
+            <span>Metric</span>
+            <div className="flex gap-6">
+              <span className="w-16 text-right">Total</span>
+              <span className="w-14 text-right">7d</span>
+            </div>
+          </div>
+          <div className="space-y-2.5">
+            {([
+              ["Total Inboxes", kpis.total_inboxes, d.total_inboxes],
+              ["Emails Sent", kpis.total_emails_sent, d.total_emails_sent],
+              ["Emails Received", kpis.total_emails_received, d.total_emails_received],
+              ["Free Accounts", kpis.free_accounts, d.free_accounts],
+              ["GitHub Stars", kpis.github_stars, d.github_stars],
+              ["X Followers", kpis.x_followers, d.x_followers],
+              ["ClawHub Installs", kpis.clawhub_skill_installs, d.clawhub_skill_installs],
+            ] as [string, number, number | null][]).map(([label, val, delta]) => (
               <div key={label} className="flex justify-between text-sm">
                 <span style={{ color: "var(--text-secondary)" }}>{label}</span>
-                <span className="font-mono font-semibold" style={{ color: "var(--foreground)" }}>
-                  {val}
-                </span>
+                <div className="flex gap-6">
+                  <span className="w-16 text-right font-mono font-semibold" style={{ color: "var(--foreground)" }}>
+                    {fmt(val)}
+                  </span>
+                  <span className="w-14 text-right font-mono text-xs" style={{ color: deltaColor(delta) }}>
+                    {fmtDelta(delta)}
+                  </span>
+                </div>
               </div>
             ))}
           </div>
@@ -358,18 +386,30 @@ export default async function DashboardPage() {
           className="rounded-xl border-2 p-5"
           style={{ borderColor: "var(--edge)", background: "var(--surface-1)" }}
         >
-          <h2 className="h4 mb-4">Market (OpenClaw)</h2>
-          <div className="space-y-3">
-            {[
-              ["GitHub Stars", fmt(market.openclaw_github_stars)],
-              ["npm Daily", fmt(market.openclaw_npm_daily)],
-              ["X Followers", fmt(market.openclaw_twitter_followers)],
-            ].map(([label, val]) => (
+          <h2 className="h4 mb-3">Market (OpenClaw)</h2>
+          <div className="mb-2 flex justify-between text-xs font-medium" style={{ color: "var(--text-secondary)" }}>
+            <span>Metric</span>
+            <div className="flex gap-6">
+              <span className="w-16 text-right">Total</span>
+              <span className="w-14 text-right">7d</span>
+            </div>
+          </div>
+          <div className="space-y-2.5">
+            {([
+              ["GitHub Stars", market.openclaw_github_stars, d.openclaw_github_stars],
+              ["npm Daily", market.openclaw_npm_daily, d.openclaw_npm_daily],
+              ["X Followers", market.openclaw_twitter_followers, d.openclaw_twitter_followers],
+            ] as [string, number, number | null][]).map(([label, val, delta]) => (
               <div key={label} className="flex justify-between text-sm">
                 <span style={{ color: "var(--text-secondary)" }}>{label}</span>
-                <span className="font-mono font-semibold" style={{ color: "var(--foreground)" }}>
-                  {val}
-                </span>
+                <div className="flex gap-6">
+                  <span className="w-16 text-right font-mono font-semibold" style={{ color: "var(--foreground)" }}>
+                    {fmt(val)}
+                  </span>
+                  <span className="w-14 text-right font-mono text-xs" style={{ color: deltaColor(delta) }}>
+                    {fmtDelta(delta)}
+                  </span>
+                </div>
               </div>
             ))}
           </div>
