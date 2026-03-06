@@ -1,0 +1,161 @@
+---
+title: 'agent email trust graphs: how agents decide which messages to act on'
+description: >-
+  An agent email trust graph maps relationships between AI agents, email
+  identities, and verification signals. Here's how it works and why it matters.
+date: '2026-03-06'
+author: Samuel Chenard
+tags:
+  - email
+  - security
+  - infrastructure
+  - automation
+image: /blog/agent-email-trust-graphs-how-agents-decide-which-messages-to-act-on.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — agent email
+  trust graph
+publish_at: '2026-03-06T12:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-06T21:10:03.637Z'
+---
+An agent email trust graph is a structured graph of weighted relationships between AI agents, email identities, and verified credentials that determines how much trust an agent should assign to incoming messages, senders, and delegated instructions before acting on them. It's the difference between an agent that blindly follows every email it receives and one that reasons about who sent a message, whether it's been tampered with, and how much authority the sender actually has.
+
+Core components of an agent email trust graph:
+
+- **Nodes**: individual agents, email addresses, domains, and human operators
+- **Edges**: communication history, delegation chains, forwarding relationships
+- **Reputation scores**: weighted trust values based on past interactions and verification signals
+- **Verification signals**: SPF, DKIM, DMARC results attached to each email node
+- **Trust cascades**: inherited trust that flows (or doesn't) through agent-to-agent relationships
+- **Decay functions**: trust that weakens over time without reinforcement
+
+If you're building agents that process email, this matters more than you think. Let me explain why.
+
+## The problem: agents treat every email the same
+
+Most agent email workflows today are flat. An email arrives, the agent reads it, extracts relevant information, and acts on it. There's no differentiation between an email from a verified business partner and a spoofed message from an unknown sender. The agent's context window doesn't carry memory of past interactions with that sender, and it has no framework for deciding "I should trust this message" versus "I should ignore this."
+
+This is how [prompt injection through email](/blog/prompt-injection-email-agents) becomes a real attack vector. OWASP ranks indirect prompt injection as the number one vulnerability in LLM applications, and email is one of the widest attack surfaces. An attacker sends a carefully crafted email to your agent's inbox, the agent ingests it as context, and now it's following instructions from an adversary. Without a trust graph, there's no defense layer between "email arrived" and "agent acted."
+
+Gen Digital launched their Agent Trust Hub in February 2026, calling it "a new security platform designed for safer autonomous AI agent adoption." Their framing is right: autonomous agents that read emails, manage financial workflows, and act across accounts are moving from experimentation to production. The security model needs to catch up.
+
+## How an agent email trust graph actually works
+
+Think of it as a weighted, directed graph where every email interaction creates or modifies edges.
+
+When your agent receives an email from `vendor@acme.com` for the first time, a new node gets created. That node starts with a base trust score derived from the email's authentication results. Did it pass SPF? DKIM? Is there a valid DMARC policy on the domain? These aren't just deliverability signals (though they matter for [email deliverability](/blog/email-deliverability-ai-agents) too). They're identity signals. An email that passes all three tells your agent: this message genuinely came from the domain it claims to come from, and it wasn't modified in transit.
+
+Over time, the edge between your agent and `vendor@acme.com` accumulates weight. Ten successful interactions with accurate information strengthen the trust score. One interaction where the sender tried to override your agent's system prompt drops it. The graph becomes a living record of every email relationship your agent has.
+
+This is different from a context graph, which stores factual knowledge an agent retrieves during reasoning. A trust graph doesn't tell the agent what to know. It tells the agent who to believe.
+
+## Trust cascades and delegation chains
+
+Here's where it gets interesting. Say Agent A trusts Agent B (they've exchanged 50 verified emails, all clean). Agent B forwards an email from Agent C, someone Agent A has never interacted with. Should Agent A trust Agent C's message?
+
+This is the trust cascade problem, and there's no single right answer. A naive approach says yes: if I trust Agent B, and Agent B vouches for Agent C by forwarding the email, I should extend some trust. A more cautious approach says no: trust is non-transitive, and forwarding doesn't constitute endorsement.
+
+In practice, the right model is probabilistic. Agent A might assign Agent C a fractional trust score, maybe 40% of Agent B's score, decaying over time unless Agent C establishes its own direct relationship. The forwarding chain becomes an edge in the graph with its own weight and metadata.
+
+This matters for hierarchical agent relationships too. A manager agent that delegates tasks to sub-agents creates a trust tree. The sub-agent's emails carry inherited trust from the manager, but that trust should have bounds. A sub-agent authorized to send status updates shouldn't automatically be trusted to initiate financial transactions. The graph needs scoped trust, not blanket trust.
+
+## Email-based identity vs. cryptographic identity
+
+There's a debate in the agent identity space about whether email addresses are "real" identity signals or just legacy identifiers. Proponents of verifiable credentials and cryptographic keys argue that a DID (decentralized identifier) is more reliable than an email address. They're not wrong, technically. A cryptographic key pair is deterministic: either you hold the private key or you don't.
+
+But email-based identity has something cryptographic identity doesn't: universality. Every organization on the planet has email. Not every organization has a DID resolver. When your agent needs to communicate with a human's assistant, a vendor's automated system, or another agent built on a completely different framework, email works. It's the lowest common denominator of digital identity.
+
+The smart approach is treating email as one signal in a multi-layered identity stack. SPF/DKIM/DMARC provide probabilistic identity (high confidence, not absolute). Cryptographic signatures provide deterministic identity. An agent email trust graph should accommodate both, weighting deterministic signals higher but not ignoring probabilistic ones.
+
+LobsterMail's agent-first architecture already emits some of these signals. When an agent provisions its own inbox, the `@lobstermail.ai` domain's SPF and DKIM records authenticate every outgoing message. That's a machine-verifiable trust signal that any receiving agent can validate and store as a graph edge. We covered some of the underlying security model in [our breakdown of OpenClaw agent email security](/blog/openclaw-agent-email-security).
+
+## What trust graph poisoning looks like
+
+An attacker who understands your agent's trust graph has a more sophisticated playbook than simple prompt injection. Instead of sending one malicious email, they can:
+
+1. **Build trust first.** Send ten legitimate, helpful emails to your agent's inbox. Let the trust score climb. Then send the payload on email eleven.
+2. **Hijack a trusted node.** Compromise a domain that your agent already trusts. The spoofed email arrives with valid SPF/DKIM because the attacker controls the sending infrastructure.
+3. **Exploit trust cascades.** Send a malicious email to Agent B, knowing Agent B will forward it to Agent A. Agent A trusts Agent B, so the forwarded content gets higher trust than a direct message from the attacker would.
+
+Defending against this requires the graph to track anomalies, not just accumulate positive signals. A sudden change in sending patterns, unexpected content types, or instructions that conflict with the agent's established goals should trigger trust score reduction, even from high-trust nodes.
+
+## Building this in practice
+
+You don't need a graph database to start. A simple adjacency list with weighted edges works for most agent setups. Each node stores a sender identity, authentication results from their last N emails, a cumulative trust score, and a timestamp of last interaction.
+
+The more interesting question is where to store the graph. If it lives only in the agent's local memory, it dies when the agent restarts. If it lives in a shared database, multiple agents can contribute to and query the same trust graph, creating network effects. TrustGraph (the open-source project on GitHub) takes this approach for context backends. Applying the same pattern to email trust is a natural extension.
+
+For agent-first email infrastructure, the ideal setup is: your agent provisions an inbox, receives email with authentication metadata already parsed, and feeds that metadata into a trust graph that persists across sessions. The inbox becomes a trust signal emitter, not just a message receiver.
+
+If you're building agents that make decisions based on email content, even simple decisions like "should I reply to this," a trust graph isn't optional. It's the difference between an agent that can operate autonomously and one that's a prompt injection away from doing something you didn't authorize.
+
+Start with SPF/DKIM/DMARC validation on every incoming message. Add sender history tracking. Then layer in trust cascades for forwarded messages and delegated authority. You'll have a working agent email trust graph before you have a reason to regret not building one.
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
+
+<FAQ>
+  <FAQItem question="What is an agent email trust graph and why does it matter for autonomous AI systems?">
+    An agent email trust graph is a weighted graph that maps relationships between AI agents, email addresses, and verification signals to determine how much trust an agent should place in incoming messages. It prevents agents from blindly acting on spoofed or malicious emails.
+  </FAQItem>
+
+  <FAQItem question="How does an AI agent use email addresses as nodes in a trust graph?">
+    Each email address the agent interacts with becomes a node in the graph. Edges between nodes carry weight based on authentication results (SPF, DKIM, DMARC), interaction history, and behavioral patterns. Higher-weight edges mean more trust.
+  </FAQItem>
+
+  <FAQItem question="What role do SPF, DKIM, and DMARC play in establishing agent email trust?">
+    SPF verifies the sending server is authorized, DKIM confirms the message wasn't altered in transit, and DMARC ties them together with a domain policy. Together, they provide probabilistic identity: high confidence that the email genuinely came from the claimed domain.
+  </FAQItem>
+
+  <FAQItem question="How can a trust graph prevent an AI agent from acting on a spoofed or malicious email?">
+    The graph assigns trust scores to senders based on verified identity and interaction history. An email from an unknown or unverified sender gets a low trust score, and the agent can be configured to require a minimum score before taking action on the message contents.
+  </FAQItem>
+
+  <FAQItem question="What happens when a trusted agent forwards an email to an untrusted agent?">
+    Trust doesn't automatically transfer through forwarding. A well-designed trust graph assigns forwarded content a fractional trust score, typically a percentage of the forwarder's own trust level, that decays unless the original sender establishes a direct relationship.
+  </FAQItem>
+
+  <FAQItem question="How does indirect prompt injection via email corrupt an agent's trust graph context?">
+    An attacker can embed instructions in email content that manipulate the agent's reasoning. Without a trust graph, the agent treats this content the same as any other input. With one, low-trust messages get sandboxed or flagged before reaching the agent's decision-making loop. See our post on [prompt injection through email](/blog/prompt-injection-email-agents) for more.
+  </FAQItem>
+
+  <FAQItem question="What is a trust cascade and how does it propagate through an agent email network?">
+    A trust cascade is when trust flows from one agent relationship to another through delegation or forwarding chains. Agent A trusts Agent B, so it assigns partial trust to Agent C when B forwards C's message. Cascades should be bounded and scoped to prevent unbounded trust propagation.
+  </FAQItem>
+
+  <FAQItem question="Can email interaction history be used to build a reputation score for an AI agent?">
+    Yes. Consistent, verified interactions over time build a sender's reputation score in the trust graph. Ten clean exchanges with accurate content raise trust. A single attempt at instruction override or pattern anomaly should reduce it.
+  </FAQItem>
+
+  <FAQItem question="How do verifiable credentials differ from email-based identity in agent trust systems?">
+    Verifiable credentials use cryptographic key pairs for deterministic identity (you either hold the key or you don't). Email-based identity is probabilistic, relying on SPF/DKIM/DMARC for high-confidence verification. Both can coexist in a trust graph, with cryptographic signals weighted higher.
+  </FAQItem>
+
+  <FAQItem question="What is the difference between probabilistic and deterministic identity signals in an agent trust graph?">
+    Deterministic signals (like cryptographic signatures) provide absolute proof of identity. Probabilistic signals (like email authentication) provide high confidence but not certainty. A trust graph should accept both types and weight them accordingly.
+  </FAQItem>
+
+  <FAQItem question="How should agent-first email infrastructure handle emails from unknown or unverified senders?">
+    Unknown senders should start with a minimal trust score. Their emails should still be delivered but flagged with low trust metadata so the agent can decide how to handle them. Over time, consistent verified interactions can raise the score.
+  </FAQItem>
+
+  <FAQItem question="What does 'durable agent memory' mean in the context of email trust graphs?">
+    Durable agent memory means the trust graph persists across agent sessions and restarts. Without durability, every interaction starts from zero trust, and the agent can't benefit from relationship history it's already built.
+  </FAQItem>
+
+  <FAQItem question="How do hierarchical agent relationships get represented in a trust graph?">
+    Manager agents and sub-agents form a trust tree with scoped permissions. A sub-agent inherits trust from its manager for specific tasks but shouldn't automatically be trusted beyond its authorized scope. The graph encodes both the relationship and its boundaries.
+  </FAQItem>
+
+  <FAQItem question="What are the biggest security risks when AI agents process emails as context for decision-making?">
+    The top risks are prompt injection (malicious instructions embedded in email content), trust graph poisoning (attackers building trust over time before sending a payload), and cascade exploitation (attacking through trusted intermediaries). Learn more in our post on [agent email security](/blog/openclaw-agent-email-security).
+  </FAQItem>
+
+  <FAQItem question="How can LobsterMail's agent-first architecture emit trust signals that plug into existing knowledge graphs?">
+    When an agent provisions a LobsterMail inbox, every outgoing email is authenticated with SPF and DKIM under the `@lobstermail.ai` domain. These machine-verifiable signals can be consumed by any receiving system and stored as trust graph edges. [Get started free](/).
+  </FAQItem>
+</FAQ>
