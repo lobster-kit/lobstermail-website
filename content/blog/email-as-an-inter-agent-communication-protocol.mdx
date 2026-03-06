@@ -1,0 +1,165 @@
+---
+title: email as an inter-agent communication protocol
+description: >-
+  MCP, ACP, A2A, and ANP get all the attention. But email already solves async
+  agent-to-agent messaging with built-in discovery, queuing, and audit trails.
+date: '2026-03-06'
+author: Samuel Chenard
+tags:
+  - email
+  - infrastructure
+  - automation
+image: /blog/email-as-an-inter-agent-communication-protocol.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — email
+  inter-agent communication protocol
+publish_at: '2026-03-06T15:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-06T21:10:03.649Z'
+---
+Every few weeks, a new inter-agent communication protocol drops. MCP. ACP. A2A. ANP. Each one promises to be the standard that finally lets AI agents talk to each other without duct tape. I've been reading the specs, following the GitHub threads, trying the SDKs. Some of these are genuinely good work.
+
+But here's what keeps bugging me: we already have a protocol that handles asynchronous, cross-boundary, persistent messaging between independent parties. It's been running since 1982. It's called email.
+
+I'm not saying SMTP replaces everything MCP does. That would be silly. But when you look at what agents actually need for inter-agent communication, email covers a surprising amount of the surface area, and the protocol comparison conversations keep ignoring it entirely.
+
+## The protocols, compared
+
+An inter-agent communication protocol is a standardized way for AI agents to exchange messages, share context, and coordinate tasks across different systems or frameworks. Here's how the current options stack up:
+
+| Protocol | Primary use case | Communication style | Transport layer | Email support |
+|----------|-----------------|---------------------|-----------------|---------------|
+| MCP | Tool and context access | Synchronous | JSON-RPC over stdio/HTTP | No |
+| ACP | Multi-agent coordination | Async and sync | HTTP/REST | No |
+| A2A | Cross-framework agent interop | Async with callbacks | HTTP with Agent Cards | No |
+| ANP | Decentralized agent networking | Async | HTTP with DID auth | No |
+| SMTP/IMAP | Async message passing | Asynchronous | SMTP (send), IMAP (receive) | Native |
+
+Notice the pattern? Every new protocol builds its own transport. None of them use the transport that already reaches every organization, every domain, every inbox on the internet.
+
+## What MCP and ACP actually solve
+
+Let me be fair to these protocols before I make the case for email.
+
+**MCP (Model Context Protocol)** is Anthropic's standard for giving agents access to tools and data sources. Think of it as the way an agent reads your internal wiki or calls your database. It's synchronous, tightly coupled, and designed for agents operating within a single trust boundary. AWS recently published a [detailed exploration](https://aws.amazon.com/blogs/opensource/open-protocols-for-agent-interoperability-part-1-inter-agent-communication-on-mcp/) of how MCP can enable inter-agent communication, but it requires both agents to share the same MCP server infrastructure.
+
+**ACP (Agent Communication Protocol)** handles multi-agent coordination with both sync and async patterns. IBM's been pushing it as the way for agents to collaborate on complex tasks. It's more flexible than MCP for agent-to-agent work, supporting long-running tasks and structured message semantics.
+
+**A2A (Agent-to-Agent Protocol)** from Google focuses on cross-framework interop. Your LangChain agent talks to your CrewAI agent through standardized "Agent Cards" that describe capabilities. It's the closest thing to a universal directory for agents.
+
+**ANP (Agent Network Protocol)** takes a decentralized approach with DID-based authentication. It's early, but the vision is a peer-to-peer network where agents discover and communicate without a central registry.
+
+These all solve real problems. But they share a limitation: they only work when both sides have adopted the same protocol. And they require infrastructure that someone has to set up and maintain.
+
+## Why email works as an inter-agent transport
+
+Email has properties that no new protocol has managed to replicate:
+
+**Universal addressing.** Every agent that has an email address can be reached by every other agent. No shared infrastructure required. No protocol negotiation. No Agent Cards. Just an address. We covered this in depth in [the agent communication stack: email, chat, voice, and what's next](/blog/agent-communication-stack).
+
+**Store-and-forward queuing.** If the receiving agent is offline, the message waits. SMTP was literally designed for this. The "offline agent discovery" problem that ACP and ANP are solving with complex retry logic and capability registries? Email's had that solved since before most of us were born. Messages queue at the receiving mail server until the agent polls or gets a webhook notification.
+
+**Built-in audit trails.** Every email has headers showing the full delivery path: who sent it, when, through which servers, and whether the signatures checked out. For enterprise multi-agent deployments where compliance matters, this is not a small thing. Try getting that level of auditability from a WebSocket connection.
+
+**Async by default.** Inter-agent communication is almost always asynchronous. Agent A sends a request. Agent B processes it whenever it's ready. Agent B responds. This is email's native mode. You don't need to bolt on callback URLs or polling mechanisms. The protocol is the queue.
+
+**Human-in-the-loop for free.** Here's something none of the new protocols handle well: what happens when an agent needs to escalate to a human? With email, the human is already in the channel. An agent can CC a person, forward a thread, or hand off a conversation without switching protocols. We explored this pattern in [multi-agent email: when agents need to talk to each other](/blog/multi-agent-email-coordination).
+
+## The deliverability problem nobody talks about
+
+If email is so great for inter-agent messaging, why isn't everyone using it?
+
+Because deliverability for automated senders is genuinely hard. When agents send high volumes of email, spam filters get suspicious. Domain authentication (SPF, DKIM, DMARC) has to be configured correctly or messages vanish into spam folders. IP reputation matters. Content scanning can flag structured data as suspicious.
+
+This is the real engineering challenge, and it's the reason most teams reach for a new protocol instead of using email. Setting up proper email infrastructure for agents means managing DNS records, warming IP addresses, monitoring bounce rates, and handling feedback loops. It's not impossible. It's just tedious enough that building a custom WebSocket feels easier.
+
+That's the problem LobsterMail solves. Your agent provisions its own inbox, sends and receives with proper authentication already configured, and you never touch a DNS record. The deliverability infrastructure is handled so the agent can focus on communication, not email ops.
+
+## When email isn't the right choice
+
+I'd be dishonest if I claimed email replaces all inter-agent protocols. It doesn't.
+
+**Real-time coordination:** If two agents need sub-second response times (think: a coding agent calling a search agent mid-generation), email is too slow. MCP or direct function calls make more sense here.
+
+**Tool invocation:** MCP exists because agents need to call functions, not just send messages. Email is a messaging protocol, not an RPC framework. You wouldn't send an email to query a database.
+
+**Structured capability discovery:** A2A's Agent Cards let agents programmatically discover what another agent can do. Email has no equivalent. You'd need to layer that on top (which is entirely possible, but it's extra work).
+
+**High-frequency messaging:** If agents are exchanging hundreds of messages per second, email's overhead is prohibitive. Use a message broker.
+
+The sweet spot for email as an inter-agent communication protocol is cross-boundary, async, low-to-medium frequency messaging where persistence and auditability matter more than speed.
+
+## The hybrid approach
+
+The most practical architecture I've seen combines protocols by layer:
+
+- **MCP** for internal tool access (agent talks to its own tools)
+- **A2A or ACP** for real-time agent coordination within a trusted network
+- **Email** for cross-boundary messaging, human escalation, and audit trails
+
+Your agent uses MCP to access its knowledge base, A2A to coordinate with other agents in your stack, and email to communicate with agents (or humans) outside your trust boundary. Each protocol plays to its strengths.
+
+For the email layer, your agent needs to receive messages reliably. That means either [webhooks or polling](/blog/webhooks-vs-polling-email), depending on your latency requirements. Webhooks give you near-real-time delivery. Polling is simpler to set up and works well when a few seconds of delay doesn't matter.
+
+## What comes next
+
+I think we'll see email formalized as an inter-agent transport within the next year. Someone will write an RFC for structured agent-to-agent messages over SMTP, with standardized headers for capability declaration, message typing, and conversation threading. The building blocks are all there. MIME types can carry structured payloads. Email headers are extensible. Threading already works.
+
+The missing piece has been infrastructure that treats agents as first-class email users, not second-class citizens piggy-backing on human Gmail accounts. That's changing.
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) -- it's free.*
+
+<FAQ>
+  <FAQItem question="What is an inter-agent communication protocol and why does it matter?">
+    An inter-agent communication protocol defines how AI agents exchange messages, share context, and coordinate tasks. Without one, agents from different frameworks can't talk to each other, limiting multi-agent systems to a single vendor or custom integration.
+  </FAQItem>
+
+  <FAQItem question="How is ACP different from MCP?">
+    MCP (Model Context Protocol) focuses on giving agents access to tools and data sources within a single trust boundary. ACP (Agent Communication Protocol) is designed for multi-agent coordination, supporting both synchronous and asynchronous communication between independent agents.
+  </FAQItem>
+
+  <FAQItem question="Can AI agents communicate using email protocols like SMTP or IMAP?">
+    Yes. SMTP handles sending and IMAP handles receiving, giving agents a fully asynchronous, persistent communication channel. The main challenge is deliverability, which requires proper domain authentication (SPF, DKIM, DMARC) and sender reputation management.
+  </FAQItem>
+
+  <FAQItem question="What makes email unique compared to REST or WebSocket for agent messaging?">
+    Email provides universal addressing (any agent with an address can be reached), built-in store-and-forward queuing (messages persist when the receiver is offline), and audit trails via message headers. REST and WebSocket require both sides to be online and share an endpoint.
+  </FAQItem>
+
+  <FAQItem question="What is A2A protocol for AI agents?">
+    A2A (Agent-to-Agent Protocol) is Google's standard for cross-framework agent interoperability. It uses "Agent Cards" that describe an agent's capabilities, allowing agents built on different frameworks to discover and communicate with each other.
+  </FAQItem>
+
+  <FAQItem question="What is Agent Network Protocol (ANP)?">
+    ANP is a decentralized inter-agent protocol that uses DID-based (Decentralized Identifier) authentication. It aims to create a peer-to-peer network where agents discover and communicate without relying on a central registry or shared infrastructure.
+  </FAQItem>
+
+  <FAQItem question="How do asynchronous inter-agent protocols handle long-running tasks?">
+    ACP and A2A use callback URLs and polling mechanisms to track task progress. Email handles this natively: the requesting agent sends a message and the responding agent replies when the work is done. The mail server queues everything in between.
+  </FAQItem>
+
+  <FAQItem question="What authentication standards apply when agents send email to each other?">
+    SPF verifies the sending server is authorized for the domain. DKIM adds a cryptographic signature to each message. DMARC ties them together with a policy for handling failures. All three are necessary for agent email to avoid spam folders.
+  </FAQItem>
+
+  <FAQItem question="How does a human-in-the-loop workflow work with agent email communication?">
+    Because email is already a human communication channel, an agent can CC a person, forward a thread, or hand off a conversation without switching protocols. The human sees the same email thread and can respond directly. No separate escalation system needed.
+  </FAQItem>
+
+  <FAQItem question="What are the security risks of using email for inter-agent communication?">
+    The main risks are prompt injection (malicious content in emails that manipulates agent behavior), spoofing (forged sender addresses), and data exposure in transit. LobsterMail mitigates these with built-in [injection risk scoring](/docs/getting-started) and proper authentication.
+  </FAQItem>
+
+  <FAQItem question="Which inter-agent protocol is best for enterprise multi-agent deployments?">
+    There's no single best option. Most enterprise setups combine protocols: MCP for internal tool access, A2A or ACP for real-time agent coordination, and email for cross-boundary messaging and compliance-friendly audit trails.
+  </FAQItem>
+
+  <FAQItem question="How does LobsterMail support agent-first communication?">
+    LobsterMail lets agents self-provision their own email inboxes with no human signup or configuration. The SDK handles authentication, deliverability, and security so agents can send and receive email as a native communication channel. [Get started here](/).
+  </FAQItem>
+</FAQ>
