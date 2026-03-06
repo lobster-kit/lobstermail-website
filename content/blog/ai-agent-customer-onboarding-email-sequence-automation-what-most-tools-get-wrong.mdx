@@ -22,7 +22,7 @@ agent: agent-3-content
 channel: blog
 type: blog-post
 status: approved
-approved_at: '2026-03-06T14:26:29.970Z'
+approved_at: '2026-03-06T15:56:39.446Z'
 ---
 A new customer signs up. Your agent reads the form data, picks a welcome template based on their plan tier, personalizes the subject line, and sends it within four seconds. Twelve hours later it checks whether they logged in. If they didn't, it sends a nudge with a different angle. If they did, it skips straight to the "here's what to try next" email.
 
@@ -42,13 +42,13 @@ These layers need to be decoupled. Your agent shouldn't care about SPF records. 
 
 ## How to automate a customer onboarding email sequence with an AI agent
 
-1. **Define your trigger events.** Signup, first login, plan upgrade, feature activation, or inactivity after 24 hours.
-2. **Connect your CRM or product database** so the agent has context on each customer's plan, industry, and behavior.
-3. **Configure the agent's personalization logic.** Which data points it uses, which templates it selects from, what conditions change the sequence.
-4. **Set up dedicated email sending infrastructure** with proper authentication (SPF, DKIM, DMARC) and a warmed domain.
-5. **Build escalation and fallback rules.** What happens when an email bounces, when a customer replies, or when the agent encounters missing data.
-6. **Separate inbox isolation per workflow** so your onboarding sends don't share reputation with transactional or marketing email.
-7. **Test deliverability before going live** and monitor inbox placement rates, bounce rates, and complaint ratios continuously.
+1. **Define your trigger events**: signup, first login, plan upgrade, feature activation, or inactivity after 24 hours
+2. **Connect your CRM or product database** so the agent has context on each customer's plan, industry, and behavior
+3. **Configure the agent's personalization logic**: which data points it uses, which templates it selects from, what conditions change the sequence
+4. **Set up dedicated email sending infrastructure** with proper authentication (SPF, DKIM, DMARC) and a warmed domain
+5. **Build escalation and fallback rules**: what happens when an email bounces, when a customer replies, or when the agent encounters missing data
+6. **Separate inbox isolation per workflow** so your onboarding sends don't share reputation with transactional or marketing email
+7. **Test deliverability before going live** and monitor inbox placement rates, bounce rates, and complaint ratios continuously
 
 Steps 1-3 are the fun part. Steps 4-7 are where onboarding sequences actually survive or die.
 
@@ -58,7 +58,7 @@ Here's a scenario nobody in the "automate onboarding with AI" articles talks abo
 
 Gmail sees a 16x volume spike from a low-reputation sender. It throttles delivery. Half your welcome emails land in spam. The other half arrive six hours late. First impressions, ruined.
 
-This isn't hypothetical. Burst capacity is a real constraint. Traditional email platforms rate-limit based on account tiers. AI agents don't think in rate limits; they think in tasks. When the task is "send a welcome email to every new signup," the agent tries to complete it as fast as possible.
+This isn't hypothetical. Burst capacity is a real constraint. Traditional email platforms rate-limit based on account tiers. AI agents don't think in rate limits. They think in tasks. When the task is "send a welcome email to every new signup," the agent tries to complete it as fast as possible.
 
 The infrastructure needs to handle that. Dedicated IPs with pre-warmed reputation. Automatic send rate smoothing. Queue management that spreads bursts over time without the agent needing to know about it. We covered the full technical setup in our guide to [email deliverability for AI agents](/blog/email-deliverability-ai-agents).
 
@@ -66,7 +66,7 @@ The infrastructure needs to handle that. Dedicated IPs with pre-warmed reputatio
 
 | | Traditional drip campaign | AI agent onboarding sequence |
 |---|---|---|
-| Trigger logic | Fixed delays (send email 3 on day 5) | Behavioral, adapts to what the user actually does |
+| Trigger logic | Fixed delays (send email 3 on day 5) | Behavioral: adapts to what the user actually does |
 | Personalization | Merge tags (first name, company) | Full context: plan tier, usage patterns, industry |
 | Sequence adjustment | Manual A/B tests over weeks | Agent re-evaluates after every send |
 | Infrastructure needs | Predictable, steady volume | Unpredictable bursts when signups spike |
@@ -129,11 +129,11 @@ Most teams spend all their time on the first problem and discover the second one
   </FAQItem>
 
   <FAQItem question="How do I measure the success of an AI agent onboarding email sequence?">
-    Track activation rate (did the user complete onboarding?), time-to-first-value, email open and reply rates, bounce rate, spam complaint rate, and inbox placement rate. The infrastructure metrics matter as much as the engagement metrics; a 60% open rate means nothing if 40% of emails never arrived.
+    Track activation rate (did the user complete onboarding?), time-to-first-value, email open and reply rates, bounce rate, spam complaint rate, and inbox placement rate. The infrastructure metrics matter as much as the engagement metrics. A 60% open rate means nothing if 40% of emails never arrived.
   </FAQItem>
 
   <FAQItem question="What happens to onboarding email sequences when an AI agent encounters missing or ambiguous customer data?">
-    A well-configured agent falls back to a generic but still useful message rather than sending nothing or hallucinating details. Define fallback rules for every data field, specifying what the agent sends when it doesn't know the customer's industry, plan tier, or usage history.
+    A well-configured agent falls back to a generic but still useful message rather than sending nothing or hallucinating details. Define fallback rules for every data field: what the agent sends when it doesn't know the customer's industry, plan tier, or usage history.
   </FAQItem>
 
   <FAQItem question="Can AI agents handle multi-channel onboarding from a single workflow?">
@@ -145,6 +145,6 @@ Most teams spend all their time on the first problem and discover the second one
   </FAQItem>
 
   <FAQItem question="Is LobsterMail free for onboarding email automation?">
-    LobsterMail's free tier includes 1,000 emails per month with no credit card required. Your agent provisions its own inbox and can start sending immediately. For higher volumes, the Builder plan at $9/mo supports additional inboxes and capacity. See the [pricing page](/) for current details.
+    LobsterMail's free tier includes 1,000 emails per month with no credit card required. Your agent provisions its own inbox and can start sending immediately. For higher volumes, the Builder plan at $9/month supports up to 5,000 emails per month with 10 inboxes. See the [pricing page](/) for current details.
   </FAQItem>
 </FAQ>
