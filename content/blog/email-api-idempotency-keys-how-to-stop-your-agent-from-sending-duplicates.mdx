@@ -1,0 +1,258 @@
+---
+title: 'email API idempotency keys: how to stop your agent from sending duplicates'
+description: >-
+  Idempotency keys prevent duplicate emails when your agent retries API calls.
+  Here's how they work, when to use them, and how to implement one yourself.
+date: '2026-03-04'
+author: Ian Bussières
+tags:
+  - email
+  - infrastructure
+  - guides
+  - security
+image: >-
+  /blog/email-api-idempotency-keys-how-to-stop-your-agent-from-sending-duplicates.png
+imageAlt: >-
+  Pixel art lobster integrating with an email API — email API idempotency
+  deduplication key
+publish_at: '2026-03-04T09:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-06T14:26:29.975Z'
+---
+Your agent sends an email. The network hiccups. The SDK retries. Now your customer has two identical receipts in their inbox and you're writing an apology.
+
+This happens more than people admit. In distributed systems where agents make API calls autonomously, retries are normal. They're expected. The problem isn't the retry. The problem is when the email API treats each retry as a brand new request and happily sends the message again.
+
+That's what idempotency keys solve.
+
+## What is an email API idempotency key?
+
+An idempotency key is a unique identifier that a client attaches to an API request so the server can recognize duplicate submissions and return the original response instead of processing the request again. In email APIs, this means the server sends the email exactly once, no matter how many times the client submits the same request. It prevents duplicate sends, duplicate charges on metered plans, and duplicate records in your logs.
+
+- Prevents the same email from being sent twice
+- Prevents double-counting against your send quota
+- Prevents duplicate delivery records in your database
+
+Without one, every retry is a coin flip. Your agent doesn't know if the first request succeeded but the response was lost, or if it genuinely failed. So it retries, and the API does exactly what it was told: sends another email.
+
+## How idempotency keys actually work
+
+The flow is straightforward. Your agent generates a unique key before making the send request. It includes that key in a request header. The email API stores the key alongside the response.
+
+```typescript
+const idempotencyKey = crypto.randomUUID();
+
+await fetch('https://api.emailprovider.com/v1/send', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer sk_...',
+    'Idempotency-Key': idempotencyKey,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    to: 'customer@example.com',
+    subject: 'Your receipt',
+    html: receiptHtml,
+  }),
+});
+If the request succeeds but the response never reaches your agent, the agent retries with the same key. The API sees the key already exists, skips sending, and returns the cached response from the first attempt. No duplicate email. No wasted quota.
+
+If your agent sends the same key with a *different* request body, most APIs will reject it with a 422 or 409 error. The key is bound to the original payload. This is intentional; it prevents accidentally mapping two different operations to the same deduplication slot.
+
+## Idempotency vs deduplication: they're not the same thing
+
+People use these terms interchangeably, but they solve different problems at different layers.
+
+**Idempotency** is a client-side contract. The client generates a key, attaches it to the request, and the server promises that processing the same key twice produces the same result. It's proactive. You prevent the duplicate before it happens.
+
+**Deduplication** is a server-side cleanup. The server looks at incoming messages and filters out ones it's already seen, usually by hashing the content, recipient, and timestamp. It's reactive. The duplicate was already submitted, and the server catches it after the fact.
+
+In practice, you want both. Idempotency keys handle the common case (network retries, agent restarts). Content-based deduplication catches edge cases where two different code paths accidentally generate the same email with different keys.
+
+## Why this matters more for agents than for humans
+
+When a human clicks "Send" twice, they usually realize it and feel embarrassed. When an agent retries a tool call, it's doing exactly what it was designed to do.
+
+Agent frameworks like LangChain, CrewAI, and OpenClaw's skill system have built-in retry logic. If a tool call times out or returns an ambiguous error, the framework retries. Sometimes the agent itself decides to retry because it didn't see a confirmation in its context window. That's two layers of retry logic, neither of which knows whether the original email actually sent.
+
+This gets worse with multi-agent systems. If Agent A asks Agent B to send an email, and the coordination message is retried, Agent B might execute the send twice without knowing Agent A already got a success response from the first attempt. Without idempotency keys at the email API layer, there's no safety net.
+
+## Common retry scenarios that cause duplicate emails
+
+To make this concrete, here are the specific failure modes that idempotency keys protect against:
+
+**Timeout with successful delivery.** Your agent sends the email request. The server processes it and delivers the message. But the HTTP response takes longer than your client's timeout threshold. The agent sees a timeout error and retries. Without an idempotency key, the server processes the second request as new, and the recipient gets two identical emails.
+
+**Load balancer disconnection.** A load balancer or reverse proxy between your agent and the email API drops the connection mid-response. The server already queued the email, but your agent never received confirmation. It retries, and the result is another duplicate.
+
+**Agent framework double-execution.** Some agent frameworks implement their own retry wrappers on top of HTTP-level retries. If the HTTP client retries once and the framework retries once, you could end up with three total requests from a single logical send operation.
+
+**Deployment overlap.** During a rolling deployment, an old instance and a new instance might both pick up the same job from a task queue. If the job is "send a welcome email to user X," both instances call the email API. Idempotency keys (derived from the job ID) collapse these into a single send.
+
+Understanding these scenarios helps you appreciate why a simple "just don't retry" policy doesn't work. Retries are a feature of reliable systems. Idempotency keys make them safe.
+
+## Implementing idempotency when your provider doesn't support it
+
+Stripe and Resend both support idempotency keys natively. You pass a header and the API handles deduplication. Postmark [acknowledges the concept](https://postmarkapp.com/support/article/what-is-an-idempotency-key) but doesn't offer native support. SendGrid doesn't either.
+
+If your provider lacks native support, you can build a thin deduplication layer yourself:
+
+```typescript
+import { createHash } from 'node:crypto';
+
+const recentKeys = new Map<string, { response: unknown; expires: number }>();
+
+async function sendEmailIdempotent(key: string, payload: EmailPayload) {
+  const cached = recentKeys.get(key);
+  if (cached && cached.expires > Date.now()) {
+    return cached.response; // already sent, return cached result
+  }
+
+  const response = await emailProvider.send(payload);
+
+  recentKeys.set(key, {
+    response,
+    expires: Date.now() + 24 * 60 * 60 * 1000, // 24-hour TTL
+  });
+
+  return response;
+}
+This is a minimal in-memory version. For production, swap the Map for Redis or a database table with a unique constraint on the key column. The TTL matters: too short and you miss retries that come in late; too long and you're storing keys forever. For transactional emails like OTP codes and receipts, 24 hours is reasonable. For marketing sends, you can drop to 1-2 hours since the retry window is shorter.
+
+### Redis-based production implementation
+
+For production systems that need to survive process restarts, here's a Redis-backed approach:
+
+```typescript
+import Redis from 'ioredis';
+
+const redis = new Redis(process.env.REDIS_URL);
+
+async function sendEmailIdempotent(key: string, payload: EmailPayload) {
+  const cached = await redis.get(`idem:${key}`);
+  if (cached) {
+    return JSON.parse(cached);
+  }
+
+  const response = await emailProvider.send(payload);
+
+  // SET with EX for automatic expiration (24 hours)
+  await redis.set(`idem:${key}`, JSON.stringify(response), 'EX', 86400);
+
+  return response;
+}
+```
+
+The Redis version gives you persistence across deployments and shared state if multiple instances of your agent are running. The `EX` flag handles TTL automatically, so you don't need to write cleanup logic.
+
+## Key format: UUID, hash, or something else?
+
+UUIDv4 is the simplest choice. Generate one per logical operation, attach it to the request, done. But it requires your agent to store the key between retries, which means persisting state somewhere.
+
+An alternative is to derive the key from the request content:
+
+```typescript
+const key = createHash('sha256')
+  .update(`${recipient}:${subject}:${bodyHash}:${operationId}`)
+  .digest('hex');
+```
+
+This approach is deterministic. The same inputs always produce the same key, so your agent doesn't need to remember anything between retries. The tradeoff is that legitimately sending the same email twice (say, a daily report with identical content) would be blocked unless you include a timestamp or operation ID in the hash.
+
+For agent workflows, I'd lean toward content-derived keys with an operation ID. Your agent already tracks which task it's executing. Include that task ID in the hash and you get natural deduplication without external state.
+
+## Monitoring and observability
+
+Once you've implemented idempotency keys, you should track how often they're actually preventing duplicates. This gives you visibility into the reliability of your infrastructure and helps you catch systemic issues.
+
+Log every time a cached response is returned instead of a fresh send. If your deduplication hit rate is climbing, that suggests increasing network instability or a misconfigured retry policy. If it's near zero, your system is healthy (or your idempotency layer isn't wired up correctly).
+
+Useful metrics to track:
+
+- **Deduplication hit rate**: percentage of requests that matched an existing key
+- **Key collision errors**: requests rejected because the key existed but the payload differed (409/422 responses)
+- **Average retries per operation**: how many times a typical send is attempted before succeeding
+- **TTL expiration distribution**: how long keys typically live before expiring unused
+
+These numbers also help you tune your TTL. If 99% of retries arrive within 30 seconds but your TTL is 24 hours, you might be holding keys far longer than necessary.
+
+## Testing your implementation
+
+The easiest way to verify: send the same request twice with the same key and confirm only one email arrives. If you're using LobsterMail, you can do this in a [sandbox environment](/blog/testing-agent-email-sandbox) without hitting production inboxes.
+
+For a more thorough test, simulate the failure scenario. Send the request, artificially drop the response (kill the connection after the server accepts it), then retry. Check that the second attempt returns the cached response and that only one email was delivered. If you're receiving emails via [webhooks](/blog/webhooks-vs-polling-email), you should see exactly one `email.received` event, not two.
+
+## What happens when you get it wrong
+
+Stripe published data showing that roughly 0.4% of API requests are retries. At scale, that adds up fast. If your agent sends 10,000 emails a month, that's 40 potential duplicates. For a customer-facing support agent, even one duplicate reply looks unprofessional. For a billing agent, a duplicate invoice is a compliance issue.
+
+The fix is cheap. One header per request. The cost of not fixing it compounds with every retry your agent makes.
+
+<FAQ>
+  <FAQItem question="What is an idempotency key in the context of an email API?">
+    An idempotency key is a unique string attached to an API request that lets the server recognize retries and return the original response instead of sending the email again. It ensures each logical send operation produces exactly one email, regardless of how many times the request is submitted.
+  </FAQItem>
+
+  <FAQItem question="How does an idempotency key prevent duplicate emails from being sent?">
+    The server stores the key alongside the response on the first request. When a retry arrives with the same key, the server returns the cached response and skips the send. The email goes out once, and subsequent requests with that key are no-ops.
+  </FAQItem>
+
+  <FAQItem question="What format should an idempotency key use — UUID, hash, or custom string?">
+    UUIDv4 is the simplest option but requires persisting the key between retries. A content-derived SHA-256 hash (combining recipient, subject, and an operation ID) is deterministic and doesn't require external state. Either works. Pick based on whether your agent can easily store state between retries.
+  </FAQItem>
+
+  <FAQItem question="How long should an email API store an idempotency key before expiring it?">
+    For transactional emails (OTP codes, receipts, alerts), 24 hours is a safe TTL. For marketing or batch sends with shorter retry windows, 1-2 hours is sufficient. Stripe expires keys after 24 hours. Resend uses a similar window.
+  </FAQItem>
+
+  <FAQItem question="What is the difference between idempotency and deduplication for email sending?">
+    Idempotency is proactive and client-driven: the client sends a key, the server promises not to process duplicates. Deduplication is reactive and server-driven: the server detects duplicate content after submission and filters it out. Use both for comprehensive protection.
+  </FAQItem>
+
+  <FAQItem question="Does using an idempotency key guarantee exactly-once email delivery?">
+    It guarantees at-most-once processing per key, which is as close to exactly-once as you can get. If the original request fails before the server processes it, the retry will send it. But you'll never get two sends from the same key.
+  </FAQItem>
+
+  <FAQItem question="What should happen when a client reuses an idempotency key with a different request body?">
+    Most APIs return a 409 Conflict or 422 Unprocessable Entity error. The key is bound to the original payload, so changing the body while reusing the key is treated as a client error. Your agent should generate a new key for genuinely different emails.
+  </FAQItem>
+
+  <FAQItem question="How do idempotency keys work when emails are queued asynchronously?">
+    The server stores the key at acceptance time, before the email enters the send queue. If a retry arrives while the first email is still queued, the server returns the original acceptance response. The queue processes the email once.
+  </FAQItem>
+
+  <FAQItem question="Which popular email APIs support idempotency keys natively?">
+    Stripe (for receipt emails) and Resend both support idempotency keys via request headers. Postmark and SendGrid do not offer native idempotency key support. You'd need to build a deduplication layer yourself or use a wrapper.
+  </FAQItem>
+
+  <FAQItem question="How do I implement idempotency keys if my email provider does not support them?">
+    Build a thin middleware layer that caches keys in Redis or a database with a unique constraint. Before forwarding the send request, check if the key exists. If it does, return the cached response. If not, forward the request, cache the result with a TTL, and return it.
+  </FAQItem>
+
+  <FAQItem question="What are the storage requirements for maintaining an idempotency key cache at scale?">
+    Each entry is small: a key string (32-64 bytes), a response object (a few KB), and an expiration timestamp. At 100,000 requests per day with a 24-hour TTL, you're looking at a few hundred MB in Redis. The storage cost is negligible compared to the cost of duplicate sends.
+  </FAQItem>
+
+  <FAQItem question="Can idempotency keys be used for batch email sends?">
+    Yes, but assign one key per recipient, not one key per batch. If a batch of 500 emails partially fails and you retry with a single batch-level key, the server might skip the entire batch, including the emails that didn't send the first time.
+  </FAQItem>
+
+  <FAQItem question="How do AI agents benefit from idempotency keys when sending emails?">
+    Agents retry tool calls automatically when responses are ambiguous or lost. Without idempotency keys, each retry sends another email. With them, the agent can retry freely knowing the API will only send the message once. This is especially important in multi-agent systems where coordination messages themselves can be retried.
+  </FAQItem>
+
+  <FAQItem question="What is the risk of not using an idempotency key in a distributed email-sending system?">
+    Duplicate customer-facing emails (receipts, invoices, support replies), inflated send quotas, compliance violations for duplicate billing communications, and eroded trust with recipients who receive the same message twice. At scale, even a 0.4% retry rate produces dozens of duplicates monthly.
+  </FAQItem>
+
+  <FAQItem question="How do I test that my idempotency key implementation is working correctly?">
+    Send the same request twice with the same key and confirm only one email arrives. Then send the same key with a different body and confirm you get a 409 or 422 error. Finally, simulate a dropped response and verify the retry returns the cached result. Use a [sandbox environment](/blog/testing-agent-email-sandbox) to avoid hitting production.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
