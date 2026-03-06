@@ -1,0 +1,122 @@
+---
+title: '550 email rejected: how to fix outbound failures from your agent'
+description: >-
+  A 550 rejection means the recipient's server permanently refused your agent's
+  email. Here's what causes it and how to fix it fast.
+date: '2026-03-06'
+author: Ian Bussières
+tags:
+  - email
+  - troubleshooting
+  - infrastructure
+  - guides
+image: /blog/550-email-rejected-how-to-fix-outbound-failures-from-your-agent.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — 550 email
+  rejected agent outbound fix
+publish_at: '2026-03-06T15:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-06T13:43:01.090Z'
+---
+Your agent tried to send an email. The server responded with `550`. The message is gone. Not deferred, not queued, not retrying. Permanently rejected.
+
+A 550 SMTP error is a hard bounce. The recipient's mail server looked at your agent's message and said no. Unlike a 4xx temporary failure (where retrying might work), a 550 means something is fundamentally wrong with the message, the sender, or the authentication behind it. Retrying the same message to the same address will produce the same result every time.
+
+For agents running outbound email workflows (sales outreach, verification requests, customer follow-ups), a single 550 might be a bad address. A pattern of 550s is a reputation emergency.
+
+## How to fix a 550 outbound email rejection (step-by-step)
+
+1. **Read the full NDR code.** The sub-code after 550 tells you what went wrong. `5.1.1` is an invalid recipient, `5.1.8` is a blocked sender, `5.7.1` is a policy rejection.
+2. **Unblock the sender if flagged.** In Microsoft 365, go to the Defender portal, then Restricted entities, and release the account.
+3. **Review transport rules.** Check for rules that silently reject outbound messages matching certain patterns or headers.
+4. **Verify SPF, DKIM, and DMARC records.** Run `dig TXT yourdomain.com` and confirm all three records are correctly published and aligned.
+5. **Check blacklist status.** Query your sending IP and domain against MXToolbox, Spamhaus, and Barracuda. Request delisting if flagged.
+6. **Authenticate SMTP relay credentials.** If your agent sends through a relay, confirm the username, password, and relay host are current.
+7. **Suppress the address from your sending queue.** Add permanently-bounced addresses to a suppression list so your agent never retries them.
+
+That covers the generic playbook. But agents hit a few 550 scenarios that human senders rarely encounter.
+
+## Why agents trigger 550 rejections differently
+
+When a human gets a 550, they usually mistyped an address. When an agent gets one, the cause is almost always infrastructure.
+
+**The `5.1.8 bad outbound sender` problem.** Microsoft 365 and Exchange Online flag accounts that show sudden spikes in outbound volume or that receive a burst of complaints. The account gets restricted and every subsequent message returns `550 5.1.8 Access denied`. This hits agents hard because they send in bursts; processing a queue of 200 messages in ten minutes looks identical to a compromised account spraying spam. To unblock, an admin has to manually release the account from the Microsoft 365 Defender portal under Restricted entities. Microsoft doesn't publish a guaranteed timeline for lifting restrictions, but most accounts are eligible for release within an hour of the triggering activity stopping.
+
+**Transport rules you forgot about.** Exchange Online lets admins create transport rules that reject outbound messages based on headers, content patterns, or sender attributes. An agent sending programmatically might include headers or formatting that trips a rule nobody remembers creating. The result is a `550 5.7.1` rejection that looks like a recipient-side problem but originates from your own infrastructure. Audit your outbound rules before blaming the receiving server.
+
+**SPF and DKIM failures on programmatic sends.** Your marketing emails pass authentication because they route through your configured ESP. Your agent sends through a different path (maybe a direct SMTP connection, maybe an API gateway) and that path isn't in your SPF record. The receiving server sees a valid-looking message from your domain, checks SPF, finds no match, and issues a 550. We covered the full authentication setup in our [email deliverability guide](/blog/email-deliverability-ai-agents), and it applies doubly to agent outbound flows where the sending path might differ from your human team's.
+
+**Blacklisted sending infrastructure.** If your agent sends from a shared IP pool, another sender's bad behavior can land that IP on a blacklist. Your agent's messages start returning 550 before you've done anything wrong. This is one reason reputation isolation matters. When you [send from your own domain](/blog/custom-domains-agent-email), your agent's reputation stays separate from everyone else's.
+
+## How your agent should handle 550 errors
+
+Here's where most guides stop. They explain the fix for a human admin but ignore what the agent itself should do when it receives a 550 in an automated pipeline.
+
+**Never retry a 550.** This is the single most important rule. A 550 is permanent. Retrying wastes resources and actively damages your sender reputation. Every retry generates another bounce event, and bounce rate is one of the primary signals inbox providers use to evaluate your domain. Your agent should classify any 5xx response as a hard bounce and immediately suppress that address.
+
+**Log the full SMTP response, not just the code.** The human-readable text after the status code often contains the actual reason: "mailbox not found," "sender blocked by policy," "SPF verification failed." Your agent should capture and store this for debugging. A dashboard that only shows "550 error" is useless when you're trying to figure out if the problem is authentication, blacklisting, or an invalid address.
+
+**Monitor bounce rates in real time.** If your agent's bounce rate crosses 2%, something systemic is wrong. Don't wait for the daily report. An agent [running outbound campaigns](/blog/ai-sales-outreach-agent-email) should check its own bounce metrics after every batch and pause sending if the rate spikes. On LobsterMail, the pre-send MX validation catches invalid domains before the message leaves, which eliminates a whole category of avoidable 550s.
+
+**Separate transactional from outreach sending.** Your verification emails and your cold outreach should not share the same sending identity. A complaint wave from outreach can trigger restrictions that block your transactional messages too. Use separate inboxes, separate domains if possible, and separate reputation tracking.
+
+## The difference between a 550 and a hard bounce
+
+People use these terms interchangeably, but they're not identical. A hard bounce is a classification; it means the delivery failure is permanent. A 550 is a specific SMTP response code that usually results in a hard bounce classification. But not every 550 sub-code means the address is dead forever. A `550 5.7.1` policy rejection might resolve once you fix your authentication. A `550 5.1.1` invalid mailbox is genuinely permanent.
+
+Your agent needs to distinguish between these. Suppressing an address that bounced due to a temporary policy issue (your SPF record was broken for an hour) means losing a valid contact. Retrying an address that genuinely doesn't exist means burning reputation. The sub-code matters.
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
+
+<FAQ>
+  <FAQItem question="What does a 550 email error code mean and why is it considered permanent?">
+    A 550 error is an SMTP response indicating the recipient's server permanently refused the message. Unlike 4xx codes (temporary failures where retrying may succeed), a 5xx code signals a hard failure; the same message sent again will be rejected again.
+  </FAQItem>
+  <FAQItem question="What is the difference between a 550 rejection and a 4xx temporary bounce?">
+    A 4xx response means the server encountered a temporary issue (full mailbox, server overload, greylisting) and your agent can retry later. A 550 means the rejection is permanent: the address doesn't exist, authentication failed, or a policy explicitly blocks the message.
+  </FAQItem>
+  <FAQItem question="Should my sending agent automatically retry an email after receiving a 550 error?">
+    No. Retrying a 550 wastes resources and damages your sender reputation. Each retry generates another bounce event, which inbox providers use to evaluate your domain. Your agent should suppress the address immediately and log the full SMTP response for debugging.
+  </FAQItem>
+  <FAQItem question="How do I unblock a user account flagged with 550 5.1.8 in Microsoft 365?">
+    Go to the Microsoft 365 Defender portal, navigate to Restricted entities, and release the flagged account. You'll also need to identify what triggered the restriction (usually a volume spike or complaint burst) and address the root cause before resuming sends.
+  </FAQItem>
+  <FAQItem question="How long does Microsoft 365 take to lift sending restrictions after a 550 5.1.8 block?">
+    Microsoft doesn't publish a guaranteed timeline. In practice, most accounts become eligible for manual release within an hour after the triggering activity stops. An admin must actively release the account from the Defender portal; it won't unblock on its own.
+  </FAQItem>
+  <FAQItem question="What causes the 550 5.7.1 error in Exchange Online and how do I fix it?">
+    The 550 5.7.1 error means the recipient's server or your own transport rules rejected the message based on policy. Common causes include misconfigured transport rules, the recipient blocking external senders, or missing authentication records. Audit your outbound rules and verify SPF/DKIM/DMARC alignment.
+  </FAQItem>
+  <FAQItem question="Can SPF, DKIM, or DMARC failures trigger a 550 outbound rejection?">
+    Yes. Many receiving servers now reject messages outright when authentication fails, rather than routing them to spam. If your agent sends through a path that isn't listed in your SPF record or lacks a valid DKIM signature, the receiving server may respond with a 550. Check our [deliverability guide](/blog/email-deliverability-ai-agents) for setup details.
+  </FAQItem>
+  <FAQItem question="How should an automated email agent log and classify 550 errors?">
+    Capture the full SMTP response (code, sub-code, and human-readable text), not just the error number. Classify by sub-code: `5.1.1` is an invalid address (suppress permanently), `5.7.1` is a policy rejection (investigate and potentially retry after fixing), `5.1.8` is a sender block (unblock and review sending patterns).
+  </FAQItem>
+  <FAQItem question="What steps should I take if my outbound IP or domain is blacklisted and causing 550 errors?">
+    Check your IP and domain against Spamhaus, Barracuda, and SORBS using MXToolbox. Submit a delisting request with evidence that the issue is resolved. Review your sending patterns, suppress invalid addresses, and consider [sending from your own domain](/blog/custom-domains-agent-email) with isolated reputation to prevent future cross-contamination.
+  </FAQItem>
+  <FAQItem question="How can I tell if a 550 rejection is caused by the recipient's server versus my own sending infrastructure?">
+    Check the NDR details. If the rejection references your domain's authentication records (SPF fail, DKIM mismatch) or mentions sender restrictions, the problem is on your side. If it references an invalid mailbox or recipient policy, the issue is on the receiving end. Transport rule rejections from Exchange Online are a common source of self-inflicted 550s.
+  </FAQItem>
+  <FAQItem question="What is a Non-Delivery Report and how does it relate to 550 rejections?">
+    An NDR (also called a bounce message) is the automated notification your sending server generates when a message can't be delivered. It includes the SMTP error code, sub-code, and a description of why delivery failed. For 550 errors, the NDR contains the specific rejection reason you need to diagnose the problem.
+  </FAQItem>
+  <FAQItem question="How do relay authentication settings contribute to 550 and 553 errors?">
+    If your agent sends through an SMTP relay with incorrect or expired credentials, the relay server rejects the message with a 550 or 553 error. This is common when agents use a different sending path than your human team. Verify the relay host, port, username, and password in your agent's SMTP configuration.
+  </FAQItem>
+  <FAQItem question="What proactive measures can an outbound email agent take to prevent 550 errors?">
+    Validate recipient addresses with MX lookups before sending. Monitor bounce rates after every batch and pause if they spike above 2%. Maintain a suppression list of previously bounced addresses. Warm up new domains gradually. Authenticate all sending paths with SPF, DKIM, and DMARC. LobsterMail handles pre-send MX validation and suppression automatically.
+  </FAQItem>
+  <FAQItem question="Is LobsterMail free to use for receiving email?">
+    Yes. The free tier includes inbox creation, receiving email, and up to 1,000 emails per month with no credit card required. Sending email and custom domains are available on paid tiers starting at $9/month.
+  </FAQItem>
+  <FAQItem question="What is the difference between a hard bounce and a 550 error?">
+    A hard bounce is a delivery classification meaning the failure is permanent. A 550 is a specific SMTP code that usually triggers a hard bounce classification. However, some 550 sub-codes (like `5.7.1` policy rejections) may resolve after you fix the underlying issue, so the distinction matters for how your agent handles suppression.
+  </FAQItem>
+</FAQ>
