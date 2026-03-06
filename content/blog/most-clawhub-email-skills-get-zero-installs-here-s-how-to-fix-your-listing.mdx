@@ -20,9 +20,9 @@ agent: agent-3-content
 channel: blog
 type: blog-post
 status: approved
-approved_at: '2026-03-06T14:26:29.993Z'
+approved_at: '2026-03-06T15:56:39.458Z'
 ---
-ClawHub crossed 5,700 skills in early 2026. That's a lot of competition for attention. The email category is one of the most crowded, because every agent eventually needs to send or receive mail, and every developer eventually tries to build a skill for it.
+ClawHub crossed 5,700 skills in early 2026. That's a lot of competition for attention. And the email category is one of the most crowded, because every agent eventually needs to send or receive mail, and every developer eventually tries to build a skill for it.
 
 Here's what I keep seeing: someone builds a genuinely useful email skill, publishes it to ClawHub, and waits. Nothing happens. Two installs in the first week, both from their own machines. The skill works fine. The listing is the problem.
 
@@ -46,7 +46,7 @@ Bad descriptions I've seen this week:
 - "A comprehensive email solution with advanced features" (says nothing, louder)
 - "Send and receive emails using SMTP" (technically accurate, completely forgettable)
 
-Compare those to a description that works: "Your agent provisions its own inbox and sends authenticated email in one function call, no API keys, no human signup." That tells you the capability, the setup cost (zero), and the differentiator.
+Compare those to a description that works: "Your agent provisions its own inbox and sends authenticated email in one function call. No API keys, no human signup." That tells you the capability, the setup cost (zero), and the differentiator.
 
 Be specific about what your skill handles. Does it support receiving? Attachments? Custom domains? Prompt injection scanning? If you built something that solves a real problem, say so in the description. Don't make people read your README to find out.
 
@@ -79,7 +79,7 @@ Three things that actually move the needle early:
 
 **Write a tutorial.** A blog post or GitHub gist showing your skill solving a real problem gives people a reason to try it. "Here's how I built an agent that processes support tickets via email" is more compelling than "here's my email skill."
 
-**Make the first run effortless.** If someone installs your skill and the first thing they hit is a configuration wall (API keys, environment variables, account creation), most will uninstall and try the next result. The skills that grow fastest are the ones where the agent can start working immediately after install. This is why we built LobsterMail to require [zero configuration](/blog/openclaw-email-setup-60-seconds); the agent provisions its own inbox without any human setup step.
+**Make the first run effortless.** If someone installs your skill and the first thing they hit is a configuration wall (API keys, environment variables, account creation), most will uninstall and try the next result. The skills that grow fastest are the ones where the agent can start working immediately after install. This is why we built LobsterMail to require [zero configuration](/blog/openclaw-email-setup-60-seconds): the agent provisions its own inbox without any human setup step.
 
 ## What the top email skills do differently
 
@@ -131,7 +131,7 @@ Your ClawHub listing is a tiny lobster trap. Bait it with the right words or it 
   </FAQItem>
 
   <FAQItem question="What should a ClawHub skill README include?">
-    A one-line description, a quick-start code example (2-3 lines), a capabilities list, and security notes if you handle inbound email. Skip installation instructions, since ClawHub handles that.
+    A one-line description, a quick-start code example (2-3 lines), a capabilities list, and security notes if you handle inbound email. Skip installation instructions; ClawHub handles that.
   </FAQItem>
 
   <FAQItem question="Can my agent auto-discover email skills on ClawHub?">
@@ -143,7 +143,7 @@ Your ClawHub listing is a tiny lobster trap. Bait it with the right words or it 
   </FAQItem>
 
   <FAQItem question="Does LobsterMail have a ClawHub skill?">
-    Yes. You can install it with `/install lobstermail` in OpenClaw. The skill lets your agent provision its own inbox and send authenticated email with zero configuration, no API keys or human signup required.
+    Yes. You can install it with `/install lobstermail` in OpenClaw. The skill lets your agent provision its own inbox and send authenticated email with zero configuration. No API keys or human signup required.
   </FAQItem>
 
   <FAQItem question="What's the difference between ClawHub tags and description for SEO?">
