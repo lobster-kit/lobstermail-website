@@ -3,209 +3,217 @@ title: >-
   email threading explained: how In-Reply-To and References headers keep
   conversations together
 description: >-
-  How email threading actually works under the hood. A practical guide to
-  Message-ID, In-Reply-To, and References headers for developers and AI agents.
-date: '2026-03-06'
+  How Message-ID, In-Reply-To, and References headers create email threads. A
+  practical guide for developers and agents building reply chains
+  programmatically.
+date: '2026-03-07'
 author: Samuel Chenard
 tags:
   - email
   - infrastructure
   - guides
+  - automation
 image: >-
   /blog/email-threading-explained-how-in-reply-to-and-references-headers-keep-conversations-together.png
 imageAlt: >-
   Pixel art lobster mascot illustration for email infrastructure — email
   threading In-Reply-To References headers
-publish_at: '2026-03-06T10:00:00Z'
+publish_at: '2026-03-07T12:00:00Z'
 agent: agent-3-content
 channel: blog
 type: blog-post
 status: approved
-approved_at: '2026-03-06T21:10:03.650Z'
+approved_at: '2026-03-07T08:09:29.289Z'
 ---
-Every email you've ever received has hidden metadata that determines whether it shows up as part of a conversation or lands as a standalone message. Three headers do the heavy lifting: `Message-ID`, `In-Reply-To`, and `References`. If you're building anything that sends email programmatically (an agent, a transactional system, a notification pipeline), getting these right is the difference between clean threaded conversations and a scattered mess in your recipient's inbox.
+Every email you've ever received carries invisible metadata that determines whether it shows up as a new conversation or gets tucked into an existing thread. Three headers do most of the work: `Message-ID`, `In-Reply-To`, and `References`. Get them right, and your replies land exactly where they belong. Get them wrong (or skip them entirely), and your carefully crafted response floats into someone's inbox as a disconnected orphan message.
 
-Here's how they work, where they differ, and how to set them correctly.
+This matters more than ever if you're building agents that send email programmatically. An agent replying to a customer, coordinating with another agent, or confirming a booking needs its replies threaded correctly. Otherwise, the human on the other end sees a disjointed mess of one-off emails instead of a coherent conversation.
 
-## In-Reply-To vs References: the quick comparison
+Let's break down how email threading actually works at the header level, how different email clients interpret these headers, and how to set them correctly when sending replies from code or an agent.
 
-The **In-Reply-To** header contains the `Message-ID` of the single email being replied to. The **References** header contains a chain of `Message-ID` values representing the entire conversation history.
+## The three headers that make threading work
+
+Every email message gets a unique identifier when it's created. That's the `Message-ID` header. It looks something like this:
+
+Message-ID: <abc123@mail.example.com>
+When someone replies to that email, their mail client does two things automatically. First, it sets the `In-Reply-To` header to the `Message-ID` of the email being replied to. Second, it populates the `References` header with the chain of `Message-ID` values from the entire conversation history.
+
+Here's what a reply's headers look like in a three-message thread:
+
+```
+Message-ID: <msg003@mail.example.com>
+In-Reply-To: <msg002@mail.example.com>
+References: <msg001@mail.example.com> <msg002@mail.example.com>
+```
+
+That's the entire mechanism. `Message-ID` identifies each email. `In-Reply-To` points to the direct parent. `References` carries the full ancestry of the thread.
+
+## In-Reply-To vs. References: key differences
+
+Both headers reference `Message-ID` values, but they serve different purposes. Here's a side-by-side comparison:
 
 | | In-Reply-To | References |
 |---|---|---|
-| Definition | Points to the direct parent message | Lists the full ancestry of the thread |
-| Value format | Single `Message-ID` | Space-separated list of `Message-ID` values |
-| Number of IDs | Always one | One to many (recommended cap: ~10) |
-| Primary purpose | Identifies which message this is a reply to | Lets clients reconstruct the full thread tree |
-| Fallback behavior | Clients may fall back to subject-line matching | Clients walk the list to find any known ancestor |
+| **Purpose** | Points to the direct parent message | Carries the full thread ancestry |
+| **Value format** | Single Message-ID | Space-separated list of Message-IDs |
+| **Number of IDs** | Always one | One to many (trimmed after ~10) |
+| **Required for threading** | Not strictly, but strongly recommended | Not strictly, but strongly recommended |
+| **How clients use it** | Quick parent lookup | Reconstructing full conversation tree |
+| **Fallback behavior** | Clients may fall back to subject-line matching | Some clients ignore threading entirely without it |
 
-Most email clients use both headers together. But when they conflict or one is missing, behavior gets unpredictable. More on that below.
+In practice, you want both. Some email clients prioritize `In-Reply-To` for simple parent-child linking. Others rely on `References` to build the complete tree structure, especially in long conversations with branches.
 
-## Message-ID: the foundation
+## How email clients handle threading differently
 
-Before you can understand threading, you need to understand `Message-ID`. Every email gets a unique identifier when it's sent, formatted like an email address wrapped in angle brackets:
+Here's where it gets interesting. The RFC standard (RFC 5322) defines `In-Reply-To` and `References`, but email clients interpret them with their own quirks.
 
-Message-ID: <abc123@mail.example.com>
-This ID is generated by the sending mail server or client. It should be globally unique. RFC 5322 defines the format, and most implementations use a combination of timestamp, random string, and domain name to guarantee uniqueness.
+**Gmail** uses a hybrid approach. It threads messages that share the same `References` chain, but it also threads messages with matching subject lines sent between the same participants. This means Gmail can sometimes group unrelated emails into the same thread if they happen to share a subject line like "Re: Invoice" between the same two addresses. It's a known frustration, and it's why Gmail's threading feels "too aggressive" to some people.
 
-The `Message-ID` is what `In-Reply-To` and `References` point back to. Without it, threading can't work at all. If your sending infrastructure strips or fails to generate `Message-ID` headers, every downstream reply will be orphaned.
+**Outlook** relies more heavily on `In-Reply-To` and the `Thread-Index` header (a Microsoft-specific extension). Outlook generates a `Thread-Index` value for the first message in a conversation and appends to it with each reply. If `Thread-Index` is missing, Outlook falls back to `In-Reply-To` and `References`. If those are missing too, it uses subject-line matching as a last resort.
 
-## How In-Reply-To works
+**Apple Mail** sticks closer to the RFC spec. It uses `In-Reply-To` and `References` for threading and generally won't group messages by subject alone. This makes it more predictable but less forgiving if your headers are wrong or missing.
 
-When someone replies to an email, their mail client takes the `Message-ID` of the original message and places it in the `In-Reply-To` header of the reply:
+**Thunderbird** implements the JWZ threading algorithm (named after Jamie Zawinski, who wrote the original Netscape Mail threading code in the 1990s). It builds a tree from `References` headers first, then uses `In-Reply-To` to fill gaps. Subject-line matching is a fallback, but it's applied conservatively.
 
-```
-Message-ID: <reply-456@mail.example.com>
-In-Reply-To: <abc123@mail.example.com>
-```
+The takeaway: if you set `In-Reply-To` and `References` correctly, your messages will thread properly across all major clients. If you skip them, you're gambling on subject-line matching, which is inconsistent.
 
-This creates a direct parent-child relationship. The email client receiving this reply can now display it underneath the original message.
+## Setting threading headers programmatically
 
-Simple enough. But `In-Reply-To` only tells you about the immediate parent. In a long conversation with ten messages, the fifth reply only knows about the fourth message. It has no awareness of messages one through three. That's where `References` comes in.
+When your application or agent sends a reply, you need to construct the headers yourself. Here's the process:
 
-## How References works
+1. **Store the `Message-ID` of every email you receive.** You'll need it to build reply headers later.
+2. **Set `In-Reply-To`** to the `Message-ID` of the email you're replying to.
+3. **Build `References`** by copying the `References` header from the parent email and appending the parent's `Message-ID` to the end.
 
-The `References` header contains the full chain of `Message-ID` values from the root of the conversation down to the parent:
-
-```
-Message-ID: <reply-789@mail.example.com>
-In-Reply-To: <reply-456@mail.example.com>
-References: <abc123@mail.example.com> <reply-456@mail.example.com>
-```
-
-The convention, defined in RFC 5322 (and its predecessor RFC 2822), is straightforward: copy the `References` header from the parent message, then append the parent's `Message-ID` to the end. The first ID in the list is always the root message. The last ID is always the direct parent.
-
-For deeply nested threads, RFC 5322 recommends trimming the list if it exceeds roughly ten entries. When trimming, keep the first ID (the root) and remove IDs from the middle, preserving the most recent ancestors. This prevents headers from growing unbounded while keeping enough context for clients to stitch threads together.
-
-## How email clients use these headers
-
-Different email clients prioritize these headers differently, and this is where things get interesting.
-
-**Gmail** is aggressive about threading. It uses `References` and `In-Reply-To` as the primary signals, but it also groups messages by subject line. This means two completely unrelated emails with the same subject can end up in the same conversation view. Gmail also threads messages sent from the same account to the same recipient with the same subject, even without any threading headers at all. This behavior is well-documented, frequently complained about, and unlikely to change.
-
-**Outlook** relies more strictly on `In-Reply-To` and `References`. Subject-line matching plays a smaller role. If threading headers are missing, Outlook is more likely to display messages separately. It also supports its own proprietary `Thread-Index` and `Thread-Topic` headers, which Outlook clients use internally but other providers ignore.
-
-**Apple Mail** follows the RFC standards closely. It uses `In-Reply-To` and `References` for threading and does not aggressively group by subject line. Of the major clients, Apple Mail is the most predictable.
-
-**Thunderbird** and most open-source clients follow RFC 5322 faithfully. Threading works as specified: `References` for tree construction, `In-Reply-To` for direct parent identification.
-
-The takeaway: if you set both headers correctly, your emails will thread properly in every major client. If you only set one, you're gambling on client-specific fallback behavior.
-
-## What happens when threading headers are missing
-
-When `In-Reply-To` and `References` are both absent, email clients have to guess. Gmail falls back to subject-line matching, which is why you sometimes see unrelated messages grouped together if they share a generic subject like "Re: Update" or "Re: Question." Outlook tends to leave headerless messages ungrouped. Apple Mail does the same.
-
-When `In-Reply-To` is missing but `References` is present, most clients can still thread correctly by walking the `References` list. The reverse (only `In-Reply-To`, no `References`) works for simple two-message exchanges but breaks down in longer threads because the client can't reconstruct the conversation tree.
-
-The worst case is when headers are present but contain incorrect or spoofed `Message-ID` values. A message with a fabricated `In-Reply-To` can inject itself into an existing thread, which has real security implications for agents processing email. If your agent trusts that all messages in a thread are from the same conversation, a spoofed `In-Reply-To` header can trick it into treating a malicious message as a legitimate reply. This is one reason [multi-agent email coordination](/blog/multi-agent-email-coordination) requires careful validation beyond just checking thread membership.
-
-## Setting threading headers in programmatic email
-
-If your agent or application sends email through an API or SMTP, you're responsible for setting these headers yourself. Most email APIs (SendGrid, Postmark, SES, LobsterMail) let you pass custom headers with each message.
-
-Here's the pattern for a correct reply:
+In TypeScript, that looks something like this:
 
 ```typescript
-// When sending a reply to a received email:
-const replyHeaders = {
-  'In-Reply-To': originalEmail.messageId,
-  'References': originalEmail.references
-    ? `${originalEmail.references} ${originalEmail.messageId}`
-    : originalEmail.messageId,
-  'Subject': `Re: ${originalEmail.subject}`,
-};
+function buildReplyHeaders(parentEmail: { messageId: string; references?: string }) {
+  const parentRefs = parentEmail.references || '';
+  const references = parentRefs
+    ? `${parentRefs} ${parentEmail.messageId}`
+    : parentEmail.messageId;
+
+  return {
+    'In-Reply-To': parentEmail.messageId,
+    'References': references,
+  };
+}
 ```
 
-A few things to note:
+One detail that trips people up: the `References` header should be trimmed if it grows beyond about ten Message-IDs. The RFC recommends keeping the first ID (the thread root) and the most recent ancestors, dropping IDs from the middle. In practice, most conversations don't hit ten levels deep, but automated systems and [multi-agent email coordination](/blog/multi-agent-email-coordination) can generate long chains fast.
 
-1. **Always set both headers.** Some guides say `In-Reply-To` alone is sufficient. It isn't, at least not reliably across all clients.
+```typescript
+function trimReferences(references: string, maxIds: number = 10): string {
+  const ids = references.split(/\s+/).filter(Boolean);
+  if (ids.length <= maxIds) return references;
 
-2. **Preserve the `References` chain.** Don't just set `References` to the parent's `Message-ID`. Copy the parent's `References` value and append the parent's `Message-ID`. This is how threads stay intact across many replies.
+  // Keep the root and the most recent ancestors
+  const root = ids[0];
+  const recent = ids.slice(-(maxIds - 1));
+  return [root, ...recent].join(' ');
+}
+```
 
-3. **Keep the subject line consistent.** Prepend `Re:` if it isn't already there, and don't modify the rest. Gmail in particular uses subject matching as a secondary threading signal.
+## What happens when headers are missing
 
-4. **Don't fabricate `Message-ID` values.** If you're replying to a message, use the actual `Message-ID` from the original. Generating a fake one will break the thread.
+If `In-Reply-To` and `References` are both absent, email clients fall back to heuristics. Gmail groups by subject line and participants. Outlook checks `Thread-Index`. Apple Mail mostly gives up and shows the message as a new conversation.
 
-5. **Store `Message-ID` and `References` on your side.** If your agent needs to [schedule meetings over email](/blog/agent-schedule-meetings-email) or manage ongoing conversations, you'll want to persist these values so future replies reference the correct chain.
+This is why automated emails so often break threading. A transactional email system fires off a reply without setting the threading headers, and the recipient sees it as a brand-new message. They reply to *that*, and now there are two threads about the same thing. Multiply by hundreds of customers and you've got an inbox disaster.
 
-## Threading for AI agents
+The fix is simple: always include both headers when sending a reply. There is no valid reason to omit them.
 
-Agents that send and receive email at scale hit threading edge cases that human users rarely encounter. An agent might process hundreds of conversations simultaneously, each with its own thread. Mixing up a `Message-ID` between conversations means cross-contaminating threads, which can confuse both the recipient and the agent itself.
+## Threading for agents: the multi-turn problem
 
-A few practical recommendations:
+When AI agents handle email conversations, threading becomes even more important. Consider an agent that [schedules meetings over email](/blog/agent-schedule-meetings-email). It might exchange four or five messages with a human: initial request, proposed times, a counter-proposal, confirmation, calendar invite. If any of those messages breaks the thread, the human has to hunt through their inbox to piece the conversation back together.
 
-Store the `Message-ID`, `In-Reply-To`, and `References` of every message your agent sends and receives. Index them by conversation or task ID. When the agent needs to reply, look up the most recent message in that conversation and construct headers from its stored metadata.
+Agents also face a unique challenge: they often process emails from multiple inboxes simultaneously. If your agent manages ten inboxes, each with active conversations, it needs to track the `Message-ID` and `References` chain for every thread independently. Mixing up threading headers between conversations would splice unrelated emails into the same thread on the recipient's end.
 
-If your agent starts a new conversation, don't set `In-Reply-To` or `References` at all. Let the first message establish the root `Message-ID`, and only add threading headers on subsequent replies.
+With LobsterMail, when your agent receives an email, the `messageId` and `references` fields are included in the email object. When the agent sends a reply through `inbox.send()`, it can pass those values directly:
 
-When an agent receives a reply, validate that the `In-Reply-To` value matches a `Message-ID` your agent actually sent. This is a basic defense against thread injection attacks, where a sender spoofs threading headers to insert messages into an existing conversation.
+```typescript
+const emails = await inbox.receive();
+const original = emails[0];
 
-LobsterMail returns threading metadata (`messageId`, `inReplyTo`, `references`) on every received email, so your agent can read and set these headers without parsing raw MIME. The `receive()` method surfaces these fields directly, and `send()` accepts them as parameters.
+await inbox.send({
+  to: original.from,
+  subject: `Re: ${original.subject}`,
+  text: 'Got it, confirmed for Tuesday at 2pm.',
+  inReplyTo: original.messageId,
+  references: original.references
+    ? `${original.references} ${original.messageId}`
+    : original.messageId,
+});
+```
 
-## Testing your threading
+The agent doesn't need to understand threading theory. It just passes the right values, and every email client on the receiving end threads the conversation correctly.
 
-Before sending at scale, verify your headers are working. Send a test email, reply to it programmatically with correct headers, and check the result in Gmail, Outlook, and Apple Mail. All three should show a threaded conversation.
+## Security: when threading headers get weaponized
 
-If threads split unexpectedly, check these common causes: the `Message-ID` format is malformed (missing angle brackets or domain portion), the `References` header was overwritten instead of appended to, or the subject line was modified between messages. Any of these can break threading in at least one major client.
+There's a less-discussed angle to threading headers: they can be spoofed. If an attacker knows the `Message-ID` of a legitimate email in a thread (which is sometimes exposed in mailing list archives or forwarded messages), they can craft a message with matching `In-Reply-To` and `References` headers. The recipient's email client would then slot the attacker's message into the existing thread, making it look like part of a trusted conversation.
+
+This is called thread hijacking, and it's a real vector for phishing. The attacker's message appears inside a thread the recipient already trusts, making them more likely to click a link or share information.
+
+There's no perfect defense at the header level since `Message-ID` values aren't cryptographically signed in standard email. DKIM signatures cover some headers but not all clients validate them strictly. The practical defense is awareness: if an email appears in a thread but the sender address doesn't match previous participants, treat it with suspicion.
+
+For agents processing inbound email, this is another reason to check sender identity independently rather than trusting thread context alone.
+
+## The short version
+
+Set `Message-ID` on every outgoing email (your mail library probably does this automatically). When replying, set `In-Reply-To` to the parent's `Message-ID` and build `References` from the parent's `References` plus the parent's `Message-ID`. Trim `References` if it exceeds ten IDs. Do this every time, without exception, and your emails will thread correctly in Gmail, Outlook, Apple Mail, and everything else.
+
+Skip these headers and you'll spend more time debugging broken threads than you spent building the feature.
 
 ---
 
 *Give your agent its own email. [Get started with LobsterMail](/) -- it's free.*
 
 <FAQ>
-  <FAQItem question="What is the In-Reply-To header and what value should it contain?">
-    The `In-Reply-To` header identifies which message an email is replying to. It should contain exactly one `Message-ID` value from the parent email, wrapped in angle brackets (e.g., `<abc123@mail.example.com>`).
+  <FAQItem question="What is the In-Reply-To header in email?">
+    The `In-Reply-To` header contains the `Message-ID` of the email being replied to. Email clients use it to link a reply to its parent message and display them in the same thread.
   </FAQItem>
 
   <FAQItem question="What is the References header and how does it differ from In-Reply-To?">
-    The `References` header contains a space-separated list of `Message-ID` values representing the full conversation ancestry, from root to parent. `In-Reply-To` only points to the direct parent, while `References` maps the entire thread tree.
+    The `References` header contains a space-separated list of `Message-ID` values representing the entire ancestry of a conversation. While `In-Reply-To` points only to the direct parent, `References` carries the full chain from the thread root to the most recent message.
   </FAQItem>
 
-  <FAQItem question="Do I need to set both In-Reply-To and References, or is one enough?">
-    Set both. While some clients can thread with just one header, behavior varies across Gmail, Outlook, and Apple Mail. Setting both gives you reliable threading everywhere.
+  <FAQItem question="What is a Message-ID and why is it required for email threading?">
+    A `Message-ID` is a globally unique identifier assigned to every email when it's sent. It looks like `<unique-string@domain.com>`. Without it, there's nothing for `In-Reply-To` or `References` to point to, so threading can't work.
   </FAQItem>
 
-  <FAQItem question="How does Gmail's threading differ from Outlook's?">
-    Gmail threads aggressively using `References`, `In-Reply-To`, and subject-line matching. Outlook relies more strictly on the threading headers and gives less weight to subject lines. Outlook also uses proprietary `Thread-Index` and `Thread-Topic` headers that other clients ignore.
+  <FAQItem question="How do email clients decide which header takes priority when threading?">
+    It depends on the client. Gmail uses `References` combined with subject-line matching. Outlook prefers its proprietary `Thread-Index` header, falling back to `In-Reply-To`. Apple Mail and Thunderbird follow the RFC spec closely, prioritizing `References` for tree construction and `In-Reply-To` for parent lookup.
   </FAQItem>
 
-  <FAQItem question="What is a Message-ID and how is it generated?">
-    A `Message-ID` is a globally unique identifier assigned to every email by the sending server. It typically combines a timestamp, random string, and domain name in the format `<unique-string@domain.com>`. It's defined by RFC 5322.
-  </FAQItem>
-
-  <FAQItem question="What happens when both In-Reply-To and References are missing?">
-    Email clients fall back to heuristics. Gmail groups messages by matching subject lines, which can incorrectly merge unrelated emails. Outlook and Apple Mail are more likely to display them as separate messages.
-  </FAQItem>
-
-  <FAQItem question="How should I construct the References header for a deeply nested reply?">
-    Copy the `References` header from the parent message and append the parent's `Message-ID` to the end. If the list exceeds about ten IDs, remove entries from the middle while keeping the first (root) and most recent ancestors.
+  <FAQItem question="What happens when both In-Reply-To and References headers are missing?">
+    Most email clients fall back to subject-line matching. Gmail groups messages with the same subject and participants. Apple Mail typically shows the message as a new conversation. The result is inconsistent across clients, which is why you should always include both headers.
   </FAQItem>
 
   <FAQItem question="Can unrelated emails accidentally end up in the same thread?">
-    Yes. Gmail in particular will group messages with the same subject line into one thread, even without threading headers. This is a known behavior. Using unique, descriptive subject lines reduces the risk.
+    Yes, especially in Gmail. If two separate emails share the same subject line (like "Re: Invoice") between the same participants, Gmail may group them into one thread even though they're unrelated. Correct `References` headers help prevent this.
   </FAQItem>
 
-  <FAQItem question="How should an AI agent set threading headers when sending programmatic replies?">
-    Store the `messageId` and `references` from every received email. When replying, set `In-Reply-To` to the parent's `Message-ID` and `References` to the parent's `References` value plus the parent's `Message-ID`. LobsterMail's SDK surfaces these fields on every received email and accepts them on `send()`.
+  <FAQItem question="How many Message-IDs should the References header contain before trimming?">
+    The RFC recommends trimming after about ten Message-IDs. Keep the first ID (the thread root) and the most recent ancestors, dropping entries from the middle of the list.
   </FAQItem>
 
-  <FAQItem question="Does the subject line affect email threading?">
-    In Gmail, yes. Gmail uses subject-line matching as a secondary threading signal, so changing the subject mid-conversation can split the thread. Outlook and Apple Mail rely more on `In-Reply-To` and `References` headers than subject lines.
+  <FAQItem question="How do I set In-Reply-To and References headers when sending a reply via API?">
+    Set `In-Reply-To` to the `Message-ID` of the email you're replying to. Build `References` by copying the parent email's `References` value and appending the parent's `Message-ID`. Most email SDKs and APIs accept these as header fields on the send call.
   </FAQItem>
 
-  <FAQItem question="Why do email threads sometimes break or split even when In-Reply-To is set correctly?">
-    Common causes include malformed `Message-ID` values (missing angle brackets), overwriting `References` instead of appending to it, or modifying the subject line between messages. Any of these can cause at least one major client to split the thread.
+  <FAQItem question="How does Gmail's threading algorithm differ from the RFC standard?">
+    Gmail threads by `References` headers but also groups messages with matching subject lines and participants, even without threading headers. This makes Gmail's threading more aggressive than the RFC spec, sometimes merging unrelated conversations.
   </FAQItem>
 
-  <FAQItem question="What RFC standards define In-Reply-To and References behavior?">
-    RFC 5322 (Internet Message Format) is the current standard. It superseded RFC 2822, which superseded RFC 822. All three define the same basic threading header behavior, with RFC 5322 being the authoritative reference.
+  <FAQItem question="How should AI agents manage threading headers across multi-turn email conversations?">
+    Agents should store the `Message-ID` and `References` value of every received email. When replying, the agent sets `In-Reply-To` to the parent's `Message-ID` and appends it to the parent's `References` chain. With [LobsterMail](/), these fields are included in the email object so the agent can pass them directly when sending.
   </FAQItem>
 
-  <FAQItem question="How can I test that my threading headers work correctly before sending at scale?">
-    Send a test message, reply to it programmatically with correct headers, then verify the thread displays correctly in Gmail, Outlook, and Apple Mail. Check that `Message-ID` values include angle brackets and a domain, that `References` chains are intact, and that subject lines are consistent.
+  <FAQItem question="Can subject-line matching replace In-Reply-To and References as a threading fallback?">
+    It's unreliable. Subject-line matching works in some clients (Gmail, Outlook) but not others (Apple Mail). It also creates false positives when unrelated emails share a subject. Always use proper threading headers rather than relying on subject matching.
   </FAQItem>
 
-  <FAQItem question="Can someone spoof In-Reply-To to inject messages into an existing thread?">
-    Yes. If a sender sets `In-Reply-To` to a valid `Message-ID` from an existing conversation, most email clients will display the spoofed message as part of that thread. Agents should validate that `In-Reply-To` values match `Message-ID` values they actually sent.
+  <FAQItem question="Can threading headers be spoofed for phishing?">
+    Yes. If an attacker knows a legitimate `Message-ID`, they can forge `In-Reply-To` and `References` to inject a message into an existing thread. This is called thread hijacking. DKIM helps but isn't universally enforced, so recipients (and agents) should verify sender identity independently.
   </FAQItem>
 </FAQ>
