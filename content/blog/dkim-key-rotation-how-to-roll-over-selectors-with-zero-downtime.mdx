@@ -1,0 +1,188 @@
+---
+title: 'DKIM key rotation: how to roll over selectors with zero downtime'
+description: >-
+  A step-by-step guide to rotating DKIM keys using the dual-selector rollover
+  method, so your email authentication never breaks mid-transition.
+date: '2026-03-08'
+author: Ian Bussières
+tags:
+  - email
+  - security
+  - infrastructure
+  - guides
+  - deliverability
+image: /blog/dkim-key-rotation-how-to-roll-over-selectors-with-zero-downtime.png
+imageAlt: >-
+  Pixel art lobster mascot illustration for email infrastructure — DKIM key
+  rotation selector rollover zero downtime
+publish_at: '2026-03-08T14:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-08T07:10:28.064Z'
+---
+Most DKIM rotation guides tell you to "just update your DNS record." That advice skips the part where emails in transit fail authentication because the old key vanished before every mail server caught up. If you're sending any meaningful volume, a botched DKIM key rotation can tank your deliverability for days.
+
+Here's the thing: zero-downtime DKIM rotation isn't complicated. It just requires a specific sequence of steps that most people skip because they don't realize DNS propagation takes time and email takes even longer.
+
+## What is DKIM key rotation?
+
+DKIM (DomainKeys Identified Mail) lets receiving mail servers verify that an email actually came from your domain and wasn't tampered with in transit. Your sending server signs each outgoing message with a private key, and the receiving server checks that signature against a public key published in your DNS records.
+
+Key rotation means replacing that key pair with a fresh one. You do this because keys can be compromised over time, because longer keys offer better security, or simply because it's good hygiene. The challenge is swapping keys without breaking authentication for emails that are still bouncing between servers using the old signature.
+
+A DKIM selector is the mechanism that makes rotation possible. Each DKIM DNS record is published under a selector name (like `s1._domainkey.yourdomain.com`), and the selector name is included in the email's DKIM-Signature header. This means you can have multiple valid keys published simultaneously under different selectors, and receiving servers will know which one to check.
+
+## How to rotate DKIM keys without downtime
+
+Zero-downtime DKIM rotation uses two selectors so the old key stays valid while the new one takes over. Here's the process:
+
+1. **Lower your DNS TTL to 300 seconds** on the existing DKIM record, at least 24-48 hours before you start.
+2. **Generate a new 2048-bit RSA key pair** (or Ed25519 if your mail server supports it).
+3. **Publish the new public key under a new selector** in DNS (e.g., `s2._domainkey.yourdomain.com`).
+4. **Wait for DNS propagation**, typically 15-60 minutes at low TTL, though some resolvers cache longer.
+5. **Update your mail server's signing configuration** to use the new selector and private key.
+6. **Keep the old selector's DNS record active** for at least 7 days as a grace period.
+7. **Monitor DMARC aggregate reports** to confirm old-selector traffic drops to zero.
+8. **Delete the old selector's DNS record** once no traffic references it.
+
+That's the whole playbook. The rest of this article explains why each step matters and what happens when you skip one.
+
+## Why dual selectors prevent breakage
+
+The key insight is that DKIM verification is selector-based, not domain-based. When a receiving server gets an email with the header `s=s1`, it looks up `s1._domainkey.yourdomain.com` specifically. It doesn't care about `s2._domainkey` at all.
+
+This means you can publish both `s1` and `s2` simultaneously. Emails signed with the old key still verify against the old selector. New emails signed with the new key verify against the new selector. There's no conflict, no race condition, no moment where both keys need to exist in the same record.
+
+The failure scenario people hit is simpler than they think: they publish the new key *over* the old selector instead of using a new one. Now every email in transit that was signed with the old key fails verification because the public key changed under the same selector. In busy systems, that can mean thousands of bounced or spam-foldered messages.
+
+## Selector naming: dates vs. generic pairs
+
+Microsoft 365 uses a fixed `selector1` / `selector2` naming scheme. When you rotate, traffic moves from selector1 to selector2, and the old one stays active for 5-7 days. It's simple but opaque. You can't tell when a key was created just by looking at the selector name.
+
+A better approach for infrastructure you control: use date-stamped selectors like `dkim-20260308`. The operational advantages are real. When you're troubleshooting six months later and see `dkim-20250915` in a bounce log, you immediately know that key is stale. With `selector1`, you're digging through changelogs.
+
+The tradeoff is that date-stamped selectors require your signing configuration to accept arbitrary selector names, while some managed platforms only support a fixed pair. Use whichever your infrastructure allows, but if you have the choice, dates win.
+
+## The grace period: how long to keep the old key
+
+Seven days is the standard recommendation, and it's grounded in practical reality. Most email gets delivered within minutes, but retry queues can hold messages for up to 5 days (per RFC 5321). A 7-day grace period covers the worst-case retry scenario with a comfortable margin.
+
+But here's the data-driven approach that none of the guides mention: use your DMARC aggregate reports. These reports (sent daily by major receivers like Google and Microsoft) include the selector used for each batch of authenticated messages. When your old selector stops appearing in DMARC reports entirely, it's safe to retire.
+
+If you're running [custom domains for agent email](/blog/custom-domains-agent-email), this matters even more. Agents sending on your domain need uninterrupted DKIM authentication, and they won't notice a misconfigured selector until messages start landing in spam.
+
+## DNS TTL: the step everyone forgets
+
+Before you touch anything, lower the TTL on your existing DKIM TXT record. If your TTL is set to 86400 (24 hours), DNS resolvers worldwide will cache that record for up to a full day. That means even after you delete the old selector, some servers will still see the cached record and verify successfully, while others will get NXDOMAIN and fail.
+
+Drop the TTL to 300 seconds (5 minutes) at least 24-48 hours before rotation. This ensures that by the time you make changes, no resolver is caching a stale record for more than 5 minutes. After rotation is complete and the old selector is retired, you can raise the TTL back to a longer value to reduce DNS lookup overhead.
+
+## Key length: upgrade while you're at it
+
+If you're still on 1024-bit RSA keys, rotation is a good time to upgrade to 2048-bit. The 1024-bit keys are considered weak by modern standards, and some security-conscious receivers may treat them with lower confidence.
+
+One constraint to know: DNS TXT records have a 255-byte string limit per chunk. A 2048-bit key exceeds this, so it needs to be split across multiple strings within the same TXT record. Most DNS providers handle this automatically, but if you're editing zone files by hand, you'll need to split the base64-encoded key into 255-character segments wrapped in separate quoted strings.
+
+Ed25519 keys are shorter and faster to verify, but support is still inconsistent across receivers. RSA 2048-bit is the safe default for now.
+
+## Automating rotation with DNS APIs
+
+If you manage DNS through a provider with an API (Cloudflare, Route 53, Google Cloud DNS), you can script the entire rotation:
+
+```bash
+# Generate new key pair
+openssl genrsa -out dkim-20260308.key 2048
+openssl rsa -in dkim-20260308.key -pubout -outform PEM | \
+  grep -v "^-" | tr -d '\n' > dkim-20260308.pub.txt
+
+# Publish new selector via Cloudflare API
+curl -X POST "https://api.cloudflare.com/client/v4/zones/{zone_id}/dns_records" \
+  -H "Authorization: Bearer $CF_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "TXT",
+    "name": "dkim-20260308._domainkey",
+    "content": "v=DKIM1; k=rsa; p=YOUR_PUBLIC_KEY_HERE",
+    "ttl": 300
+  }'
+The key benefit of API-driven rotation: you can build a cron job that rotates keys on a schedule (quarterly is a good cadence), monitors DMARC reports for old-selector traffic, and retires selectors automatically once they're clear. No human intervention, no forgotten keys sitting around for years.
+
+For platforms that send email on behalf of multiple customers (like agent infrastructure), coordinating rotation across dozens of sending domains becomes manageable only with automation. You can stagger rollouts, run health checks against each domain's DMARC data, and roll back instantly if something breaks.
+
+## The rollback plan
+
+Sometimes a rotation goes wrong. Maybe the new private key didn't deploy correctly to all sending nodes. Maybe a typo in the DNS record broke the public key format. Whatever the cause, emails signed with the new selector start failing DKIM checks.
+
+The fix is fast if you kept the old selector active: revert your signing configuration to use the old selector and private key. Since the old DNS record is still published (you're in the grace period), authentication resumes immediately. No DNS changes needed, no propagation delay.
+
+This is why the grace period isn't optional. It's your rollback window. Delete the old selector too early and you've burned your safety net.
+
+## How this connects to deliverability
+
+DKIM is one leg of the email authentication tripod (SPF, DKIM, DMARC). A failed DKIM signature doesn't automatically bounce your email, but it weakens your DMARC alignment. If SPF also fails (common when sending through third-party infrastructure), DMARC will instruct receivers to quarantine or reject the message.
+
+For AI agents sending email autonomously, authentication failures are invisible until the damage is done. The agent doesn't get a bounce notification for a spam-foldered message. It just never hears back. We covered the broader picture in our guide on [email deliverability for AI agents](/blog/email-deliverability-ai-agents), but the short version is: keep your authentication chain intact, and DKIM rotation is the most likely place to accidentally break it.
+
+## Recommended rotation cadence
+
+Quarterly rotation (every 90 days) is a reasonable default. It balances security against operational overhead. Some organizations rotate every 6 months, which is acceptable for lower-risk use cases. Annual rotation is the bare minimum.
+
+If you suspect a key compromise, rotate immediately. Don't wait for the next scheduled window.
+
+For automated systems and agent-based email infrastructure, quarterly rotation is easy to set up once and forget. The scripts run, the DMARC reports confirm, the old selectors retire. The only time a human needs to get involved is when something breaks, and if you followed the dual-selector approach, breaking is hard to do.
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
+
+---
+
+<FAQ>
+  <FAQItem question="What is a DKIM selector rollover and why does it matter for deliverability?">
+    A selector rollover is the process of switching DKIM signing from one selector to another so you can replace an old key with a new one. It matters because a broken DKIM signature weakens DMARC alignment, which can cause receiving servers to quarantine or reject your email.
+  </FAQItem>
+  <FAQItem question="How does the dual-selector method achieve zero downtime during DKIM key rotation?">
+    You publish the new key under a different selector name while keeping the old selector active. Emails signed with the old key still verify against the old selector, and new emails verify against the new one. There's no gap in authentication.
+  </FAQItem>
+  <FAQItem question="How long should DNS TTL be set before starting a DKIM selector rollover?">
+    Lower your TTL to 300 seconds (5 minutes) at least 24-48 hours before rotation. This ensures DNS resolvers worldwide aren't caching stale records when you make changes.
+  </FAQItem>
+  <FAQItem question="How do I know when it's safe to retire the old DKIM selector after rotation?">
+    Check your DMARC aggregate reports. When the old selector no longer appears in any report, no receivers are seeing emails signed with that key. A minimum grace period of 7 days is recommended regardless.
+  </FAQItem>
+  <FAQItem question="What DKIM key length should I use when generating a new key: 1024-bit or 2048-bit?">
+    Use 2048-bit RSA. 1024-bit keys are considered weak by modern standards. Note that 2048-bit keys exceed the 255-byte DNS TXT string limit, so the key must be split across multiple quoted strings in the record.
+  </FAQItem>
+  <FAQItem question="Can I use date-stamped selector names instead of selector1 and selector2?">
+    Yes, and it's often better for troubleshooting. A selector like `dkim-20260308` tells you exactly when the key was created. The only constraint is that your mail server or platform must support arbitrary selector names (some managed platforms like Microsoft 365 only allow fixed pairs).
+  </FAQItem>
+  <FAQItem question="How do DMARC aggregate reports help confirm a safe DKIM selector transition?">
+    DMARC aggregate reports, sent daily by major receivers, include the selector used for each authenticated message batch. By monitoring these reports, you can see exactly when old-selector traffic drops to zero and know it's safe to delete the old DNS record.
+  </FAQItem>
+  <FAQItem question="What happens to emails in transit if I delete the old DKIM selector too early?">
+    Any email still in a retry queue that was signed with the old key will fail DKIM verification when the receiving server tries to look up the deleted selector. This can result in those messages being quarantined or rejected, depending on your DMARC policy.
+  </FAQItem>
+  <FAQItem question="How do I rotate DKIM keys programmatically using DNS APIs?">
+    Generate a new key pair with OpenSSL, publish the public key under a new selector using your DNS provider's API (Cloudflare, Route 53, etc.), update your mail server's signing config, then schedule deletion of the old record after the grace period. The whole flow can run as a cron job.
+  </FAQItem>
+  <FAQItem question="Does DKIM key rotation affect SPF or DMARC records?">
+    No. DKIM, SPF, and DMARC are independent DNS records. Rotating DKIM keys only changes the DKIM TXT records under your `_domainkey` subdomain. Your SPF and DMARC records remain unchanged.
+  </FAQItem>
+  <FAQItem question="How often should DKIM keys be rotated according to current best practices?">
+    Quarterly (every 90 days) is a solid default. Every 6 months is acceptable for lower-risk setups. Annual rotation is the bare minimum. Rotate immediately if you suspect key compromise.
+  </FAQItem>
+  <FAQItem question="What is the recommended grace period for keeping the old DKIM selector active?">
+    At least 7 days. Email retry queues can hold messages for up to 5 days per RFC 5321, and 7 days gives a comfortable margin. Use DMARC reports to confirm when it's truly safe to remove.
+  </FAQItem>
+  <FAQItem question="How do I coordinate DKIM rotation across multiple sending domains or subdomains?">
+    Use DNS API automation to stagger rollouts. Rotate one domain at a time, verify DMARC alignment for each before moving to the next, and maintain a central log of selector versions per domain. This prevents a single misconfiguration from affecting all sending domains at once.
+  </FAQItem>
+  <FAQItem question="What is the rollback procedure if a DKIM key rotation causes email authentication failures?">
+    Revert your mail server's signing configuration to use the old selector and private key. Since you kept the old selector's DNS record active during the grace period, authentication resumes immediately with no DNS changes or propagation delay needed.
+  </FAQItem>
+  <FAQItem question="How does Microsoft 365 handle DKIM selector rotation between selector1 and selector2?">
+    Microsoft 365 uses a fixed two-selector system. When you trigger rotation in the admin portal, signing moves from selector1 to selector2 (or vice versa). The old selector remains published for 5-7 days automatically. You cannot use custom selector names in M365.
+  </FAQItem>
+</FAQ>

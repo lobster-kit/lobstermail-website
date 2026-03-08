@@ -11,6 +11,28 @@ import {
 import { FadeIn } from "./FadeIn";
 import { faqItems } from "@/lib/faq-data";
 
+function FAQSchema() {
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqItems.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: item.answer,
+      },
+    })),
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
+  );
+}
+
 export function FAQ() {
   return (
     <section className="px-6 py-28 sm:py-36">

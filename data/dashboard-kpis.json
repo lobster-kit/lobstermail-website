@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-08T13:15:05.808Z",
+  "generated_at": "2026-03-08T19:15:04.781Z",
   "kpis": {
     "mrr_usd": 0,
-    "paid_accounts": 1,
-    "free_accounts": 18,
+    "paid_accounts": 2,
+    "free_accounts": 17,
     "total_accounts": 25,
     "npm_installs_7d": 5,
     "seo_clicks_7d": 48,
     "seo_impressions_7d": 4534,
     "seo_avg_position": 6.3,
-    "total_emails_sent": 14,
-    "total_emails_received": 78,
+    "total_emails_sent": 15,
+    "total_emails_received": 82,
     "total_inboxes": 34,
     "daily_visitors": 818,
     "daily_visitors_human": 504,
@@ -21,20 +21,20 @@
   },
   "deltas": {
     "total_inboxes": 34,
-    "total_emails_sent": 14,
-    "total_emails_received": 78,
-    "free_accounts": 18,
+    "total_emails_sent": 15,
+    "total_emails_received": 82,
+    "free_accounts": 17,
     "github_stars": 0,
     "x_followers": 2,
     "clawhub_skill_installs": 0,
-    "openclaw_github_stars": 277809,
+    "openclaw_github_stars": 279531,
     "openclaw_npm_daily": null,
-    "openclaw_twitter_followers": 423253
+    "openclaw_twitter_followers": 426164
   },
   "market": {
-    "openclaw_github_stars": 277809,
+    "openclaw_github_stars": 279531,
     "openclaw_npm_daily": 0,
-    "openclaw_twitter_followers": 423253
+    "openclaw_twitter_followers": 426164
   },
   "sparklines": {
     "mrr_usd": [
@@ -142,7 +142,7 @@
       },
       {
         "date": "2026-03-08",
-        "value": 1
+        "value": 2
       }
     ],
     "seo_clicks": [
@@ -364,8 +364,8 @@
   },
   "pipeline": {
     "drafts": 13,
-    "approved": 8,
-    "published": 179
+    "approved": 0,
+    "published": 183
   },
   "content": {
     "total_topics": 300,
@@ -382,7 +382,7 @@
   "agents": {
     "agent_2_last_run": "2026-03-08T08:07:09.341Z",
     "agent_3_last_run": "2026-03-08T07:10:24.759Z",
-    "agent_6_last_run": "2026-03-08T10:00:13.815Z"
+    "agent_6_last_run": "2026-03-08T16:00:13.471Z"
   },
   "latest_date": "2026-03-08"
 }

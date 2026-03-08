@@ -35,7 +35,10 @@ Let's break down how email threading actually works at the header level, how dif
 
 Every email message gets a unique identifier when it's created. That's the `Message-ID` header. It looks something like this:
 
+```
 Message-ID: <abc123@mail.example.com>
+```
+
 When someone replies to that email, their mail client does two things automatically. First, it sets the `In-Reply-To` header to the `Message-ID` of the email being replied to. Second, it populates the `References` header with the chain of `Message-ID` values from the entire conversation history.
 
 Here's what a reply's headers look like in a three-message thread:
@@ -178,7 +181,7 @@ Skip these headers and you'll spend more time debugging broken threads than you 
   </FAQItem>
 
   <FAQItem question="What is a Message-ID and why is it required for email threading?">
-    A `Message-ID` is a globally unique identifier assigned to every email when it's sent. It looks like `<unique-string@domain.com>`. Without it, there's nothing for `In-Reply-To` or `References` to point to, so threading can't work.
+    A `Message-ID` is a globally unique identifier assigned to every email when it's sent. It looks like `{'<unique-string@domain.com>'}`. Without it, there's nothing for `In-Reply-To` or `References` to point to, so threading can't work.
   </FAQItem>
 
   <FAQItem question="How do email clients decide which header takes priority when threading?">

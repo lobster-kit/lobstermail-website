@@ -1,0 +1,253 @@
+---
+title: how to handle lobstermail 429 errors with a proper retry strategy
+description: >-
+  Rate limits protect your sending reputation. Here's how to detect 429 errors,
+  back off correctly, and keep your agent sending without duplicates.
+date: '2026-03-08'
+author: Ian Bussières
+tags:
+  - guides
+  - email
+  - infrastructure
+  - troubleshooting
+  - automation
+image: /blog/how-to-handle-lobstermail-429-errors-with-a-proper-retry-strategy.png
+imageAlt: >-
+  Pixel art lobster mascot illustration for email infrastructure — lobstermail
+  rate limit 429 error retry strategy
+publish_at: '2026-03-08T18:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-08T07:10:28.070Z'
+---
+Your agent is humming along, sending verification emails, firing off notifications, coordinating with three other agents. Then it gets a `429 Too Many Requests` response back from the LobsterMail API and does what most agents do: retries immediately, gets another 429, retries again, and now you've got a tight loop hammering an endpoint that's already telling you to slow down.
+
+This is the most common rate limit mistake I see. Not hitting the limit. Hitting it and then making things worse.
+
+Rate limits exist to protect everyone on the platform, including your agent. LobsterMail's free tier gives you 1,000 emails per month. The [Builder tier at $9/month](/blog/lobstermail-pricing-explained) raises that ceiling. But regardless of your tier, the API enforces per-minute and per-second request limits to prevent burst abuse and keep deliverability high for all senders.
+
+Here's how to handle 429 errors correctly so your agent recovers on its own, every time.
+
+## How to handle LobsterMail 429 rate limit errors
+
+If your agent hits a 429, follow this sequence:
+
+1. Detect the 429 status code in the API response
+2. Read the `Retry-After` header for the server-recommended wait time
+3. Apply exponential backoff with random jitter
+4. Check for an idempotency key before retrying send operations
+5. Re-enqueue the failed request rather than retrying inline
+6. Log the event for monitoring and alerting
+7. Resume normal operations after a successful response
+
+That's the short version. Let me walk through each piece.
+
+## What a 429 actually means
+
+A `429 Too Many Requests` response means your agent has exceeded the allowed request rate for its current window. This is not an error in the traditional sense. The API is working correctly. It's telling your agent: "You're going too fast. Wait, then try again."
+
+This is different from a `503 Service Unavailable`, which means the server itself is having problems. With a 503, retrying might work or might not, depending on the cause. With a 429, retrying *will* work as long as you wait long enough. The distinction matters because your retry logic should treat them differently. A 429 is a guaranteed-temporary condition. A 503 might not be.
+
+## Reading the Retry-After header
+
+When LobsterMail returns a 429, the response includes a `Retry-After` header. This tells your agent exactly how many seconds to wait before sending the next request.
+
+```typescript
+const response = await fetch('https://api.lobstermail.ai/v1/emails/send', {
+  method: 'POST',
+  headers: { 'Authorization': `Bearer ${token}` },
+  body: JSON.stringify(payload),
+});
+
+if (response.status === 429) {
+  const retryAfter = parseInt(response.headers.get('Retry-After') || '5', 10);
+  console.log(`Rate limited. Waiting ${retryAfter}s before retry.`);
+  await sleep(retryAfter * 1000);
+}
+Always respect this header. Don't guess. Don't hardcode a two-second delay. The server knows its own capacity better than your agent does.
+
+## Exponential backoff with jitter
+
+If the `Retry-After` header is missing (rare, but possible), fall back to exponential backoff. The idea is simple: wait 1 second after the first failure, 2 seconds after the second, 4 after the third, and so on. Double the wait each time.
+
+But pure exponential backoff has a problem. If fifty agents all hit the limit at the same moment and all back off on the same schedule, they'll all retry at the same moment too. That's called the thundering herd, and it causes another wave of 429s.
+
+The fix is jitter. Add a random component to each wait time so retries spread out across the window.
+
+```typescript
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries = 5
+): Promise<T> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      if (error.status !== 429 || attempt === maxRetries - 1) throw error;
+
+      const retryAfter = error.headers?.['retry-after'];
+      const baseWait = retryAfter
+        ? parseInt(retryAfter, 10) * 1000
+        : Math.pow(2, attempt) * 1000;
+      const jitter = Math.random() * 1000;
+      const waitMs = Math.min(baseWait + jitter, 60000);
+
+      console.log(`Attempt ${attempt + 1} failed. Waiting ${waitMs}ms.`);
+      await new Promise(r => setTimeout(r, waitMs));
+    }
+  }
+  throw new Error('Max retries exceeded');
+}
+Cap your maximum wait at 60 seconds. If you're still getting 429s after a minute between attempts, something else is wrong and you should alert rather than keep retrying.
+
+## Preventing duplicate sends on retry
+
+Here's the scary part about retrying email sends: what if the first request actually went through, but the response got lost? Your agent sees a timeout or a network error, retries, and now the recipient gets the same email twice.
+
+For read operations (checking inboxes, listing emails), duplicates don't matter. For sends, they absolutely do. This is where idempotency keys come in.
+
+An idempotency key is a unique string you attach to a request. If the server receives two requests with the same key, it processes the first and returns the cached result for the second. No duplicate send.
+
+```typescript
+import { randomUUID } from 'crypto';
+
+const idempotencyKey = randomUUID();
+
+const response = await fetch('https://api.lobstermail.ai/v1/emails/send', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Idempotency-Key': idempotencyKey,
+  },
+  body: JSON.stringify(payload),
+});
+```
+
+Generate the key *before* the first attempt and reuse it across all retries of that same logical operation. If you generate a new key per retry, you've defeated the purpose.
+
+## Client-side queuing instead of inline retries
+
+The retry function above works for occasional rate limits. But if your agent is [running 50 inboxes](/blog/running-50-agent-inboxes) or sending in bursts, inline retries won't scale. Each waiting request holds a connection open, and if your agent is doing other work concurrently, those blocked requests pile up.
+
+A better pattern for high-volume agents is a client-side send queue. Instead of retrying immediately, push failed requests into a queue and process them at a controlled rate.
+
+```typescript
+const sendQueue: Array<{ payload: any; key: string; attempts: number }> = [];
+
+function enqueue(payload: any) {
+  sendQueue.push({ payload, key: randomUUID(), attempts: 0 });
+}
+
+async function processQueue() {
+  while (sendQueue.length > 0) {
+    const job = sendQueue[0];
+    try {
+      await sendEmail(job.payload, job.key);
+      sendQueue.shift(); // success, remove from queue
+    } catch (error: any) {
+      if (error.status === 429 && job.attempts < 5) {
+        job.attempts++;
+        const wait = Math.pow(2, job.attempts) * 1000 + Math.random() * 1000;
+        await new Promise(r => setTimeout(r, wait));
+        // don't shift, retry same job next iteration
+      } else {
+        sendQueue.shift(); // non-retriable or max attempts
+        console.error('Send failed permanently:', error);
+      }
+    }
+  }
+}
+```
+
+This keeps your agent responsive while failed sends wait their turn. It also makes it easy to add per-domain isolation if you're sending from multiple inboxes.
+
+## Monitoring and alerting
+
+Rate limit hits are normal. Rate limit *spikes* are a signal. If your agent suddenly starts hitting 429s ten times more often than yesterday, something changed: maybe a loop bug, maybe a traffic spike, maybe you've outgrown your current tier.
+
+Track two metrics:
+
+- **429 count per hour.** Set an alert if it crosses 2x your weekly average.
+- **Retry success rate.** If retries are failing more than 20% of the time, your backoff might be too aggressive or your volume might need a tier upgrade.
+
+A simple counter in your logs is enough to start. You don't need a full observability stack. Just make sure the information is there when you need it.
+
+## Common mistakes that make 429s worse
+
+**Retrying immediately.** The most common mistake. If the server says "too many requests," sending another request one millisecond later is not the move.
+
+**Retrying in parallel.** If your agent fans out five retry attempts simultaneously, it's 5x worse than the original problem.
+
+**Ignoring the Retry-After header.** Some developers hardcode a 1-second delay and ignore the header entirely. The header exists for a reason. Use it.
+
+**No maximum retry count.** Without a cap, a persistent 429 turns into an infinite loop. Five retries is a reasonable default. After that, log and move on.
+
+**Generating new idempotency keys per retry.** This turns safe retries into duplicate sends. One key per logical operation, reused across all attempts.
+
+## Picking the right tier for your volume
+
+If you're hitting rate limits regularly, your agent might just need more headroom. LobsterMail's free tier includes 1,000 emails per month, which is plenty for prototyping and light use. The Builder tier at $9/month raises that to 5,000 emails with higher burst limits. Check the [pricing breakdown](/blog/lobstermail-pricing-explained) for the full comparison.
+
+But don't upgrade blindly. Fix your retry logic first. I've seen agents on the free tier send hundreds of emails per month without a single 429, and I've seen agents on paid tiers hit limits constantly because of retry loops. The tier sets your ceiling. Your retry strategy determines whether you actually hit it.
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) -- it's free.*
+
+---
+
+<FAQ>
+  <FAQItem question="What does a 429 error mean when using the LobsterMail API?">
+    It means your agent has sent too many requests within the current rate limit window. The API is healthy; it's asking your agent to slow down and retry after a short wait.
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail include a Retry-After header in its 429 responses?">
+    Yes. The `Retry-After` header contains the number of seconds your agent should wait before sending the next request. Always read and respect this value instead of hardcoding a delay.
+  </FAQItem>
+
+  <FAQItem question="What is the safest exponential backoff formula to use with LobsterMail?">
+    Use `Math.pow(2, attempt) * 1000 + Math.random() * 1000` with a maximum cap of 60 seconds. The random jitter prevents multiple agents from retrying at the exact same moment.
+  </FAQItem>
+
+  <FAQItem question="How do I prevent duplicate email sends when retrying after a 429 error?">
+    Attach an `Idempotency-Key` header to your send request. Generate the key once before the first attempt and reuse it across all retries of that same operation. The server will deduplicate automatically.
+  </FAQItem>
+
+  <FAQItem question="Should I use jitter in my backoff strategy when hitting LobsterMail rate limits?">
+    Yes. Without jitter, agents that hit the limit at the same time will all retry at the same time, causing another spike. Adding a random delay of 0-1 seconds spreads retries across the window.
+  </FAQItem>
+
+  <FAQItem question="How can AI agents autonomously recover from LobsterMail 429 errors without human intervention?">
+    Implement a retry loop with exponential backoff, jitter, and a maximum retry count. With idempotency keys protecting against duplicates, the agent can safely retry on its own. Set up alerting for cases that exceed the max retry count.
+  </FAQItem>
+
+  <FAQItem question="Can I queue outbound emails client-side to avoid exceeding LobsterMail's rate limits?">
+    Yes. A client-side send queue lets you control your send rate and handle retries without blocking your agent's other work. Push failed sends back into the queue with incremented attempt counters instead of retrying inline.
+  </FAQItem>
+
+  <FAQItem question="How should I handle 429 errors differently from 503 errors in LobsterMail?">
+    A 429 is a guaranteed-temporary condition caused by rate limiting; retrying after the indicated wait will succeed. A 503 means the server itself may be struggling, and retries may or may not help. Use longer initial waits for 503s.
+  </FAQItem>
+
+  <FAQItem question="Is it safe to retry all 429 errors from LobsterMail, or are some non-retriable?">
+    All 429 responses from LobsterMail are retriable. The rate limit window will reset, and the same request will succeed once your agent has waited long enough. Cap retries at five attempts to avoid infinite loops.
+  </FAQItem>
+
+  <FAQItem question="What monitoring should I set up to detect LobsterMail rate limit issues early?">
+    Track two things: 429 count per hour and retry success rate. Alert if the hourly count exceeds 2x your weekly average, or if more than 20% of retries fail. A simple log counter is enough to start.
+  </FAQItem>
+
+  <FAQItem question="How long does LobsterMail's rate limit window last before it resets?">
+    The exact window depends on the endpoint and your tier. The `Retry-After` header in each 429 response tells you exactly how long to wait for the current window to reset. Don't assume a fixed interval.
+  </FAQItem>
+
+  <FAQItem question="Does the LobsterMail SDK handle retries automatically?">
+    The SDK provides the building blocks, but retry logic is left to your agent so you can control backoff timing, idempotency keys, and queue behavior. The code examples in this article work directly with the SDK's request layer.
+  </FAQItem>
+
+  <FAQItem question="What causes too many requests errors in email APIs?">
+    Burst sends (sending dozens of emails in a tight loop), retry storms (retrying without backoff), and polling too frequently are the most common causes. Spreading requests over time and using proper backoff eliminates most 429s.
+  </FAQItem>
+</FAQ>

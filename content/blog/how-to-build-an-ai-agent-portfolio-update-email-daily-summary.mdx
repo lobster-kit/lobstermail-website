@@ -1,0 +1,215 @@
+---
+title: how to build an AI agent portfolio update email daily summary
+description: >-
+  Build an AI agent that reads your portfolio data, summarizes it, and emails
+  you a daily digest. A step-by-step tutorial with real code.
+date: '2026-03-08'
+author: Ian Bussières
+tags:
+  - automation
+  - use-cases
+  - guides
+  - email
+image: /blog/how-to-build-an-ai-agent-portfolio-update-email-daily-summary.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — AI agent
+  portfolio update email daily summary
+publish_at: '2026-03-08T17:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-08T07:10:28.069Z'
+---
+Last month I set up an agent that reads my brokerage feed every morning at 6:45am, pulls the previous day's position changes, P&L deltas, and any triggered alerts, then sends me a single email with everything I need to know before the market opens. The whole thing took about two hours to build. It hasn't missed a morning since.
+
+This isn't a hypothetical. Portfolio update emails are one of the clearest use cases for autonomous agents because the workflow is repetitive, the data is structured, and the stakes of missing a day are real. If you manage investments for yourself or for clients, you already know the pain: logging into three dashboards, scanning for what changed, mentally assembling the picture. An AI agent portfolio update email daily summary replaces that entire ritual with a message in your inbox.
+
+Here's how to build one.
+
+## How to set up an AI agent for daily portfolio update email summaries
+
+1. Give your agent its own email inbox (no human account needed).
+2. Connect your portfolio data source: brokerage API, CSV export, or database query.
+3. Define what matters: position changes, P&L thresholds, sector allocation shifts, triggered alerts.
+4. Choose a summarization model (Claude, GPT-4, or Gemini) to turn raw data into readable prose.
+5. Structure the output: a subject line with the date and net change, then sections for key moves, alerts, and a full holdings snapshot.
+6. Schedule a daily trigger using cron, a serverless function, or your orchestration tool of choice.
+7. Monitor delivery and refine the summary format based on what you actually read.
+
+Each of these steps has nuance. Let's walk through them.
+
+## Step 1: your agent needs its own inbox
+
+The first instinct is to wire your agent into your personal Gmail. Don't. There are [real security risks to sharing your inbox with an AI agent](/blog/security-risks-sharing-inbox), and you'll hit OAuth token expiration issues within weeks.
+
+Instead, let the agent provision its own address. With LobsterMail, that looks like this:
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create();
+const inbox = await lm.createSmartInbox({ name: 'Portfolio Agent' });
+
+console.log(inbox.address); // portfolio-agent@lobstermail.ai
+No API keys to paste. No Google Cloud Console. The agent handles [its own signup](/blog/agent-self-signup-explained) and stores the token locally. If you want the summary to come from `updates@yourfirm.com` instead of a LobsterMail address, you can [set up a custom domain](/blog/custom-domains-agent-email) later.
+
+## Step 2: connect your data sources
+
+This is where most tutorials get vague. "Connect your data" isn't a step, it's a project. So let's be specific about the common sources.
+
+**Brokerage APIs** like Alpaca, Interactive Brokers, or Schwab's new developer portal give you positions, balances, and order history via REST endpoints. Alpaca's `/v2/positions` returns JSON with current price, market value, unrealized P&L, and change percent for each holding. That's most of what you need.
+
+**Database queries** work if you're pulling from a portfolio management system like Airtable, Snowflake, or even a Postgres table you maintain yourself. Write a query that returns yesterday's positions alongside today's, and compute the deltas in your agent logic.
+
+**CSV or email-based feeds** are messier but common. Some brokers still email a daily statement as a PDF or CSV attachment. Your agent can receive these at its LobsterMail inbox, parse the attachment, and extract the structured data. The `inbox.receive()` method returns attachments with MIME types, so you can filter for `text/csv` or `application/pdf` and process accordingly.
+
+The key principle: get the raw data into a JSON structure before you send it to your summarization model. Don't ask GPT-4 to "read" a PDF. Parse it first, then summarize the parsed data.
+
+## Step 3: define your filters and thresholds
+
+Not everything belongs in a daily summary. If you hold 40 positions and nothing moved more than 0.3%, the summary should say "quiet day" and stop. If one position dropped 8%, that should be the first line.
+
+I use a simple tiering system:
+
+- **Critical alerts**: any position moving more than 5% in a day, any margin call, any failed trade execution
+- **Notable changes**: positions moving 2-5%, sector allocation shifting more than 1 percentage point, new dividends posted
+- **Routine**: everything else, summarized as a table or skipped entirely
+
+Define these thresholds in your agent's config, not in the LLM prompt. You want deterministic filtering before the model ever sees the data. The model's job is to write the summary in clear English, not to decide what's important. That's your logic.
+
+## Step 4: choose your summarization model
+
+For financial summaries, you want a model that follows formatting instructions precisely and doesn't hallucinate numbers. This rules out smaller open-source models for most production use.
+
+Claude 3.5 Sonnet handles structured financial data well and follows output templates reliably. GPT-4 is comparable. Gemini 2.5 Flash is faster and cheaper if you're sending summaries at scale (say, to 50 clients with different portfolios).
+
+The prompt structure that works best:
+You are a portfolio analyst writing a daily summary email.
+
+DATA:
+{parsed_positions_json}
+
+RULES:
+- Lead with the net portfolio change (dollar amount and percentage)
+- List critical alerts first, then notable changes
+- Include a plain-text table of all positions with yesterday's close, today's close, and change %
+- Keep the total summary under 300 words
+- Do not add commentary or predictions. Facts only.
+```
+
+That last rule matters. You don't want your summary agent speculating about Fed policy. Facts, numbers, changes. If you want analysis, build a separate agent for that.
+
+## Step 5: structure the email output
+
+A good daily summary email has a predictable structure so you can scan it in 30 seconds. Here's what mine looks like:
+
+**Subject**: `Portfolio update: +$1,247.30 (+0.8%) — Mar 7`
+
+**Body**:
+- One-sentence overview: "Your portfolio gained $1,247.30 yesterday, driven by NVDA (+3.2%) and offset by a dip in bonds."
+- Alerts section (if any): critical moves, margin warnings, failed orders
+- Top movers: 3-5 positions with the largest absolute or percentage changes
+- Holdings table: every position, sorted by allocation weight
+- Footer: "Generated by Portfolio Agent. Reply to this email to adjust your preferences."
+
+That footer is useful. Because your agent has its own inbox, replies go back to the agent. You can wire up a simple intent parser so replying "stop including bonds" actually updates the filter config. That's a later optimization, but the architecture supports it from day one.
+
+## Step 6: schedule and send
+
+The sending part is straightforward:
+
+```typescript
+await inbox.send({
+  to: 'you@yourfirm.com',
+  subject: `Portfolio update: ${netChange} — ${date}`,
+  text: summaryText,
+  html: summaryHtml,
+});
+```
+
+For scheduling, a cron job works fine for a single user. If you're building this for a team or for clients, use a serverless function (AWS Lambda, Vercel Cron, or Cloudflare Workers) triggered on a schedule. The agent boots, pulls data, generates the summary, sends the email, and shuts down. Total runtime is usually under 10 seconds.
+
+One thing to watch: if your brokerage API has rate limits or delayed data, schedule your agent after the data refreshes. Alpaca updates positions by 6:00am ET. Running your agent at 5:30am gets you stale numbers. Running at 6:30am gets you accurate ones.
+
+## Scaling to teams and clients
+
+The single-user version is simple. The multi-user version introduces real complexity.
+
+If you're a financial advisor sending daily summaries to 20 clients, each client needs a different portfolio, different thresholds, and possibly different delivery times. You'll want role-based routing: the senior partner gets the consolidated view, the junior analyst gets flagged items only, and the client gets a polished summary without internal notes.
+
+This is where most off-the-shelf tools (n8n, Make.com) start to break down. They handle single-flow automations well, but multi-tenant portfolio routing with per-recipient customization pushes you toward custom code. The email infrastructure layer stays the same. Your agent creates one inbox for sending and manages recipient lists in its own database.
+
+Compliance is the other consideration. If you're in a regulated environment, you may need to archive every summary email, include disclaimers, and ensure no client data leaks between summaries. An agent with its own dedicated inbox creates a clean audit trail: every email it sends is logged, timestamped, and separate from your personal communications.
+
+## What about accuracy?
+
+The honest answer: your AI-generated summary is only as accurate as the data you feed it. If the brokerage API returns correct numbers, the summary will be correct. The LLM isn't doing math. It's formatting pre-computed values into sentences.
+
+Where things can go wrong: the model occasionally reorders rows, rounds inconsistently, or drops a position from the table if the context window is tight. My solution is to generate the holdings table programmatically (not with the LLM) and only use the model for the narrative overview. Belt and suspenders.
+
+Run a validation step before sending. Compare the sum of individual position values against the total portfolio value. If they diverge by more than 0.1%, flag it and send a simplified version instead. Your recipients trust these emails. One wrong number and they stop reading them.
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) , it's free.*
+
+---
+
+<FAQ>
+  <FAQItem question="What is an AI agent portfolio update email daily summary?">
+    It's an automated email, generated by an AI agent, that summarizes your portfolio's performance, position changes, and alerts from the previous day. The agent pulls data from your brokerage or database, summarizes it with an LLM, and sends the digest to your inbox on a schedule.
+  </FAQItem>
+
+  <FAQItem question="How does an AI agent decide what to include in a daily portfolio summary?">
+    You define the rules. Set thresholds for what counts as a critical alert (e.g., any position moving more than 5%), what's notable (2-5% moves), and what gets included as routine data. The agent applies these filters deterministically before the LLM writes the summary text.
+  </FAQItem>
+
+  <FAQItem question="Can I customize the format and frequency of AI-generated portfolio summary emails?">
+    Yes. The summary format, delivery time, and content filters are all configurable in your agent's code. You can send daily, weekly, or only when critical alerts trigger. The email structure (sections, tables, subject line format) is controlled by your prompt template and code logic.
+  </FAQItem>
+
+  <FAQItem question="Which AI models work best for summarizing financial email content?">
+    Claude 3.5 Sonnet and GPT-4 both handle structured financial data reliably. Gemini 2.5 Flash is a good option if you need lower cost at scale. The key is using the model for narrative writing only, not for math. Compute your numbers in code first.
+  </FAQItem>
+
+  <FAQItem question="How do I connect my brokerage to an AI email summary agent?">
+    Most brokerages offer REST APIs. Alpaca's `/v2/positions` endpoint returns JSON with current holdings, P&L, and price data. Interactive Brokers and Schwab have similar endpoints. For brokerages without APIs, your agent can receive emailed statements at its own inbox and parse the attachments.
+  </FAQItem>
+
+  <FAQItem question="What's the difference between an AI email digest tool and a purpose-built portfolio reporting agent?">
+    Generic digest tools (like n8n or Make.com templates) summarize any emails in your inbox. A purpose-built portfolio agent connects directly to your data source, understands financial concepts like P&L and sector allocation, applies domain-specific filters, and generates structured reports. It's more accurate because it works with raw data, not email text.
+  </FAQItem>
+
+  <FAQItem question="How do I ensure my daily portfolio summary emails are delivered reliably?">
+    Use dedicated email infrastructure rather than your personal Gmail. Services like LobsterMail handle deliverability, so your summaries don't land in spam. Schedule your agent after your data source refreshes to avoid stale numbers, and add a validation step to catch data inconsistencies before sending.
+  </FAQItem>
+
+  <FAQItem question="Can an AI agent flag critical portfolio alerts separately from routine summaries?">
+    Yes. Build a two-tier system: critical alerts (large moves, margin calls, failed trades) send immediately as a separate email, while routine summaries send on schedule. Your agent monitors your data source continuously for critical events and batches everything else for the daily digest.
+  </FAQItem>
+
+  <FAQItem question="How do I set up role-based routing so different team members get relevant summaries?">
+    Maintain a recipient config that maps each person to their role, preferred format, and data scope. The senior partner gets the consolidated view, analysts get flagged items, clients get polished summaries. Your agent generates a different email for each role using the same underlying data.
+  </FAQItem>
+
+  <FAQItem question="How do I handle data privacy and compliance when using AI to process portfolio emails?">
+    Give your agent its own dedicated inbox so client data stays separate from personal communications. Log every email sent for audit purposes. If you're in a regulated environment, include required disclaimers and ensure your LLM provider's data processing terms meet your compliance requirements.
+  </FAQItem>
+
+  <FAQItem question="Is there a free option for building a daily portfolio email summary agent?">
+    LobsterMail's free tier gives you an inbox with 1,000 emails per month, which covers daily summaries for a single user easily. For the summarization model, most providers offer free API credits to start. The orchestration code is just a script you run on any machine with a cron job.
+  </FAQItem>
+
+  <FAQItem question="How long does it take to build an AI agent that sends daily portfolio update emails?">
+    A basic version for personal use takes 1-2 hours if your data source has an API. Most of that time is spent on the data connection and summary template. The email infrastructure (inbox provisioning, sending) takes about five minutes with the right SDK.
+  </FAQItem>
+
+  <FAQItem question="Can AI agents send automated client portfolio update emails?">
+    Yes. Your agent can maintain a list of clients, each with their own portfolio data source and preferences, and send personalized daily summaries to each one. Use the Builder tier ($9/mo) if you need multiple sending inboxes or higher volume.
+  </FAQItem>
+
+  <FAQItem question="How do I measure the accuracy of AI-generated portfolio email summaries?">
+    Add a validation step that compares the sum of individual position values against the reported total. If they diverge by more than 0.1%, flag the summary. For the narrative portion, spot-check weekly by comparing the agent's "top movers" against your brokerage dashboard. Over time, refine your prompt to eliminate any recurring formatting issues.
+  </FAQItem>
+</FAQ>
