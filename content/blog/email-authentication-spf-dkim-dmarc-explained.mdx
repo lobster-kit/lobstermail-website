@@ -1,0 +1,198 @@
+---
+title: email authentication SPF DKIM DMARC explained
+description: >-
+  SPF, DKIM, and DMARC are the three protocols that prove your emails are real.
+  Here's how they work, how they differ, and what agents need to know.
+date: '2026-03-08'
+author: Samuel Chenard
+tags:
+  - email
+  - security
+  - infrastructure
+  - guides
+image: /blog/email-authentication-spf-dkim-dmarc-explained.png
+imageAlt: >-
+  Pixel art lobster mascot illustration for email infrastructure — email
+  authentication SPF DKIM DMARC explained
+publish_at: '2026-03-08T07:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-08T07:10:28.066Z'
+---
+SPF, DKIM, and DMARC are three email authentication protocols that verify whether an email actually came from the domain it claims to come from. They solve different parts of the same problem: stopping spoofing, phishing, and unauthorized senders. Here's how they compare.
+
+| Protocol | What it does | DNS record type | Protects against | Works alone? |
+|----------|-------------|-----------------|------------------|-------------|
+| SPF | Lists which servers can send for your domain | TXT | Spoofed sender IPs | Yes, but limited |
+| DKIM | Adds a cryptographic signature to each message | TXT (public key) | Tampered content, forged headers | Yes, but limited |
+| DMARC | Sets a policy for what happens when SPF or DKIM fails | TXT | Phishing, domain impersonation | No, requires SPF and/or DKIM |
+
+If you're sending email from your own domain (whether as a human or an AI agent), you need all three. Not eventually. Now. Gmail and Yahoo started rejecting unauthenticated bulk email in early 2024, and by 2026, most providers have zero tolerance for domains missing these records. That shift matters for everyone, but it matters especially for agents sending programmatic email at scale.
+
+## What SPF actually does
+
+Sender Policy Framework (SPF) is the oldest of the three. It answers a simple question: is this server allowed to send email on behalf of this domain?
+
+You publish an SPF record in your domain's DNS. That record is a list of IP addresses and domains authorized to send mail for you. When a receiving server gets an email claiming to be from `you@yourdomain.com`, it looks up your SPF record and checks whether the sending server's IP is on the list.
+
+A typical SPF record looks like this:
+
+v=spf1 ip4:192.0.2.1 include:mail.provider.com -all
+The `-all` at the end means "reject anything not on this list." You can also use `~all` (soft fail, mark as suspicious) or `?all` (neutral, don't care), but `-all` is the only one that actually protects you.
+
+SPF has a real limitation, though. It checks the envelope sender (the Return-Path header), not the From address that humans see in their inbox. A phisher can spoof the visible From address while passing SPF checks with a completely different envelope domain. This is exactly the gap DKIM and DMARC fill.
+
+There's another problem: email forwarding breaks SPF. When someone forwards your email through their server, the receiving server sees the forwarder's IP, not yours. That IP isn't in your SPF record, so the check fails. This is a known pain point for mailing lists and automated forwarding pipelines.
+
+## What DKIM actually does
+
+DomainKeys Identified Mail (DKIM) takes a different approach. Instead of checking the server's IP, it checks the message itself.
+
+When you send an email, your mail server signs selected headers and the body with a private key. It attaches that signature as a DKIM-Signature header. The corresponding public key lives in your DNS as a TXT record. The receiving server fetches the public key, verifies the signature, and confirms two things: the message hasn't been altered in transit, and it was signed by someone with access to your domain's private key.
+
+Here's what a DKIM DNS record looks like:
+
+```
+selector._domainkey.yourdomain.com  TXT  "v=DKIM1; k=rsa; p=MIGfMA0GCSqG..."
+```
+
+The "selector" lets you rotate keys or use different keys for different sending services. If you're using LobsterMail with a [custom domain](/blog/custom-domains-agent-email), the platform handles DKIM signing for you. You add the DNS record, and every outbound message gets signed automatically.
+
+DKIM survives forwarding because the signature is attached to the message, not tied to the sending server's IP. This makes it more resilient than SPF for relayed or forwarded mail. But DKIM on its own doesn't tell the receiving server what to do if the signature is missing or fails. That's DMARC's job.
+
+## What DMARC actually does
+
+Domain-based Message Authentication, Reporting, and Conformance (DMARC) is the policy layer. It ties SPF and DKIM together and tells receiving servers: here's what to do when authentication fails.
+
+A DMARC record looks like this:
+
+```
+_dmarc.yourdomain.com  TXT  "v=DMARC1; p=reject; rua=mailto:reports@yourdomain.com"
+```
+
+The `p=` tag is the policy. You have three options:
+
+- `p=none`: do nothing, just send me reports (monitoring mode)
+- `p=quarantine`: put failing messages in spam
+- `p=reject`: drop them entirely
+
+Most domains start with `p=none` to collect data before enforcing. That's fine for a week or two. Staying on `none` permanently is the same as having no DMARC at all. Move to `quarantine`, then `reject` once you're confident your legitimate senders are passing.
+
+The `rua=` tag is where DMARC sends aggregate reports. These are XML files that show you which IPs are sending email from your domain, whether they passed SPF and DKIM, and how many messages were processed. If you're sending programmatic email (agents, transactional systems, notification pipelines), these reports are how you catch misconfigurations before they tank your deliverability.
+
+### DMARC alignment: the part most guides skip
+
+DMARC introduces a concept called alignment. For DMARC to pass, either SPF or DKIM must not only pass their own check but also align with the From domain visible to the recipient.
+
+SPF alignment means the envelope sender domain (Return-Path) matches the From header domain. DKIM alignment means the `d=` domain in the DKIM signature matches the From header domain. If SPF passes but the domains don't align, DMARC still fails. Same for DKIM. This is how DMARC closes the gap that SPF and DKIM leave open individually.
+
+Yes, SPF and DKIM can both pass while DMARC still fails. It happens when you're sending through a third-party service that uses its own envelope domain or signing domain without aligning to yours.
+
+## How this applies to agents sending email
+
+Most guides on email authentication assume you're a marketing team sending newsletters from a single domain. Agent workflows are different. An agent might spin up an inbox on the fly, send verification requests, coordinate with other agents, or handle customer replies across multiple sub-domains.
+
+If your agent sends from `@lobstermail.ai`, authentication is handled for you. LobsterMail publishes SPF records, signs every message with DKIM, and enforces DMARC on the lobstermail.ai domain. Your agent doesn't need to think about DNS records.
+
+If your agent sends from a custom domain, you're responsible for adding the DNS records. The setup takes about five minutes: one TXT record for SPF, one for DKIM, one for DMARC. We covered the full process in our guide to [custom domains for agent email](/blog/custom-domains-agent-email).
+
+The bigger concern for agents is [deliverability](/blog/email-deliverability-ai-agents). Authentication is table stakes. It gets your emails past the front door. But reputation, volume, content, and warm-up determine whether they land in the inbox or the spam folder. A brand-new domain with perfect SPF, DKIM, and DMARC records will still get throttled if you start blasting 10,000 messages on day one.
+
+## Reading DMARC aggregate reports
+
+The `rua` reports you receive are XML files that look intimidating but contain useful data. Each report covers a time period (usually 24 hours) and lists every IP that sent email claiming your domain, along with the SPF result, DKIM result, DMARC disposition (none, quarantine, reject), and message count.
+
+What to look for:
+
+- **Unexpected IPs passing authentication**: someone may have set up a service you forgot about, or worse, a misconfigured include in your SPF record is authorizing senders you didn't intend.
+- **High failure rates on legitimate senders**: usually means a forwarding path is breaking SPF or a sending service isn't signing with your DKIM key.
+- **Zero reports**: if you have `rua=` set and you're not getting reports, your DMARC record might be malformed. Validate it with a DNS lookup tool.
+
+For high-volume programmatic sending, parse these reports automatically. Several open-source tools (like parsedmarc) convert the XML into human-readable dashboards. If your agents send more than a few hundred messages a day, this is worth setting up.
+
+## Setting up all three records
+
+Here's the minimum DNS configuration for a domain sending email:
+
+**SPF:**
+```
+yourdomain.com  TXT  "v=spf1 include:your-email-provider.com -all"
+```
+
+**DKIM:**
+```
+selector._domainkey.yourdomain.com  TXT  "v=DKIM1; k=rsa; p=YOUR_PUBLIC_KEY"
+```
+
+**DMARC:**
+```
+_dmarc.yourdomain.com  TXT  "v=DMARC1; p=quarantine; rua=mailto:dmarc@yourdomain.com"
+```
+
+The exact values depend on your email provider. If you're using LobsterMail with a custom domain, the dashboard gives you the exact records to copy into your DNS. After adding them, propagation takes anywhere from a few minutes to 48 hours depending on your registrar. Verify all three with a test email to a service like mail-tester.com or by checking the raw headers of a received message.
+
+## The cost of getting this wrong
+
+An improperly authenticated domain doesn't just risk spam folder placement. It risks your domain being used in phishing attacks without your knowledge. If someone spoofs your domain and the recipient's server checks DMARC and finds `p=none` (or no DMARC at all), the spoofed email lands in the inbox looking like it came from you.
+
+For agents handling sensitive workflows, like account signups, payment confirmations, or client communications, that's not a theoretical risk. It's a [security concern](/blog/openclaw-agent-email-security) that compounds every day your domain goes unprotected.
+
+Start with `p=none`, watch the reports for a week, then move to `p=reject`. It's the single most impactful thing you can do for your email security.
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
+
+---
+
+<FAQ>
+  <FAQItem question="What is SPF and how does it protect my domain?">
+    SPF (Sender Policy Framework) is a DNS record that lists which mail servers are authorized to send email for your domain. Receiving servers check this list and can reject messages from unauthorized IPs, preventing attackers from spoofing your domain's envelope sender.
+  </FAQItem>
+
+  <FAQItem question="What is DKIM and why does it use a digital signature?">
+    DKIM attaches a cryptographic signature to outgoing emails using a private key. The recipient verifies it against a public key published in your DNS. This proves the message wasn't altered in transit and was authorized by the domain owner.
+  </FAQItem>
+
+  <FAQItem question="What is DMARC and what does it add beyond SPF and DKIM?">
+    DMARC is a policy layer that tells receiving servers what to do when SPF or DKIM fails (nothing, quarantine, or reject). It also introduces alignment, requiring that the authenticated domain matches the visible From address.
+  </FAQItem>
+
+  <FAQItem question="Do I need SPF, DKIM, and DMARC all at once?">
+    You can start with SPF and DKIM individually, but DMARC requires at least one of them to function. In practice, deploy all three together. Gmail, Yahoo, and most major providers now expect all three for reliable inbox delivery.
+  </FAQItem>
+
+  <FAQItem question="What does a DMARC policy of 'none' vs 'quarantine' vs 'reject' mean?">
+    `none` means take no action (just send reports). `quarantine` means route failing messages to spam. `reject` means drop them entirely. Start with `none` to monitor, then escalate to `reject` once your legitimate mail is passing.
+  </FAQItem>
+
+  <FAQItem question="Why does email forwarding break SPF authentication?">
+    When an email is forwarded, the forwarding server's IP replaces the original sender's IP. Since the forwarder's IP isn't in your SPF record, the check fails. DKIM survives forwarding because the signature is attached to the message itself.
+  </FAQItem>
+
+  <FAQItem question="Can SPF and DKIM both pass while DMARC still fails?">
+    Yes. DMARC requires alignment, meaning the authenticated domain must match the From header domain. If SPF passes on a different envelope domain, or DKIM signs with a different `d=` domain, DMARC fails despite the individual checks passing.
+  </FAQItem>
+
+  <FAQItem question="How does email authentication affect deliverability for AI agents?">
+    Authentication is the baseline requirement for inbox placement. Without valid SPF, DKIM, and DMARC, agent-sent emails get flagged or rejected by major providers. But authentication alone isn't enough; domain reputation and sending volume also matter. See our [deliverability guide](/blog/email-deliverability-ai-agents) for more.
+  </FAQItem>
+
+  <FAQItem question="How do I read DMARC aggregate reports (rua)?">
+    DMARC aggregate reports are XML files sent to the address in your `rua=` tag. They show which IPs sent email from your domain, whether SPF and DKIM passed, and what action was taken. Tools like parsedmarc can convert them into readable dashboards.
+  </FAQItem>
+
+  <FAQItem question="How do I authenticate email across multiple sub-domains or sending services?">
+    Each sub-domain needs its own SPF and DKIM records. Your DMARC record on the organizational domain can apply to sub-domains via the `sp=` tag. When using multiple providers, add each one to your SPF includes and ensure each signs with a DKIM key aligned to your domain.
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail handle SPF, DKIM, and DMARC automatically?">
+    If you send from `@lobstermail.ai`, all three are configured and managed for you. If you use a [custom domain](/blog/custom-domains-agent-email), LobsterMail provides the exact DNS records to add, and handles DKIM signing on every outbound message.
+  </FAQItem>
+
+  <FAQItem question="How do I verify my DKIM signature is working?">
+    Send a test email and inspect the raw headers. Look for `dkim=pass` in the Authentication-Results header. You can also use online tools like mail-tester.com or MXToolbox to validate your DKIM DNS record and test signing.
+  </FAQItem>
+</FAQ>
