@@ -7,29 +7,41 @@ import { FadeIn } from "@/components/FadeIn";
 import { getPaginatedPosts, formatDate } from "@/lib/blog";
 import { TopicNav } from "@/components/TopicNav";
 
-export const metadata: Metadata = {
-  title: "Blog",
-  description:
-    "Learn about AI agent email — tutorials, use cases, and updates from the LobsterMail team.",
-  alternates: {
-    canonical: "https://lobstermail.ai/blog",
-  },
-  openGraph: {
-    title: "Blog — LobsterMail",
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}): Promise<Metadata> {
+  const { page } = await searchParams;
+  const currentPage = Math.max(1, parseInt(page ?? "1", 10) || 1);
+  const canonical =
+    currentPage > 1
+      ? `https://lobstermail.ai/blog?page=${currentPage}`
+      : "https://lobstermail.ai/blog";
+  const url = canonical;
+
+  return {
+    title: "AI Agent Email Blog",
     description:
       "Learn about AI agent email — tutorials, use cases, and updates from the LobsterMail team.",
-    url: "https://lobstermail.ai/blog",
-    type: "website",
-    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Blog — LobsterMail",
-    description:
-      "Learn about AI agent email — tutorials, use cases, and updates from the LobsterMail team.",
-    images: ["/og-image.png"],
-  },
-};
+    alternates: { canonical },
+    openGraph: {
+      title: "AI Agent Email Blog — LobsterMail",
+      description:
+        "Learn about AI agent email — tutorials, use cases, and updates from the LobsterMail team.",
+      url,
+      type: "website",
+      images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "AI Agent Email Blog — LobsterMail",
+      description:
+        "Learn about AI agent email — tutorials, use cases, and updates from the LobsterMail team.",
+      images: ["/og-image.png"],
+    },
+  };
+}
 
 export default async function BlogPage({
   searchParams,
@@ -41,28 +53,48 @@ export default async function BlogPage({
   const { posts, totalPages, currentPage: resolvedPage } =
     getPaginatedPosts(currentPage);
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    name: "Blog — LobsterMail",
-    description:
-      "Learn about AI agent email — tutorials, use cases, and updates from the LobsterMail team.",
-    url: "https://lobstermail.ai/blog",
-    publisher: {
-      "@type": "Organization",
-      name: "LobsterMail",
-      url: "https://lobstermail.ai",
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: "AI Agent Email Blog — LobsterMail",
+      description:
+        "Learn about AI agent email — tutorials, use cases, and updates from the LobsterMail team.",
+      url: "https://lobstermail.ai/blog",
+      publisher: {
+        "@type": "Organization",
+        name: "LobsterMail",
+        url: "https://lobstermail.ai",
+      },
+      mainEntity: {
+        "@type": "ItemList",
+        itemListElement: posts.map((post, i) => ({
+          "@type": "ListItem",
+          position: i + 1,
+          url: `https://lobstermail.ai/blog/${post.slug}`,
+          name: post.title,
+        })),
+      },
     },
-    mainEntity: {
-      "@type": "ItemList",
-      itemListElement: posts.map((post, i) => ({
-        "@type": "ListItem",
-        position: i + 1,
-        url: `https://lobstermail.ai/blog/${post.slug}`,
-        name: post.title,
-      })),
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: "Home",
+          item: "https://lobstermail.ai",
+        },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: "Blog",
+          item: "https://lobstermail.ai/blog",
+        },
+      ],
     },
-  };
+  ];
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
@@ -75,7 +107,7 @@ export default async function BlogPage({
         {/* Header */}
         <section className="mx-auto max-w-6xl px-6 pb-16">
           <FadeIn>
-            <h1 className="h1">Blog</h1>
+            <h1 className="h1">AI Agent Email Blog</h1>
             <p className="p-text mt-4">
               Learn about AI agent email — tutorials, use cases, and updates
               from the LobsterMail team.

@@ -4,7 +4,7 @@ import Image from "next/image";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { FadeIn } from "@/components/FadeIn";
-import { getAllTags, getPaginatedPostsByTag, formatDate } from "@/lib/blog";
+import { getAllTags, getPostsByTag, getPaginatedPostsByTag, formatDate } from "@/lib/blog";
 
 export async function generateStaticParams() {
   return getAllTags().map((tag) => ({ tag }));
@@ -12,21 +12,30 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<{ tag: string }>;
+  searchParams: Promise<{ page?: string }>;
 }): Promise<Metadata> {
   const { tag } = await params;
+  const { page } = await searchParams;
   const decoded = decodeURIComponent(tag);
+  const postCount = getPostsByTag(decoded).length;
+  const currentPage = Math.max(1, parseInt(page ?? "1", 10) || 1);
+  const canonical =
+    currentPage > 1
+      ? `https://lobstermail.ai/blog/tag/${tag}?page=${currentPage}`
+      : `https://lobstermail.ai/blog/tag/${tag}`;
+
   return {
     title: decoded,
     description: `Articles tagged "${decoded}" on the LobsterMail blog.`,
-    alternates: {
-      canonical: `https://lobstermail.ai/blog/tag/${tag}`,
-    },
+    ...(postCount < 3 && { robots: { index: false, follow: true } }),
+    alternates: { canonical },
     openGraph: {
       title: `${decoded} — Blog`,
       description: `Articles tagged "${decoded}" on the LobsterMail blog.`,
-      url: `https://lobstermail.ai/blog/tag/${tag}`,
+      url: canonical,
       type: "website",
       images: [{ url: "/og-image.png", width: 1200, height: 630 }],
     },

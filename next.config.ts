@@ -3,8 +3,9 @@ import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 
 const nextConfig: NextConfig = {
+  trailingSlash: false,
   async redirects() {
-    const redirectsPath = join(process.cwd(), "..", "state", "redirects.json");
+    const redirectsPath = join(process.cwd(), "redirects.json");
     if (!existsSync(redirectsPath)) return [];
     try {
       const data = JSON.parse(readFileSync(redirectsPath, "utf-8"));
@@ -35,7 +36,37 @@ const nextConfig: NextConfig = {
       {
         source: "/dashboard/:path*",
         headers: [
-          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+          { key: "X-Robots-Tag", value: "noindex, follow" },
+        ],
+      },
+      {
+        source: "/:path*.png",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      {
+        source: "/:path*.jpg",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      {
+        source: "/:path*.webp",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      {
+        source: "/:path*.svg",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      {
+        source: "/:path*.woff2",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
         ],
       },
     ];

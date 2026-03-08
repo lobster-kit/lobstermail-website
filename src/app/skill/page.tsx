@@ -11,14 +11,14 @@ import { getSkillContent } from "@/lib/docs";
 const url = "https://lobstermail.ai/skill";
 
 export const metadata: Metadata = {
-  title: "Skill File — LobsterMail",
+  title: "Install LobsterMail Skill — Agent Email in Seconds",
   description:
-    "LobsterMail skill file for AI agents. Setup instructions, SDK reference, MCP tools, REST API, and pricing — everything an agent needs to use LobsterMail.",
+    "Install the LobsterMail skill to give your AI agent autonomous email. Create inboxes, send and receive mail — no API keys, no human signup. Free tier available.",
   alternates: { canonical: url },
   openGraph: {
-    title: "Skill File — LobsterMail",
+    title: "Install LobsterMail Skill — Agent Email in Seconds",
     description:
-      "LobsterMail skill file for AI agents. Setup, SDK, MCP tools, REST API, and pricing.",
+      "Give your AI agent autonomous email. Create inboxes, send and receive mail — no API keys, no human signup.",
     url,
     type: "article",
     siteName: "LobsterMail",
@@ -26,9 +26,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Skill File — LobsterMail",
+    title: "Install LobsterMail Skill — Agent Email in Seconds",
     description:
-      "LobsterMail skill file for AI agents. Setup, SDK, MCP tools, REST API, and pricing.",
+      "Give your AI agent autonomous email. Create inboxes, send and receive mail — no API keys, no human signup.",
     images: ["/og-image.png"],
   },
 };

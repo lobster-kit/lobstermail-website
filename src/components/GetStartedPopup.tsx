@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Check, Copy, X } from "@phosphor-icons/react";
 import {
   DialogTrigger,
@@ -53,7 +54,7 @@ export function GetStartedPopup({
                       className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/20"
                       aria-hidden
                     >
-                      <img src="/lobster-mail-logo.png" alt="" className="h-7 w-7 object-contain" />
+                      <Image src="/lobster-mail-logo.png" alt="LobsterMail logo" width={28} height={28} className="h-7 w-7 object-contain" />
                     </span>
                     <Heading
                       slot="title"

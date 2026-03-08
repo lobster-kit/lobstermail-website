@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Sign In — Mission Control",
-  robots: { index: false, follow: false },
+  robots: { index: false, follow: true },
 };
 
 async function login(formData: FormData) {

@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Mission Control",
-  robots: { index: false, follow: false },
+  robots: { index: false, follow: true },
 };
 
 // ── Auth gate ───────────────────────────────────────────────────────────────

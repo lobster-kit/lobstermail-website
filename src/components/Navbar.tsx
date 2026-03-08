@@ -17,6 +17,8 @@ import { GetStartedPopup } from "./GetStartedPopup";
 const navLinks = [
   { href: "/docs", label: "Docs" },
   { href: "/blog", label: "Blog" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/compare", label: "Compare" },
 ];
 
 function NavLinks({ onLinkClick }: { onLinkClick?: () => void }) {
@@ -61,11 +63,10 @@ export function Navbar() {
         <a href="/" className="flex items-center gap-2 text-base font-extrabold text-foreground">
           <Image
             src="/lobster-mail-logo-2x.png"
-            alt=""
+            alt="LobsterMail logo"
             width={28}
             height={28}
             className="size-7 object-contain"
-            aria-hidden
           />
           LobsterMail
         </a>

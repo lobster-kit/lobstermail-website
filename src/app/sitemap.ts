@@ -1,8 +1,9 @@
 import type { MetadataRoute } from "next";
 import { getGuides } from "@/lib/docs";
-import { getAllPosts, getAllTags } from "@/lib/blog";
+import { getAllPosts, getAllTags, getPostsByTag } from "@/lib/blog";
 
 const BASE_URL = "https://lobstermail.ai";
+const POSTS_PER_PAGE = 12;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const guides = await getGuides();
@@ -12,50 +13,90 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages: MetadataRoute.Sitemap = [
     {
       url: BASE_URL,
-      lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 1,
     },
     {
-      url: `${BASE_URL}/docs`,
-      lastModified: new Date(),
+      url: `${BASE_URL}/blog`,
       changeFrequency: "weekly",
       priority: 0.9,
     },
     {
-      url: `${BASE_URL}/blog`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
+      url: `${BASE_URL}/pricing`,
+      changeFrequency: "monthly",
       priority: 0.9,
+    },
+    {
+      url: `${BASE_URL}/compare`,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: `${BASE_URL}/skill`,
+      changeFrequency: "weekly",
+      priority: 0.8,
     },
     {
       url: `${BASE_URL}/terms`,
-      lastModified: new Date(),
       changeFrequency: "yearly",
       priority: 0.3,
     },
   ];
 
+  // Blog pagination pages (page 2+)
+  const totalBlogPages = Math.ceil(posts.length / POSTS_PER_PAGE);
+  const blogPaginationPages: MetadataRoute.Sitemap = [];
+  for (let p = 2; p <= totalBlogPages; p++) {
+    blogPaginationPages.push({
+      url: `${BASE_URL}/blog?page=${p}`,
+      changeFrequency: "weekly",
+      priority: 0.5,
+    });
+  }
+
   const docsPages: MetadataRoute.Sitemap = guides.map((guide) => ({
     url: `${BASE_URL}/docs/${guide.slug}`,
-    lastModified: guide.lastUpdated ? new Date(guide.lastUpdated) : new Date(),
+    lastModified: guide.lastUpdated ? new Date(guide.lastUpdated) : undefined,
     changeFrequency: "weekly",
     priority: 0.8,
   }));
 
   const blogPages: MetadataRoute.Sitemap = posts.map((post) => ({
     url: `${BASE_URL}/blog/${post.slug}`,
-    lastModified: post.updatedDate ? new Date(post.updatedDate) : post.date ? new Date(post.date) : new Date(),
+    lastModified: post.updatedDate ? new Date(post.updatedDate) : post.date ? new Date(post.date) : undefined,
     changeFrequency: "weekly",
     priority: 0.7,
   }));
 
-  const tagPages: MetadataRoute.Sitemap = tags.map((tag) => ({
-    url: `${BASE_URL}/blog/tag/${tag}`,
-    lastModified: new Date(),
-    changeFrequency: "weekly",
-    priority: 0.5,
-  }));
+  const tagPages: MetadataRoute.Sitemap = tags
+    .filter((tag) => getPostsByTag(tag).length >= 3)
+    .map((tag) => ({
+      url: `${BASE_URL}/blog/tag/${tag}`,
+      changeFrequency: "weekly",
+      priority: 0.5,
+    }));
 
-  return [...staticPages, ...docsPages, ...blogPages, ...tagPages];
+  // Tag pagination pages (page 2+ for tags with enough posts)
+  const tagPaginationPages: MetadataRoute.Sitemap = [];
+  for (const tag of tags) {
+    const tagPosts = getPostsByTag(tag);
+    if (tagPosts.length < 3) continue;
+    const totalTagPages = Math.ceil(tagPosts.length / POSTS_PER_PAGE);
+    for (let p = 2; p <= totalTagPages; p++) {
+      tagPaginationPages.push({
+        url: `${BASE_URL}/blog/tag/${tag}?page=${p}`,
+        changeFrequency: "weekly",
+        priority: 0.4,
+      });
+    }
+  }
+
+  return [
+    ...staticPages,
+    ...blogPaginationPages,
+    ...docsPages,
+    ...blogPages,
+    ...tagPages,
+    ...tagPaginationPages,
+  ];
 }
