@@ -1,20 +1,20 @@
 {
-  "generated_at": "2026-03-08T02:15:01.921Z",
+  "generated_at": "2026-03-08T07:15:05.755Z",
   "kpis": {
     "mrr_usd": 0,
     "paid_accounts": 1,
     "free_accounts": 18,
     "total_accounts": 25,
-    "npm_installs_7d": 4,
+    "npm_installs_7d": 5,
     "seo_clicks_7d": 43,
     "seo_impressions_7d": 4184,
-    "seo_avg_position": 6.1,
+    "seo_avg_position": 0,
     "total_emails_sent": 14,
     "total_emails_received": 76,
     "total_inboxes": 34,
-    "daily_visitors": 881,
-    "daily_visitors_human": 842,
-    "daily_visitors_bot": 21,
+    "daily_visitors": 818,
+    "daily_visitors_human": 504,
+    "daily_visitors_bot": 290,
     "github_stars": 0,
     "x_followers": 2,
     "clawhub_skill_installs": 0
@@ -27,14 +27,14 @@
     "github_stars": 0,
     "x_followers": 2,
     "clawhub_skill_installs": 0,
-    "openclaw_github_stars": 275502,
+    "openclaw_github_stars": 276490,
     "openclaw_npm_daily": null,
-    "openclaw_twitter_followers": 420713
+    "openclaw_twitter_followers": 421493
   },
   "market": {
-    "openclaw_github_stars": 275502,
+    "openclaw_github_stars": 276490,
     "openclaw_npm_daily": 0,
-    "openclaw_twitter_followers": 420713
+    "openclaw_twitter_followers": 421493
   },
   "sparklines": {
     "mrr_usd": [
@@ -84,6 +84,10 @@
       },
       {
         "date": "2026-03-07",
+        "value": 0
+      },
+      {
+        "date": "2026-03-08",
         "value": 0
       }
     ],
@@ -135,6 +139,10 @@
       {
         "date": "2026-03-07",
         "value": 1
+      },
+      {
+        "date": "2026-03-08",
+        "value": 1
       }
     ],
     "seo_clicks": [
@@ -184,6 +192,10 @@
       },
       {
         "date": "2026-03-07",
+        "value": 0
+      },
+      {
+        "date": "2026-03-08",
         "value": 0
       }
     ],
@@ -235,6 +247,10 @@
       {
         "date": "2026-03-07",
         "value": 0
+      },
+      {
+        "date": "2026-03-08",
+        "value": 0
       }
     ],
     "daily_visitors": [
@@ -285,6 +301,10 @@
       {
         "date": "2026-03-07",
         "value": 881
+      },
+      {
+        "date": "2026-03-08",
+        "value": 818
       }
     ],
     "total_accounts": [
@@ -335,21 +355,25 @@
       {
         "date": "2026-03-07",
         "value": 25
+      },
+      {
+        "date": "2026-03-08",
+        "value": 25
       }
     ]
   },
   "pipeline": {
-    "drafts": 12,
-    "approved": 0,
+    "drafts": 13,
+    "approved": 16,
     "published": 175
   },
   "content": {
     "total_topics": 300,
     "roadmap_progress": {
       "total": 300,
-      "planned": 210,
+      "planned": 202,
       "targeted": 10,
-      "drafted": 37,
+      "drafted": 45,
       "approved": 0,
       "published": 43,
       "refreshing": 0
@@ -357,8 +381,8 @@
   },
   "agents": {
     "agent_2_last_run": "2026-03-07T09:07:06.469Z",
-    "agent_3_last_run": "2026-03-07T08:09:27.036Z",
-    "agent_6_last_run": "2026-03-07T23:00:12.199Z"
+    "agent_3_last_run": "2026-03-08T07:10:24.759Z",
+    "agent_6_last_run": "2026-03-08T05:00:09.156Z"
   },
-  "latest_date": "2026-03-07"
+  "latest_date": "2026-03-08"
 }
