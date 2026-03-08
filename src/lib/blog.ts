@@ -206,3 +206,11 @@ export function extractFaqItems(
 
   return items;
 }
+
+const COMPARISON_PATTERNS = /\b(vs|compared|comparison|alternative)/i;
+
+export function getComparisonPosts(): BlogPost[] {
+  return getAllPosts().filter(
+    (p) => COMPARISON_PATTERNS.test(p.slug) || COMPARISON_PATTERNS.test(p.title)
+  );
+}

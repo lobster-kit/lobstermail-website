@@ -1,0 +1,17 @@
+{
+  "redirects": [
+    {
+      "source": "/blog/openclaw-email-alternatives",
+      "destination": "/blog/openclaw-email-options-compared"
+    },
+    {
+      "source": "/blog/agent-email-api-comparison",
+      "destination": "/blog/lobstermail-vs-popular-alternatives"
+    },
+    {
+      "source": "/blog/openclaw-email-skills-compared",
+      "destination": "/blog/openclaw-email-options-compared"
+    }
+  ],
+  "last_updated": "2026-03-07"
+}

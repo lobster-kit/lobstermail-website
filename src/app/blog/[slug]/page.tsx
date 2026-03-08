@@ -298,7 +298,7 @@ export default async function BlogPostPage({
           {/* Related Posts */}
           {relatedPosts.length > 0 && (
             <section className="mt-16">
-              <h2 className="h3 mb-6">Related posts</h2>
+              <h2 className="h3 mb-6">{post.type === "hub" ? "Articles in this guide" : "Related posts"}</h2>
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {relatedPosts.map((rp) => (
                   <Link
