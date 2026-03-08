@@ -1,0 +1,200 @@
+---
+title: email bounce hard vs soft bounce explained
+description: >-
+  Hard bounces are permanent failures. Soft bounces are temporary. Here's what
+  each one means, the SMTP codes behind them, and how to handle both.
+date: '2026-03-08'
+author: Samuel Chenard
+tags:
+  - email
+  - deliverability
+  - infrastructure
+  - guides
+image: /blog/email-bounce-hard-vs-soft-bounce-explained.png
+imageAlt: >-
+  Pixel art lobster mascot illustration for email infrastructure — email bounce
+  hard vs soft bounce explained
+publish_at: '2026-03-08T09:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-08T07:10:28.067Z'
+---
+Last month I watched an agent send 200 emails to a list that hadn't been cleaned in two years. Within minutes, 38 of them bounced. The agent's sending domain got flagged, deliverability tanked, and every subsequent email from that address started landing in spam. Not because the content was bad. Because the agent didn't know the difference between a permanent rejection and a temporary one, and it kept retrying addresses that would never work.
+
+That's the cost of ignoring bounces. And it's worse when an autonomous agent is doing the sending, because agents don't get tired and stop. They keep going.
+
+## What is an email bounce?
+
+An email bounce happens when a message can't be delivered to the recipient's mail server. The server sends back an error code explaining why. That error falls into one of two categories: hard bounce or soft bounce. The distinction matters because it determines what you do next.
+
+| Feature | Hard bounce | Soft bounce |
+|---|---|---|
+| Definition | Permanent delivery failure | Temporary delivery failure |
+| Permanence | Address will never accept mail | May accept mail on retry |
+| Common causes | Invalid address, nonexistent domain | Full mailbox, server downtime, message too large |
+| ESP action taken | Immediately suppresses address | Retries delivery, then suppresses after repeated failures |
+| Impact on sender reputation | High, immediate damage | Low per occurrence, cumulative if ignored |
+
+The key takeaway: hard bounces mean "stop sending here forever." Soft bounces mean "try again later, but pay attention if it keeps happening." Mishandling either one will erode your sender reputation, which affects every email you send from that domain going forward.
+
+## Hard bounces: permanent, non-negotiable
+
+A hard bounce means the email cannot be delivered and never will be. The most common SMTP error code is `550`, which translates to "requested action not taken: mailbox unavailable." You'll also see `550 5.1.1` (user unknown) and `550 5.1.2` (domain not found).
+
+Common causes:
+
+- The email address doesn't exist. Someone typed `jon@gmial.com` instead of `john@gmail.com`.
+- The domain has no mail server. The DNS has no MX record, so there's nowhere to deliver the message.
+- The receiving server has permanently blocked your sending domain or IP.
+
+Here's the part most guides skip: not every `550` is truly permanent. Some strict security filters return a `550` for messages they don't trust, even when the address is valid. Greylisting systems can also produce what looks like a hard bounce on the first attempt, then accept the message on retry. Mailchimp briefly mentions this edge case, but most platforms treat all `550` responses as final.
+
+If you're building agent-based email workflows, this gray area matters. A blanket "suppress all 550s" rule might remove valid addresses that simply have aggressive spam filters. The better approach is to check the full SMTP response text, not just the code. A `550 user not found` is genuinely permanent. A `550 message rejected by policy` might not be.
+
+### What to do about hard bounces
+
+Remove the address from your list immediately. Don't retry. Don't wait. Every attempt against a dead address counts against your sender reputation with mailbox providers like Google and Microsoft. If your hard bounce rate exceeds 2%, most ESPs will start throttling your sends. Google's [bulk sender guidelines](https://support.google.com/a/answer/81126) updated in 2024 set the threshold even lower for high-volume senders.
+
+We covered the broader implications of this in our guide on [email deliverability for AI agents](/blog/email-deliverability-ai-agents), but the short version is: mailbox providers track your bounce rate as a signal of list quality. A high rate tells them you're either scraping addresses or not maintaining your list. Either way, you look like a spammer.
+
+## Soft bounces: temporary, but not harmless
+
+A soft bounce means the email couldn't be delivered right now, but the address itself is valid. The server is saying "come back later." Common SMTP codes include `421` (service not available, try again), `452` (insufficient storage), and `422` (mailbox full).
+
+Common causes:
+
+- The recipient's mailbox is full. This is surprisingly common with free email providers.
+- The receiving server is temporarily down or overloaded.
+- Your message exceeds the server's size limit.
+- Rate limiting: you've sent too many messages to that domain in a short window.
+- DNS resolution failed temporarily.
+
+Most email providers retry soft bounces automatically. Mailchimp retries for up to 72 hours. HubSpot retries several times over a shorter window. The retry logic varies, but the principle is the same: give the server time to recover, then try again.
+
+### When soft bounces become a problem
+
+A single soft bounce is noise. Ten soft bounces to the same address over three campaigns is a pattern. If an address soft bounces consistently, most ESPs will eventually reclassify it as a hard bounce and suppress it. The threshold varies: some platforms suppress after 3 consecutive soft bounces, others wait for 7.
+
+The risk for agents is different than for human-managed campaigns. An agent running an automated outreach workflow might hit the same full mailbox every day for a week, accumulating soft bounces that eventually get reclassified. Without monitoring, the agent doesn't know its effective bounce rate is climbing. We wrote about how to structure agent sending to avoid this kind of spiral in our piece on [building an AI sales outreach agent that doesn't get blacklisted](/blog/ai-sales-outreach-agent-email).
+
+### Can a soft bounce become a hard bounce?
+
+Yes. If a mailbox stays full for weeks, the provider may eventually deactivate the account. What started as a `452 insufficient storage` becomes a `550 user not found`. More commonly, your ESP will reclassify it after repeated failures. The address itself may still exist, but from your sending infrastructure's perspective, it's dead.
+
+## SMTP bounce codes worth knowing
+
+Most articles about bounces stop at "hard = permanent, soft = temporary." But if you're working with email at the infrastructure level, you'll encounter raw SMTP codes. Here are the ones that matter:
+
+**Hard bounce codes:**
+- `550 5.1.1` — User unknown. The address doesn't exist.
+- `550 5.1.2` — Domain not found. No MX record in DNS.
+- `550 5.7.1` , Delivery not authorized. You're blocked by policy.
+- `551 5.1.6` , Address has moved, no forwarding.
+
+**Soft bounce codes:**
+- `421 4.7.0` , Connection rate limited. Slow down.
+- `450 4.2.1` , Mailbox temporarily disabled.
+- `452 4.2.2` , Mailbox full.
+- `451 4.3.0` , Mail server temporarily unavailable.
+
+**Gray area codes:**
+- `550 5.7.1` can sometimes indicate a temporary policy block (greylisting) rather than a permanent rejection. Check the response text.
+- `451 4.7.1` , Greylisting. The server wants you to retry after a delay. This looks like an error but is actually an anti-spam mechanism. Retrying after 5 to 15 minutes usually succeeds.
+
+If you're using LobsterMail's infrastructure, bounce classification happens automatically. The SDK parses the SMTP response, categorizes the bounce type, and either retries (soft) or suppresses (hard) without the agent needing to interpret error codes manually.
+
+## What's an acceptable bounce rate in 2026?
+
+The benchmarks have tightened. After Google and Yahoo rolled out stricter bulk sender requirements in early 2024, the acceptable hard bounce rate for most mailbox providers is now under 2%. Some deliverability consultants recommend staying under 0.5% for cold outreach.
+
+Here's how to think about it:
+
+- **Under 0.5%**: You're fine. Your list is clean.
+- **0.5% to 2%**: Watch it. Clean your list and verify addresses before sending.
+- **Over 2%**: You're likely being throttled already. Stop sending, clean the list, and check whether your domain or IP has been flagged.
+
+Soft bounce rates are harder to benchmark because they're transient. But if more than 5% of your sends are soft bouncing, something systemic is wrong: either your sending volume is too high for your reputation, or you're hitting a lot of inactive mailboxes.
+
+## How to prevent bounces before they happen
+
+The best bounce handling is the kind you never need. A few practices that actually work:
+
+**Verify addresses before sending.** Email verification APIs can catch typos, nonexistent domains, and deactivated accounts before you burn a send on them. This is the single most effective thing you can do.
+
+**Don't send to old lists.** If someone gave you their email 18 months ago and hasn't opened anything since, verify the address before your next campaign. Addresses go stale faster than people expect.
+
+**Warm up new sending domains.** A brand-new domain sending 5,000 emails on day one will trigger every spam filter on the internet. Start with 50 sends per day and ramp up over 2 to 4 weeks.
+
+**Monitor bounce rates per campaign, not just overall.** A single bad list segment can spike your bounce rate and drag down deliverability for everything else you send.
+
+## Bounces vs. spam complaints: different problems, different solutions
+
+A bounce means the email wasn't delivered. A spam complaint means it was delivered and the recipient marked it as junk. Both hurt your sender reputation, but they signal different issues. High bounces say "this sender has a bad list." High spam complaints say "this sender is annoying people."
+
+Google now requires bulk senders to maintain a spam complaint rate below 0.3%. That's 3 complaints per 1,000 delivered emails. Exceed it consistently and you'll end up in the spam folder for everyone, not just the people who complained.
+
+For agents, this distinction matters because an agent might optimize for low bounces (by cleaning its list) while ignoring complaint rates (by sending too frequently or to uninterested recipients). Both numbers need monitoring.
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) , it's free.*
+
+<FAQ>
+  <FAQItem question="What is a hard bounce in email?">
+    A hard bounce is a permanent delivery failure. The email address doesn't exist, the domain has no mail server, or the receiving server has permanently blocked your sending domain. Remove hard-bounced addresses from your list immediately.
+  </FAQItem>
+
+  <FAQItem question="What is a soft bounce in email?">
+    A soft bounce is a temporary delivery failure. The recipient's mailbox might be full, the server might be down, or your message exceeded a size limit. Most email providers automatically retry soft bounces for 24 to 72 hours.
+  </FAQItem>
+
+  <FAQItem question="What is the main difference between a hard bounce and a soft bounce?">
+    A hard bounce is permanent and means you should never send to that address again. A soft bounce is temporary and usually resolves on retry. Hard bounces damage your sender reputation immediately; soft bounces only cause problems if they accumulate.
+  </FAQItem>
+
+  <FAQItem question="What SMTP error codes indicate a hard bounce?">
+    The most common hard bounce codes are `550 5.1.1` (user unknown), `550 5.1.2` (domain not found), and `551 5.1.6` (address moved, no forwarding). Any `5xx` code in the first digit generally indicates a permanent failure.
+  </FAQItem>
+
+  <FAQItem question="What SMTP error codes indicate a soft bounce?">
+    Common soft bounce codes include `421` (service temporarily unavailable), `452 4.2.2` (mailbox full), and `451 4.3.0` (server temporarily unavailable). Codes starting with `4xx` indicate temporary conditions.
+  </FAQItem>
+
+  <FAQItem question="Can a valid email address produce a hard bounce?">
+    Yes. Strict security filters sometimes return a `550` error for messages they don't trust, even when the address is valid. Greylisting systems can also produce hard-bounce-like responses on the first delivery attempt. Check the full SMTP response text, not just the error code.
+  </FAQItem>
+
+  <FAQItem question="Should I remove hard bounces from my email list?">
+    Yes, immediately. Every send attempt to a dead address counts against your sender reputation. Most ESPs do this automatically, but if you're managing your own infrastructure, suppress hard-bounced addresses after the first occurrence.
+  </FAQItem>
+
+  <FAQItem question="Can a soft bounce turn into a hard bounce?">
+    Yes. If a mailbox stays full or inactive long enough, the email provider may deactivate the account. Your ESP may also reclassify an address as a hard bounce after 3 to 7 consecutive soft bounces across different campaigns.
+  </FAQItem>
+
+  <FAQItem question="What is considered a high email bounce rate?">
+    A hard bounce rate over 2% is considered high by most mailbox providers, and Google's bulk sender guidelines recommend staying well below that. For cold outreach, aim for under 0.5%. Soft bounce rates above 5% suggest systemic issues with list quality or sending volume.
+  </FAQItem>
+
+  <FAQItem question="How do ESPs like Mailchimp and HubSpot handle bounced emails?">
+    Mailchimp retries soft bounces for up to 72 hours and automatically suppresses hard bounces from future campaigns. HubSpot similarly excludes hard-bounced contacts permanently and retries soft bounces over a shorter window. Both platforms track bounce rates and may restrict your account if rates are too high.
+  </FAQItem>
+
+  <FAQItem question="What is the difference between a bounce and a spam complaint?">
+    A bounce means the email wasn't delivered at all. A spam complaint means it was delivered and the recipient marked it as junk. Both hurt sender reputation, but they signal different problems: bounces indicate list quality issues, complaints indicate content or frequency issues.
+  </FAQItem>
+
+  <FAQItem question="Does a high bounce rate get my domain blacklisted?">
+    It can. Mailbox providers and spam filtering services monitor bounce rates as a signal of sender quality. Consistently high bounce rates can lead to your domain or IP being added to blocklists like Spamhaus or Barracuda, which will cause widespread delivery failures.
+  </FAQItem>
+
+  <FAQItem question="How can I prevent hard bounces before sending?">
+    Use an email verification API to validate addresses before sending. This catches typos, nonexistent domains, and deactivated accounts. Also avoid sending to lists that haven't been cleaned in more than 6 months, since addresses go stale faster than most people expect.
+  </FAQItem>
+
+  <FAQItem question="How does LobsterMail handle email bounces for agents?">
+    LobsterMail's infrastructure automatically parses SMTP bounce responses, classifies them as hard or soft, retries soft bounces, and suppresses hard-bounced addresses. The agent doesn't need to interpret error codes manually. [Get started free](/).
+  </FAQItem>
+</FAQ>
