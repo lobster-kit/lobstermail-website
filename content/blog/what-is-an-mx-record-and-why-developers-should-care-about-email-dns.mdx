@@ -1,0 +1,210 @@
+---
+title: what is an MX record and why developers should care about email DNS
+description: >-
+  MX records route email to the right server. Here's how they work, how to query
+  them, and what happens when they break.
+date: '2026-03-08'
+author: Samuel Chenard
+tags:
+  - email
+  - infrastructure
+  - guides
+image: /blog/what-is-an-mx-record-and-why-developers-should-care-about-email-dns.png
+imageAlt: >-
+  Pixel art lobster mascot illustration for email infrastructure — what is MX
+  record email DNS developers
+publish_at: '2026-03-08T10:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-08T07:10:28.073Z'
+---
+An MX record (Mail Exchanger record) is a type of DNS resource record that specifies which mail server is responsible for accepting incoming email on behalf of a domain. When someone sends an email to `you@example.com`, the sending server queries DNS for `example.com`'s MX records to determine where to deliver the message. Without a valid MX record, email has nowhere to go.
+
+If you've ever set up a custom domain for email, you've touched MX records. If you haven't, you've been relying on someone else's. Either way, understanding how they work will save you hours of debugging when email delivery breaks.
+
+## How MX records actually work
+
+Let's trace what happens when an email is sent to `frank@example.com`.
+
+1. The sending mail server (called an MTA, or Mail Transfer Agent) extracts the domain: `example.com`.
+2. It queries DNS for MX records associated with `example.com`.
+3. DNS returns one or more MX records, each with a **hostname** and a **priority value**.
+4. The MTA connects to the server with the lowest priority number first (lower number = higher priority).
+5. If that server is down, it tries the next one.
+6. The receiving server accepts the message and drops it into the recipient's mailbox.
+
+This entire process happens in seconds, usually before you've finished clicking "send." But every step depends on those MX records being correct.
+
+### Anatomy of an MX record
+
+An MX record has three parts:
+
+| Field | Example | What it does |
+|-------|---------|-------------|
+| Host | `example.com` | The domain this record applies to |
+| Priority | `10` | Lower number = tried first |
+| Mail server | `mail.example.com` | Where email gets delivered |
+
+A typical setup might look like this:
+
+example.com.   IN   MX   10   mail1.example.com.
+example.com.   IN   MX   20   mail2.example.com.
+Mail goes to `mail1` first. If `mail1` is unreachable, the sender falls back to `mail2`. That's the entire failover mechanism for email. Simple, resilient, and unchanged since 1986 (RFC 974, later updated by RFC 5321).
+
+## MX records vs. A records
+
+This trips people up. An A record maps a domain to an IP address. An MX record maps a domain to a *mail server hostname*. They solve different problems.
+
+You might see `mail.example.com` as both an A record (pointing to `203.0.113.5`) and as the target of an MX record. That's normal. The MX record says "send email here," and the A record says "here is the IP address of that server."
+
+One thing you can't do: point an MX record at a CNAME. The RFCs explicitly prohibit this (RFC 2181, section 10.3), and while some DNS providers will let you try, it causes unpredictable failures. Always point MX records at a hostname that resolves via an A or AAAA record.
+
+## Looking up MX records from the command line
+
+Every developer should know how to check MX records. It's the first thing to verify when email isn't arriving.
+
+```bash
+# Using dig
+dig MX example.com +short
+
+# Using nslookup
+nslookup -type=mx example.com
+
+# Using host
+host -t mx example.com
+```
+
+Any of these will return the MX records and their priority values. If you get an empty response, that domain either has no MX records configured or something is very wrong with their DNS.
+
+You can also do this programmatically in Node.js:
+
+```javascript
+import dns from 'node:dns/promises';
+
+const records = await dns.resolveMx('example.com');
+records.sort((a, b) => a.priority - b.priority);
+
+for (const record of records) {
+  console.log(`Priority ${record.priority}: ${record.exchange}`);
+}
+```
+
+This is useful for pre-flight checks before sending email. If the recipient domain has no MX records, you know the delivery will fail before you even try.
+
+## Priority values and failover
+
+MX priority is a preference value, not a ranking. The mail server with the **lowest number** gets tried first. If two records share the same priority, the sender picks one at random (which acts as basic load balancing).
+
+A typical configuration for a provider like Google Workspace:
+
+```
+example.com.   IN   MX   1    aspmx.l.google.com.
+example.com.   IN   MX   5    alt1.aspmx.l.google.com.
+example.com.   IN   MX   5    alt2.aspmx.l.google.com.
+example.com.   IN   MX   10   alt3.aspmx.l.google.com.
+example.com.   IN   MX   10   alt4.aspmx.l.google.com.
+```
+
+Five servers, three tiers of priority. If the primary is down, traffic splits across the two `alt` servers at priority 5. If those fail too, the priority 10 servers handle it. This kind of redundancy is why email is surprisingly reliable despite running on infrastructure designed in the 1980s.
+
+## What happens when MX records are wrong
+
+Misconfigured MX records don't produce helpful error messages. They just silently break email delivery. Here are the common failure modes:
+
+**Missing MX records entirely.** The sending server will fall back to the domain's A record (per RFC 5321), which may or may not be a mail server. Most of the time, this means bounced messages.
+
+**Pointing to a hostname that doesn't resolve.** If `mail.example.com` has no A record, the MX record is useless. The sender gets a temporary failure, retries for a few days, then gives up.
+
+**TTL set too high during a migration.** If you're switching email providers and your MX records have a 24-hour TTL, some servers will keep sending to the old provider for up to a day after you update. Lower TTL to 300 seconds (5 minutes) before migrating, then raise it once everything is stable.
+
+**Dangling MX records after canceling a provider.** You cancel Google Workspace but forget to remove the MX records. Email gets routed to servers that no longer accept it. This is more common than you'd think.
+
+## How MX records interact with SPF and DKIM
+
+MX records handle *where* email goes. SPF and DKIM handle *who's allowed to send it*. They're complementary, not competing.
+
+SPF (Sender Policy Framework) is a TXT record that lists which servers are authorized to send email for your domain. DKIM (DomainKeys Identified Mail) uses cryptographic signatures to verify that a message wasn't altered in transit.
+
+When you set up [custom domains for agent email](/blog/custom-domains-agent-email), you configure all three: MX records for receiving, SPF for sender authorization, and DKIM for message integrity. Skip any one of them and your deliverability suffers.
+
+## MX records and AI email agents
+
+Here's where things get interesting for agent developers. When an AI agent sends email, the same MX resolution process happens. The agent's outbound MTA looks up the recipient's MX records, connects to the right server, and delivers the message. If the recipient domain has broken MX records, the agent needs to handle that failure gracefully, not just crash.
+
+With LobsterMail, the agent doesn't manage any of this directly. When your agent [provisions its own inbox](/blog/openclaw-email-without-pubsub), the MX records, SPF, and DKIM are already configured on the `@lobstermail.ai` domain. Outbound delivery and MX resolution happen at the infrastructure layer. Your agent just calls `inbox.send()` and moves on.
+
+For agents using custom domains, you do need to set MX records yourself. But the DNS setup is a one-time step, not an ongoing concern.
+
+## When to lower your MX record TTL
+
+The default TTL for MX records is often 3600 seconds (one hour) or higher. That's fine for steady-state operation. But during email provider migrations, a high TTL means DNS resolvers worldwide will cache your old MX records for the full duration.
+
+The playbook for zero-downtime migration:
+
+1. Lower MX TTL to 300 seconds, 48 hours before the switch.
+2. Wait for the old TTL to expire (so all caches pick up the new, shorter TTL).
+3. Update MX records to point to the new provider.
+4. Monitor for 24 hours.
+5. Raise TTL back to 3600 or higher.
+
+This is standard practice, but I've seen teams skip step 1 and then wonder why email is split between two providers for a full day.
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
+
+<FAQ>
+  <FAQItem question="What exactly does an MX record do in the email delivery process?">
+    An MX record tells sending mail servers which server to deliver email to for a given domain. Without it, there's no way to route incoming email to the correct destination.
+  </FAQItem>
+
+  <FAQItem question="Can a domain have more than one MX record?">
+    Yes, and most domains should. Multiple MX records provide failover: if the primary mail server is down, email routes to the next one based on priority values.
+  </FAQItem>
+
+  <FAQItem question="What does MX record priority (preference value) mean?">
+    The priority number determines delivery order. Lower numbers are tried first. If two records share the same priority, the sender picks one at random, which provides basic load balancing.
+  </FAQItem>
+
+  <FAQItem question="What is the difference between an MX record and an A record?">
+    An A record maps a hostname to an IP address. An MX record maps a domain to a mail server hostname. The MX record says "send email here," and the A record for that hostname says "here's the IP."
+  </FAQItem>
+
+  <FAQItem question="How do I look up MX records for any domain from the command line?">
+    Run `dig MX example.com +short` or `nslookup -type=mx example.com`. Both return the mail server hostnames and priority values for the domain.
+  </FAQItem>
+
+  <FAQItem question="What happens to email if my MX record is deleted or misconfigured?">
+    The sending server may fall back to the domain's A record, but in most cases email will bounce. Misconfigured MX records are the number one cause of "email just stopped arriving" issues.
+  </FAQItem>
+
+  <FAQItem question="Do MX records affect email sending, receiving, or both?">
+    MX records control receiving only. They tell other servers where to deliver email for your domain. Sending authorization is handled by SPF and DKIM records.
+  </FAQItem>
+
+  <FAQItem question="Can I use a CNAME as the value of an MX record?">
+    No. RFC 2181 prohibits pointing MX records at CNAMEs. While some DNS providers won't stop you, it causes unpredictable delivery failures. Always use a hostname with an A or AAAA record.
+  </FAQItem>
+
+  <FAQItem question="How long does MX record propagation take after a DNS change?">
+    It depends on the TTL (Time To Live) of the old record. With a 3600-second TTL, expect up to an hour. Lower the TTL to 300 seconds before making changes to speed up propagation.
+  </FAQItem>
+
+  <FAQItem question="How do MX records interact with SPF and DKIM authentication?">
+    They're complementary. MX records route incoming email. SPF authorizes which servers can send email for your domain. DKIM verifies message integrity. You need all three for proper email setup, especially when using [custom domains](/blog/custom-domains-agent-email).
+  </FAQItem>
+
+  <FAQItem question="How can developers programmatically verify MX records before sending email?">
+    In Node.js, use `dns.resolveMx('domain.com')` from the `node:dns/promises` module. If it returns an empty array or throws, the domain can't receive email. This is a useful pre-flight check.
+  </FAQItem>
+
+  <FAQItem question="How should AI email agents handle MX resolution failures?">
+    Agents should catch DNS resolution errors, log them, and avoid retrying immediately. With LobsterMail, MX resolution happens at the infrastructure layer, so your agent doesn't need to handle it directly.
+  </FAQItem>
+
+  <FAQItem question="What TTL should I set for MX records?">
+    Use 3600 seconds (one hour) for normal operation. Drop to 300 seconds (five minutes) at least 48 hours before any migration, then raise it back once the new setup is stable.
+  </FAQItem>
+</FAQ>
