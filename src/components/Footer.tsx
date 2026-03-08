@@ -60,6 +60,15 @@ export function Footer() {
               |
             </span>
             <Link
+              href="/glossary"
+              className="link-underline transition-colors hover:text-foreground"
+            >
+              Glossary
+            </Link>
+            <span className="text-muted" aria-hidden="true">
+              |
+            </span>
+            <Link
               href="/terms"
               className="link-underline transition-colors hover:text-foreground"
             >
