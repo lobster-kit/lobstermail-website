@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { Check, Copy, X } from "@phosphor-icons/react";
 import {
   DialogTrigger,
@@ -49,18 +48,12 @@ export function GetStartedPopup({
               <>
                 {/* Header */}
                 <div className="relative border-b border-edge bg-accent/[0.06] px-6 py-5">
-                  <div className="flex items-center justify-center gap-3">
-                    <span
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/20"
-                      aria-hidden
-                    >
-                      <Image src="/lobster-mail-logo.png" alt="LobsterMail logo" width={28} height={28} className="h-7 w-7 object-contain" />
-                    </span>
+                  <div className="flex items-center justify-center">
                     <Heading
                       slot="title"
                       className="text-lg font-semibold text-foreground"
                     >
-                      Setup instructions
+                      Send these to your agent
                     </Heading>
                   </div>
                   <Button
@@ -75,14 +68,11 @@ export function GetStartedPopup({
 
                 {/* Body */}
                 <div className="px-8 py-6">
-                  <p className="mb-4 text-center text-base text-secondary">
-                    Send these to your lobster
-                  </p>
                   <div
                     data-theme="dark"
                     className="overflow-hidden rounded-xl border-2 border-edge bg-terminal shadow-[0_0_24px_-4px_rgba(187,221,247,0.15)]"
                   >
-                    <div className="flex flex-col gap-3 px-5 py-3.5">
+                    <div className="flex flex-col items-center gap-3 px-5 py-3.5 text-center">
                       <span className="font-mono text-[13px] leading-relaxed text-foreground">
                         Go to <span className="text-accent">lobstermail.ai/skill</span> and follow the instructions to set up an email inbox
                       </span>

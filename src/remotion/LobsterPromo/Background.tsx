@@ -1,47 +1,44 @@
-import { AbsoluteFill } from "remotion";
+import { AbsoluteFill, useCurrentFrame, interpolate } from "remotion";
 import { COLORS } from "./styles";
 
+/**
+ * Background — matches the LobsterMail website's dark canvas.
+ * Uses CSS radial-gradient dot pattern (same technique as the site)
+ * at 4x density (12px grid vs website's 48px).
+ */
 export const Background: React.FC = () => {
-  // Subtle grid pattern like the website
-  const gridSize = 40;
-  const lines: React.ReactNode[] = [];
+  const frame = useCurrentFrame();
 
-  for (let x = 0; x <= 1080; x += gridSize) {
-    lines.push(
-      <line
-        key={`v-${x}`}
-        x1={x}
-        y1={0}
-        x2={x}
-        y2={1920}
-        stroke={COLORS.gridLine}
-        strokeWidth={1}
-      />
-    );
-  }
-  for (let y = 0; y <= 1920; y += gridSize) {
-    lines.push(
-      <line
-        key={`h-${y}`}
-        x1={0}
-        y1={y}
-        x2={1080}
-        y2={y}
-        stroke={COLORS.gridLine}
-        strokeWidth={1}
-      />
-    );
-  }
+  // Subtle grid pulse — breathes slightly over time
+  const gridOpacity = interpolate(
+    Math.sin(frame * 0.03),
+    [-1, 1],
+    [0.6, 0.85]
+  );
 
   return (
     <AbsoluteFill style={{ backgroundColor: COLORS.bg }}>
-      <svg
-        width={1080}
-        height={1920}
-        style={{ position: "absolute", top: 0, left: 0, opacity: 0.5 }}
-      >
-        {lines}
-      </svg>
+      {/* Square grid lines — same technique as the website (two perpendicular linear-gradients) */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          backgroundImage: `linear-gradient(rgba(128, 187, 255, 0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(128, 187, 255, 0.15) 1px, transparent 1px)`,
+          backgroundSize: "48px 48px",
+          opacity: gridOpacity,
+          maskImage: `linear-gradient(90deg, rgba(0,0,0,0.375) 0%, rgba(0,0,0,0.75) 15%, rgba(0,0,0,0.75) 85%, rgba(0,0,0,0.375) 100%)`,
+          WebkitMaskImage: `linear-gradient(90deg, rgba(0,0,0,0.375) 0%, rgba(0,0,0,0.75) 15%, rgba(0,0,0,0.75) 85%, rgba(0,0,0,0.375) 100%)`,
+        }}
+      />
+
+      {/* Radial accent glow — like the hero section on the website */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: `radial-gradient(ellipse 80% 40% at 50% 45%, rgba(251, 87, 5, 0.1), transparent 70%)`,
+        }}
+      />
     </AbsoluteFill>
   );
 };

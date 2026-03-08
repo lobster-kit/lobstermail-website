@@ -17,8 +17,6 @@ import { GetStartedPopup } from "./GetStartedPopup";
 const navLinks = [
   { href: "/docs", label: "Docs" },
   { href: "/blog", label: "Blog" },
-  { href: "/pricing", label: "Pricing" },
-  { href: "/compare", label: "Compare" },
 ];
 
 function NavLinks({ onLinkClick }: { onLinkClick?: () => void }) {

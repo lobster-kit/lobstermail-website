@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { MagnifyingGlass } from "@phosphor-icons/react";
 import type { GuideMeta } from "@/lib/docs";
@@ -78,8 +79,8 @@ export function DocsSearch({ guides }: { guides: GuideMeta[] }) {
         </kbd>
       </button>
 
-      {/* Search modal */}
-      {open && (
+      {/* Search modal — portalled to body to escape sticky stacking contexts */}
+      {open && createPortal(
         <>
           <div
             className="fixed inset-0 z-[60] bg-background/60 backdrop-blur-sm animate-modal-overlay-in"
@@ -135,7 +136,8 @@ export function DocsSearch({ guides }: { guides: GuideMeta[] }) {
               </div>
             </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
     </>
   );

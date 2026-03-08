@@ -4,7 +4,7 @@ import { FadeIn } from "./FadeIn";
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden px-6 pb-20 pt-20 sm:pb-28 sm:pt-48 lg:pt-52">
+    <section className="relative overflow-hidden px-6 pb-20 pt-32 sm:pb-28 sm:pt-48 lg:pt-52">
 
       <div className="relative z-10 mx-auto flex max-w-6xl flex-col items-center gap-12 text-center lg:flex-row lg:items-center lg:gap-16 lg:text-left">
         {/* Left: headline */}
@@ -27,8 +27,7 @@ export function Hero() {
 
           <FadeIn delay={0.16}>
             <p className="max-w-md text-base leading-relaxed text-secondary sm:text-lg">
-              No API keys. No human signup. Your agent pinches its own email.{" "}
-              <a href="https://lobstermail.ai/skill" className="text-accent hover:underline">Agent skill here.</a>
+              No API keys. No human signup. Your agent pinches its own email.
             </p>
           </FadeIn>
         </div>
