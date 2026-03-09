@@ -1,0 +1,168 @@
+---
+title: how to build an AI agent research literature email digest
+description: >-
+  Build an AI agent that finds new papers, summarizes them, and emails you a
+  research digest every morning. Here's the full pipeline.
+date: '2026-03-09'
+author: Ian Bussières
+tags:
+  - use-cases
+  - email
+  - automation
+  - guides
+image: /blog/how-to-build-an-ai-agent-research-literature-email-digest.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — AI agent
+  research literature email digest
+publish_at: '2026-03-09T09:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-09T16:33:23.410Z'
+---
+Last Tuesday I woke up to 47 unread Google Scholar alerts. Most were irrelevant. Three were duplicates. One was genuinely important, buried at position 34. I almost missed it.
+
+This is the default experience for anyone trying to keep up with research. You set up keyword alerts, subscribe to journal TOCs, maybe check arXiv manually when you remember. It works until it doesn't. And it stops working right around the time your reading list crosses 200 papers.
+
+An AI agent research literature email digest solves this differently. Instead of dumping raw links in your inbox, an agent searches your sources, reads the abstracts, scores them for relevance, writes a short summary of each, and delivers one clean email. Every morning, or every Monday, or whenever you want it.
+
+I spent the last few weeks building one. Here's what I learned about the architecture, the tools, and the part nobody talks about: actually getting the email delivered.
+
+## What makes this different from a Google Scholar alert
+
+Google Scholar alerts are keyword matches. They don't understand context, they can't rank papers by how relevant they are to *your* specific research questions, and they definitely can't summarize anything. You get a list of titles and links. The reading is still on you.
+
+An AI agent research digest actually processes the content. It pulls abstracts from arXiv, PubMed, Semantic Scholar, or whatever sources you configure. It uses an LLM to evaluate whether each paper matters given your stated interests. Then it writes a two-sentence summary of the ones that pass the filter. The output is a single email that takes three minutes to read instead of thirty minutes to triage.
+
+Researchers at METR have been tracking how AI agents perform on complex tasks, and the capability curve is steep. Agents that struggled with multi-step research workflows in 2024 handle them routinely now. The bottleneck isn't the AI anymore. It's the plumbing around it.
+
+## How to build an AI agent research email digest in 5 steps
+
+1. Define your research topics and sources (arXiv, PubMed, Semantic Scholar, or specific journal RSS feeds).
+2. Choose an agent framework or build a custom pipeline with function-calling and an LLM.
+3. Connect a search and summarization layer (Semantic Scholar API, Elicit, or direct arXiv queries).
+4. Configure an email delivery layer with proper authentication so your digests actually reach the inbox.
+5. Schedule automated runs on a daily or weekly cadence using cron, a task queue, or a serverless timer.
+
+Each of these steps has real decisions behind it. Let me walk through them.
+
+## Picking your sources
+
+arXiv is the obvious starting point for CS, physics, math, and quantitative biology. The arXiv API is free, returns structured metadata, and supports date-range queries. Semantic Scholar adds citation context and covers a broader set of venues. PubMed is essential for biomedical work. If you're tracking specific journals, most offer RSS feeds your agent can poll.
+
+The mistake I see people make: starting with too many sources. Your agent will spend more time deduplicating than summarizing. Pick two sources that cover 80% of your field. Add more later when the pipeline is stable.
+
+## The summarization layer
+
+This is where the LLM earns its keep. For each paper that passes your relevance filter, the agent pulls the abstract (and full text if available via open access) and generates a summary. The prompt matters more than you'd think.
+
+What works well: asking the model to explain why this paper is relevant to your specific research question, not just what the paper says. "This paper introduces a new attention mechanism for long-context retrieval" is less useful than "This paper's long-context attention mechanism could improve your RAG pipeline's recall on legal documents."
+
+Elicit and tools like it handle some of this automatically, but they're designed for interactive use. For a recurring digest, you want programmatic control over the prompt, the filtering threshold, and the output format. A custom agent with access to Semantic Scholar's API gives you that control.
+
+## The part everyone skips: email delivery
+
+Here's where most tutorials end with "and then send an email using smtplib." That works exactly once, on your own inbox, while you're watching.
+
+In practice, automated emails sent on a recurring schedule from a programmatic sender hit spam filters constantly. Gmail, Outlook, and Yahoo all scrutinize messages that look like they were generated by a machine (because they were). If your agent sends from a generic SMTP relay without proper SPF, DKIM, and DMARC records, your digest will land in spam within a week.
+
+This is the content gap I kept hitting when I researched this topic. Every guide covers the "find papers" part. Nobody addresses what happens when your agent's carefully composed digest gets a spam score of 7.2 and disappears into the void.
+
+You have a few options for the email layer:
+
+**Transactional email APIs** like Resend, Postmark, or SendGrid handle authentication for you. They work well if you're sending to a small, fixed list of recipients. The downside: you're managing API keys, handling bounces, and dealing with rate limits yourself. For a personal digest this is fine. For a team of 20 researchers, it gets tedious.
+
+**Agent-native email infrastructure** is the newer approach. Instead of bolting email onto your agent as an afterthought, the agent provisions its own inbox and sends from it directly. LobsterMail works this way. Your agent [creates its own inbox](/blog/agent-self-signup-explained) with a single function call, sends authenticated email from that address, and handles bounces programmatically. The SPF and DKIM records are already configured on the lobstermail.ai domain, so deliverability is handled from day one.
+
+**Raw SMTP** is always an option if you run your own mail server. But if you're the kind of person who enjoys configuring Postfix and monitoring mail queues, you probably aren't reading a guide on building a research digest agent. You've already built three.
+
+## Scheduling and reliability
+
+A research digest is only useful if it shows up consistently. The agent needs to run on a schedule without manual intervention.
+
+For simple setups, a cron job on a VPS works. For something more resilient, use a serverless scheduler (AWS EventBridge, Google Cloud Scheduler, or even a GitHub Action on a cron trigger). The agent wakes up, queries your sources for papers published since the last run, processes them, and sends the digest.
+
+Keep state somewhere. A simple JSON file or SQLite database tracking which papers you've already sent prevents duplicates across runs. This sounds obvious but I forgot it on my first version and got the same three papers every morning for a week.
+
+## Personalizing digests for a team
+
+If you're running this for a research group, different people care about different topics. One approach: maintain a config file per recipient with their topics, preferred sources, and delivery schedule. The agent iterates through each config, runs the pipeline with those parameters, and sends individualized digests.
+
+This is where [agent-managed email](/blog/what-agents-do-with-email) gets interesting. The agent can maintain separate sender contexts for different digest tracks, handle unsubscribe requests by parsing reply emails, and even adjust the relevance threshold based on which papers a recipient clicks on over time.
+
+## What about copyright?
+
+A real concern that deserves a direct answer: sending full paper text via email raises copyright issues, especially for paywalled journals. Stick to titles, abstracts (which are almost always freely available), and your agent's original summaries. Link to the source paper. Don't reproduce figures or full-text sections.
+
+arXiv preprints under open licenses give you more flexibility, but even there, the safest approach is summarize-and-link rather than copy-and-send.
+
+## Where this is heading
+
+The [case for agents having their own email](/blog/why-agents-need-email-2026) keeps getting stronger as these workflows mature. A research digest agent that can receive replies ("send me the full PDF of paper #3"), manage a subscriber list, and adapt its recommendations based on feedback starts looking less like a script and more like a research assistant with its own communication channel.
+
+If you want to try this yourself, start small. One source, one topic, one recipient. Get the pipeline running end-to-end before adding complexity. The hardest part isn't the AI. It's making sure the email actually arrives.
+
+If you're looking for a simple way to give your agent its own email for sending digests, [LobsterMail](/) handles the infrastructure so you can focus on the research pipeline.
+
+<FAQ>
+  <FAQItem question="What is an AI agent research literature email digest?">
+    It's an automated pipeline where an AI agent searches academic sources (arXiv, PubMed, Semantic Scholar), filters and summarizes relevant papers, and delivers the results as a formatted email on a recurring schedule.
+  </FAQItem>
+
+  <FAQItem question="How do I build an AI agent that automatically emails me summaries of new research papers?">
+    Define your research topics and sources, connect an LLM for summarization, configure an authenticated email sender, and schedule the agent to run on a daily or weekly cadence. The full process is covered step-by-step above.
+  </FAQItem>
+
+  <FAQItem question="Which AI tools can search arXiv, PubMed, or Semantic Scholar and summarize results?">
+    Elicit, Semantic Scholar's API, and OpenAI's DeepResearch all support academic search and summarization. For a custom agent, the Semantic Scholar API is free and returns structured paper metadata you can feed directly to any LLM.
+  </FAQItem>
+
+  <FAQItem question="What email delivery service should I use when an AI agent sends automated digest emails?">
+    Transactional email APIs like Resend or Postmark work for small lists. For agent-native workflows, LobsterMail lets your agent provision its own inbox and send authenticated email without manual configuration.
+  </FAQItem>
+
+  <FAQItem question="How do I prevent my AI research digest emails from going to spam?">
+    Ensure your sending domain has valid SPF, DKIM, and DMARC records. Avoid sending from generic SMTP relays. Use a reputable email service or agent-native infrastructure where authentication is pre-configured.
+  </FAQItem>
+
+  <FAQItem question="Can an AI agent monitor specific journals or topics and only email me when new relevant papers appear?">
+    Yes. Most agents use a relevance scoring step where the LLM evaluates each paper against your stated interests. Papers below the threshold are silently filtered out, so you only receive digests when something genuinely new appears.
+  </FAQItem>
+
+  <FAQItem question="How does an AI research digest agent differ from a simple Google Scholar alert?">
+    Google Scholar alerts match keywords and send raw links. An AI agent evaluates context, scores relevance to your specific questions, summarizes each paper, and delivers one consolidated email instead of scattered notifications.
+  </FAQItem>
+
+  <FAQItem question="What prompt templates work best for generating concise academic paper summaries in email format?">
+    Ask the model to explain why the paper is relevant to your specific research question, not just what the paper covers. Include the abstract as context and request a two-sentence summary that highlights the key finding and its relevance to your work.
+  </FAQItem>
+
+  <FAQItem question="How do I set up a recurring AI agent workflow to deliver a Monday morning research briefing?">
+    Use a cron job, serverless scheduler (AWS EventBridge, Google Cloud Scheduler), or a GitHub Action on a cron trigger. The agent runs on schedule, queries sources for papers published since the last run, and sends the digest.
+  </FAQItem>
+
+  <FAQItem question="Can an AI agent handle unsubscribes or manage a distribution list for a team research digest?">
+    If the agent has its own inbox, it can parse reply emails containing unsubscribe requests. You can maintain a subscriber config file that the agent reads on each run, adding or removing recipients based on incoming messages.
+  </FAQItem>
+
+  <FAQItem question="What are the limitations of AI agents when summarizing highly technical or domain-specific literature?">
+    LLMs can misinterpret specialized notation, conflate similar-sounding methods, or miss nuances in statistical methodology. Always link to the original paper so readers can verify claims. Treat summaries as triage tools, not replacements for reading.
+  </FAQItem>
+
+  <FAQItem question="What are the copyright considerations when AI agents extract and email content from academic papers?">
+    Stick to titles, abstracts, and your agent's original summaries. Don't reproduce full text, figures, or paywalled content. arXiv preprints under open licenses offer more flexibility, but summarize-and-link is the safest approach.
+  </FAQItem>
+
+  <FAQItem question="How do I compare Elicit, DeepResearch, and custom-built agents for research digest use cases?">
+    Elicit and DeepResearch are interactive tools designed for on-demand research. For recurring automated digests, a custom agent gives you control over scheduling, filtering thresholds, email formatting, and recipient management that hosted tools don't offer.
+  </FAQItem>
+
+  <FAQItem question="Is there an AI that monitors arXiv and sends daily email digests?">
+    Several open-source projects and commercial tools do this, but most require you to handle the email sending yourself. Building a custom agent with arXiv API access and an authenticated email layer gives you the most control over filtering and delivery.
+  </FAQItem>
+
+  <FAQItem question="What infrastructure is needed to run an AI research digest agent reliably every day?">
+    At minimum: a compute environment that supports scheduled execution (a VPS with cron, a serverless function, or a CI/CD runner), access to an LLM API, access to your academic source APIs, an authenticated email sender, and a small database or file to track previously sent papers.
+  </FAQItem>
+</FAQ>
