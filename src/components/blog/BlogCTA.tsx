@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { CopySnippetBlock } from "../CopySnippetBlock";
 
 interface BlogCTAProps {
@@ -27,9 +26,7 @@ export function BlogCTA({ variant = "soft" }: BlogCTAProps) {
         </h3>
 
         <p className="max-w-md text-sm leading-relaxed text-secondary">
-          {variant === "direct"
-            ? "Give your agent these instructions and it sets up its own inbox. No API keys, no human signup."
-            : "Give your agent these instructions and it creates its own inbox, sends and receives email on its own. Free to start."}
+          Copy this and give it to your agent. It will set up its own inbox automatically.
         </p>
 
         <div className="w-full max-w-sm">
@@ -37,21 +34,6 @@ export function BlogCTA({ variant = "soft" }: BlogCTAProps) {
             label="lobstermail.ai/skill"
             badgeLabel="Copy"
           />
-        </div>
-
-        <div className="flex flex-wrap items-center justify-center gap-4">
-          <Link
-            href="/docs"
-            className="link-underline text-sm text-secondary transition-colors hover:text-foreground"
-          >
-            Docs <span aria-hidden="true">&rarr;</span>
-          </Link>
-          <Link
-            href="/pricing"
-            className="link-underline text-sm text-secondary transition-colors hover:text-foreground"
-          >
-            Pricing <span aria-hidden="true">&rarr;</span>
-          </Link>
         </div>
       </div>
     </aside>
