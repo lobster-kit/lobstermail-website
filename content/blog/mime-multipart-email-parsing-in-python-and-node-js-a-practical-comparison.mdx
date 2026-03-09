@@ -1,0 +1,246 @@
+---
+title: 'MIME multipart email parsing in Python and Node.js: a practical comparison'
+description: >-
+  Compare MIME multipart email parsing in Python and Node.js with real code
+  examples, library recommendations, and a look at when you can skip parsing
+  entirely.
+date: '2026-03-09'
+author: Ian Bussières
+tags:
+  - email
+  - guides
+  - infrastructure
+  - automation
+image: >-
+  /blog/mime-multipart-email-parsing-in-python-and-node-js-a-practical-comparison.png
+imageAlt: >-
+  Pixel art lobster mascot illustration for email infrastructure — MIME
+  multipart email parsing Python Node.js
+publish_at: '2026-03-09T09:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-09T16:51:28.695Z'
+---
+Every email your agent receives is a MIME message. That friendly-looking message with a subject line, body text, and a PDF attachment? Under the hood it's a tree of nested parts, each with its own content type, encoding, and boundary delimiter. If your agent needs to read email programmatically, you need to parse that tree.
+
+The two most common environments for this work are Python and Node.js. Both have mature libraries, but they make different tradeoffs around API design, streaming support, and where they can run. Here's a direct comparison so you can pick the right tool (or decide you don't need to parse MIME at all).
+
+## Python vs Node.js MIME parsing: quick comparison
+
+| Feature | Python (`email` stdlib) | Node.js (`mailparser`) | Node.js (`postal-mime`) |
+|---|---|---|---|
+| Primary module | `email.parser` / `email.message` | `mailparser` (npm) | `postal-mime` (npm) |
+| Multipart support | Full recursive tree walking | Auto-flattened output | Auto-flattened output |
+| Attachment handling | Manual iteration over parts | `.attachments` array with buffers | `.attachments` array with `Uint8Array` |
+| Streaming support | Yes, via `email.parser.BytesFeedParser` | Yes, via `MailParser` transform stream | No (full string/buffer input) |
+| Serverless / edge | Needs Python runtime | Needs Node.js runtime | Works in browsers, Cloudflare Workers, Deno |
+| License | PSF (stdlib) | MIT | MIT |
+
+If you're building an agent that [triages a support inbox](/blog/agent-triage-support-inbox), this table should narrow your choices fast. Let's look at each side in detail.
+
+## Parsing multipart MIME emails in Python
+
+Python's standard library has shipped an `email` package since Python 3.2. No pip install required. You feed it a raw RFC 5322 string (or bytes) and get back a message object you can walk.
+
+```python
+from email import policy
+from email.parser import BytesParser
+
+with open("raw_email.eml", "rb") as f:
+    msg = BytesParser(policy=policy.default).parse(f)
+
+# Walk the MIME tree
+for part in msg.walk():
+    content_type = part.get_content_type()
+    disposition = part.get("Content-Disposition", "")
+
+    if content_type == "text/plain" and "attachment" not in disposition:
+        print("Body:", part.get_content())
+    elif content_type == "text/html" and "attachment" not in disposition:
+        print("HTML:", part.get_content())
+    elif part.get_filename():
+        filename = part.get_filename()
+        payload = part.get_content()
+        with open(filename, "wb") as out:
+            out.write(payload if isinstance(payload, bytes) else payload.encode())
+        print(f"Saved attachment: {filename}")
+A few things to notice:
+
+1. **`policy.default` matters.** The legacy `compat32` policy (still the default if you don't specify one) returns raw strings with encoding quirks. The `default` policy gives you decoded Unicode and proper header parsing. Always set it explicitly.
+
+2. **`msg.walk()` is recursive.** It yields every part in the MIME tree, depth-first. For a `multipart/mixed` message containing a `multipart/alternative` (text + HTML) plus an attachment, you'll get five parts: the outer container, the alternative container, the plain text, the HTML, and the attachment.
+
+3. **`Content-Disposition` distinguishes inline content from attachments.** A `text/plain` part with `Content-Disposition: attachment` is a `.txt` file someone attached, not the email body. Always check.
+
+4. **Base64 and quoted-printable decoding is automatic** when you use `get_content()` with the `default` policy. No manual decoding step.
+
+The stdlib parser handles the vast majority of well-formed emails. Where it struggles is malformed messages: missing boundaries, incorrect charset declarations, broken quoted-printable encoding. In production, wrap your parsing in a try/except and log the raw message for debugging when it fails.
+
+For higher-volume pipelines, `BytesFeedParser` lets you stream bytes incrementally instead of loading the entire message into memory first:
+
+```python
+from email.parser import BytesFeedParser
+
+parser = BytesFeedParser(policy=policy.default)
+for chunk in stream_from_imap():
+    parser.feed(chunk)
+msg = parser.close()
+This is useful when pulling large emails from IMAP or processing messages from a queue.
+
+## Parsing multipart MIME emails in Node.js
+
+Node.js doesn't have a built-in email parser. You'll reach for one of two libraries.
+
+**`mailparser`** (by Andris Reinman, the author of Nodemailer) is the established choice. It parses a raw email buffer into a structured object with `.text`, `.html`, `.attachments`, and fully decoded headers.
+
+```javascript
+import { simpleParser } from "mailparser";
+import { readFile } from "fs/promises";
+
+const raw = await readFile("raw_email.eml");
+const parsed = await simpleParser(raw);
+
+console.log("Subject:", parsed.subject);
+console.log("From:", parsed.from?.text);
+console.log("Body:", parsed.text);
+console.log("HTML:", parsed.html);
+
+for (const att of parsed.attachments) {
+  console.log(`Attachment: ${att.filename} (${att.contentType}, ${att.size} bytes)`);
+  // att.content is a Buffer
+}
+```
+
+`mailparser` does all the MIME tree walking for you. You don't iterate over parts manually. It extracts the "best" text and HTML bodies and collects attachments into a flat array. For most agent workflows (read the body, grab attachments, move on), this is exactly what you want.
+
+If you need streaming, `mailparser` exports a `MailParser` class that extends Node's `Transform` stream. You can pipe an IMAP fetch stream directly into it.
+
+**`postal-mime`** is the newer, lighter alternative. Its big selling point: it runs anywhere JavaScript runs. Browsers, Cloudflare Workers, Deno, Bun, Node.js. No Node-specific dependencies.
+
+```javascript
+import PostalMime from "postal-mime";
+
+const parser = new PostalMime();
+const parsed = await parser.parse(rawEmailString);
+
+console.log("Subject:", parsed.subject);
+console.log("Text:", parsed.text);
+console.log("HTML:", parsed.html);
+// parsed.attachments[].content is a Uint8Array
+```
+
+The API is almost identical to `mailparser`'s output shape. The difference is runtime compatibility. If you're [building a support agent that handles email](/blog/build-support-agent-email) inside a Cloudflare Worker or edge function, `postal-mime` is your only realistic option.
+
+The tradeoff: `postal-mime` doesn't support streaming. It needs the full raw message as a string or `ArrayBuffer` upfront. For most emails (under a few MB) this is fine. For messages with large attachments, you'll want `mailparser` and its streaming parser instead.
+
+## The multipart types, explained
+
+If you're going to parse MIME, you should know what you're looking at:
+
+- **`multipart/mixed`**: the outer wrapper when an email has attachments. Each child part is a separate piece of content: the body, an image, a PDF.
+- **`multipart/alternative`**: the same content in multiple formats. Typically contains a `text/plain` and `text/html` version of the body. The email client picks which one to display. Your parser should grab both and let your application decide.
+- **`multipart/related`**: HTML body with inline resources (embedded images referenced by `Content-ID`). The HTML part references them via `cid:` URLs.
+
+These nest. A typical email with rich text and an attachment looks like:
+
+```
+multipart/mixed
+├── multipart/alternative
+│   ├── text/plain
+│   └── text/html
+└── application/pdf (attachment)
+```
+
+In Python, `msg.walk()` yields every node in this tree. In Node.js, `mailparser` and `postal-mime` flatten it for you automatically.
+
+## Common production pitfalls
+
+After parsing thousands of emails in agent pipelines, these are the issues that actually come up:
+
+**Charset mismatches.** An email header says `charset=iso-8859-1` but the body is actually UTF-8 (or vice versa). Python's `email` module trusts the header. If the header lies, you get garbled text. Detect this with a library like `chardet` as a fallback.
+
+**Missing or broken boundaries.** Some mail servers generate boundary strings that don't match between the `Content-Type` header and the actual body. Both `mailparser` and Python's parser will fail on these. There's no clean fix besides regex-based recovery on the raw bytes.
+
+**Nested `message/rfc822` parts.** Forwarded emails embed the original message as a MIME part with type `message/rfc822`. This is a full email inside an email. Both Python and `mailparser` handle it, but you need to parse the inner message separately.
+
+**Overly large attachments.** If your agent only needs the text body, don't buffer a 25 MB attachment into memory. In Python, check `part.get_content_type()` and skip binary parts. In Node.js with `mailparser`'s streaming API, listen for the `data` event and ignore attachment chunks.
+
+## When you can skip MIME parsing entirely
+
+Here's the part most comparison articles won't tell you: if your agent receives email through a managed service, you probably don't need to parse MIME at all.
+
+LobsterMail, for example, delivers emails to your agent pre-parsed. When your agent calls `inbox.receive()`, it gets structured objects with `.subject`, `.text`, `.html`, and `.attachments` already separated. The MIME parsing happens server-side before the message reaches your code.
+
+```typescript
+import { LobsterMail } from "@lobsterkit/lobstermail";
+
+const lm = await LobsterMail.create();
+const inbox = await lm.createSmartInbox({ name: "parser-demo" });
+const emails = await inbox.receive();
+
+for (const email of emails) {
+  // Already parsed. No MIME handling needed.
+  console.log(email.subject, email.text);
+}
+```
+
+This matters for agents running in constrained environments (serverless functions with short timeouts, edge workers with limited libraries). Instead of bundling a MIME parser and handling edge cases, the infrastructure layer handles it. Your agent just reads structured data.
+
+That said, if you're processing raw email from an IMAP connection, a mail queue, or piped from a local MTA, you absolutely need a parser. Pick Python's stdlib if you're already in Python, `mailparser` if you want streaming in Node.js, or `postal-mime` if you need browser/edge compatibility.
+
+## Picking the right tool
+
+For a Python agent pulling from IMAP: use `email.parser.BytesFeedParser` with `policy.default`. It's built in and handles streaming.
+
+For a Node.js agent on a server: use `mailparser`. Streaming support, battle-tested, excellent attachment handling.
+
+For a Node.js agent on the edge or in a browser: use `postal-mime`. No Node dependencies, works everywhere.
+
+For an agent that just needs to read email without infrastructure overhead: use a managed email API like LobsterMail and skip the parser entirely.
+
+<FAQ>
+  <FAQItem question="What Python library should I use to parse multipart MIME emails in 2026?">
+    Python's built-in `email` package with `policy.default` handles multipart MIME parsing without any third-party dependencies. For malformed emails, consider `mail-parser` from PyPI as a more forgiving alternative.
+  </FAQItem>
+  <FAQItem question="How do I extract the plain-text and HTML body from a multipart/alternative email in Python?">
+    Call `msg.walk()` and check each part's `get_content_type()`. Parts with `text/plain` and `text/html` that don't have `Content-Disposition: attachment` are the body versions. Use `get_content()` with `policy.default` for automatic charset decoding.
+  </FAQItem>
+  <FAQItem question="What is the difference between mailparser and postal-mime for Node.js?">
+    `mailparser` supports streaming via Node.js Transform streams and is ideal for server-side processing. `postal-mime` has no Node-specific dependencies, so it runs in browsers, Cloudflare Workers, and Deno, but requires the full message in memory upfront.
+  </FAQItem>
+  <FAQItem question="Why does Python's email parser sometimes miss multipart boundaries?">
+    Usually because the boundary string in the `Content-Type` header doesn't match the actual delimiter in the body. This happens with malformed messages from broken mail servers. There's no built-in recovery; you'll need to regex the raw bytes or use a more forgiving parser.
+  </FAQItem>
+  <FAQItem question="How do I save email attachments from a multipart MIME message in Node.js?">
+    With `mailparser`, call `simpleParser(raw)` and iterate over `parsed.attachments`. Each attachment has `.filename`, `.contentType`, and `.content` (a Buffer you can write to disk with `fs.writeFile`).
+  </FAQItem>
+  <FAQItem question="What does the Content-Disposition header mean when parsing MIME parts?">
+    It tells you whether a part is `inline` (displayed in the email body) or an `attachment` (a downloadable file). A `text/plain` part with `Content-Disposition: attachment` is a text file someone attached, not the email body.
+  </FAQItem>
+  <FAQItem question="Can postal-mime run in a browser or Cloudflare Worker?">
+    Yes. `postal-mime` has zero Node.js dependencies and works in any JavaScript environment: browsers, Cloudflare Workers, Deno, Bun, and Node.js.
+  </FAQItem>
+  <FAQItem question="What is multipart/mixed vs multipart/alternative vs multipart/related?">
+    `multipart/mixed` wraps different content types (body + attachments). `multipart/alternative` holds the same content in different formats (plain text + HTML). `multipart/related` bundles HTML with inline resources like embedded images.
+  </FAQItem>
+  <FAQItem question="How can a managed email API eliminate the need to write my own MIME parser?">
+    Services like LobsterMail parse MIME server-side and deliver structured objects to your agent with `.subject`, `.text`, `.html`, and `.attachments` already separated. Your code reads clean data instead of raw RFC 5322 bytes.
+  </FAQItem>
+  <FAQItem question="How do I handle base64 and quoted-printable decoding in Python MIME parsing?">
+    With `policy.default`, calling `get_content()` on a MIME part automatically decodes both base64 and quoted-printable transfer encodings. You don't need to decode manually.
+  </FAQItem>
+  <FAQItem question="How do I parse a raw RFC 5322 email string in Node.js without a mail server?">
+    Install `mailparser` from npm and call `simpleParser(rawString)`. It returns a promise that resolves to a parsed object with subject, headers, body text, HTML, and attachments. No mail server connection needed.
+  </FAQItem>
+  <FAQItem question="Is it faster to parse MIME in Python or Node.js for a high-throughput pipeline?">
+    Node.js with `mailparser`'s streaming parser tends to handle high concurrency better due to the event loop. Python's `BytesFeedParser` is efficient for per-message parsing but may need multiprocessing for true parallelism. For very high throughput, offload parsing to a managed service entirely.
+  </FAQItem>
+  <FAQItem question="How do I parse MIME emails streamed from an IMAP server in Node.js?">
+    Use `mailparser`'s `MailParser` class, which extends Node's `Transform` stream. Pipe the IMAP fetch stream directly into it: `imapFetchStream.pipe(new MailParser())`, then listen for the `data` event to receive the parsed message.
+  </FAQItem>
+  <FAQItem question="What are common production errors when parsing MIME emails?">
+    Charset mismatches (header says ISO-8859-1 but body is UTF-8), missing or malformed boundary strings, nested `message/rfc822` parts from forwarded emails, and memory issues from buffering large attachments. Always wrap parsing in error handling and log raw messages on failure.
+  </FAQItem>
+</FAQ>
