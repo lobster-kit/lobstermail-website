@@ -1,0 +1,223 @@
+---
+title: 'himalaya oauth2: the complete setup guide for gmail and outlook'
+description: >-
+  Step-by-step guide to configuring OAuth2 in Himalaya CLI for Gmail and
+  Outlook, with troubleshooting tips and a simpler alternative for AI agents.
+date: '2026-03-09'
+author: Samuel Chenard
+tags:
+  - email
+  - guides
+  - infrastructure
+  - automation
+  - openclaw
+image: /blog/himalaya-oauth2-the-complete-setup-guide-for-gmail-and-outlook.png
+imageAlt: >-
+  Pixel art lobster mascot illustration for email infrastructure — himalaya
+  oauth2
+publish_at: '2026-03-09T18:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-09T19:51:58.661Z'
+---
+Himalaya is one of the better CLI email clients out there. It talks IMAP and SMTP, outputs JSON for scripting, and stays out of your way. But if you've ever tried to configure Himalaya OAuth2 for Gmail or Outlook, you know the setup is anything but quick.
+
+OAuth2 replaced basic password authentication for good reasons. Google started blocking "less secure app" access back in 2022, and Microsoft followed suit for Exchange Online. If you want Himalaya to connect to either provider in 2026, OAuth2 isn't optional. It's the only way in (unless you use Gmail app passwords, which come with their own limitations).
+
+The problem is that OAuth2 was designed for web applications with browsers, redirect URIs, and interactive login flows. Himalaya is a terminal tool. That mismatch creates friction, especially if you're trying to use it in a headless environment or as an email backend for an AI agent.
+
+Here's how to get it working, and where it breaks down.
+
+## How to configure OAuth2 in Himalaya
+
+Before touching any config files, you need credentials from your email provider. The process differs between Gmail and Outlook, but the Himalaya side looks similar for both.
+
+1. Register an OAuth2 application with your provider (Google Cloud Console for Gmail, Azure AD for Outlook)
+2. Obtain your client ID and client secret from the registered app
+3. Add the `[accounts.*.backend.auth]` block to your Himalaya TOML config with `type = "oauth2"`
+4. Configure keyring entries for your client secret, access token, and refresh token
+5. Set the correct `auth-url`, `token-url`, and `scope` values for your provider
+6. Run `himalaya` to trigger the browser-based authorization flow
+7. Complete the consent screen in your browser and let Himalaya capture the redirect
+
+Each provider has its own quirks. Let's walk through them.
+
+## Gmail OAuth2 setup
+
+To get a client ID for Gmail IMAP OAuth2, you need a Google Cloud project with the Gmail API enabled.
+
+Head to the [Google Cloud Console](https://console.cloud.google.com/), create a project (or use an existing one), and navigate to **APIs & Services > Credentials**. Create an OAuth 2.0 Client ID of type "Desktop app." Google will give you a client ID and client secret.
+
+One thing that trips people up: you need to add yourself as a test user under the OAuth consent screen if your app is in "Testing" mode. Otherwise, the authorization flow will fail silently.
+
+Your Himalaya config for Gmail looks like this:
+
+```toml
+[accounts.gmail]
+email = "you@gmail.com"
+backend.type = "imap"
+backend.host = "imap.gmail.com"
+backend.port = 993
+backend.login = "you@gmail.com"
+backend.auth.type = "oauth2"
+backend.auth.client-id = "YOUR_CLIENT_ID.apps.googleusercontent.com"
+backend.auth.client-secret.keyring = "gmail-oauth2-client-secret"
+backend.auth.access-token.keyring = "gmail-oauth2-access-token"
+backend.auth.refresh-token.keyring = "gmail-oauth2-refresh-token"
+backend.auth.auth-url = "https://accounts.google.com/o/oauth2/v2/auth"
+backend.auth.token-url = "https://oauth2.googleapis.com/token"
+backend.auth.scope = "https://mail.google.com/"
+
+message.send.backend.type = "smtp"
+message.send.backend.host = "smtp.gmail.com"
+message.send.backend.port = 465
+message.send.backend.login = "you@gmail.com"
+message.send.backend.auth.type = "oauth2"
+message.send.backend.auth.client-id = "YOUR_CLIENT_ID.apps.googleusercontent.com"
+message.send.backend.auth.client-secret.keyring = "gmail-oauth2-client-secret"
+message.send.backend.auth.access-token.keyring = "gmail-oauth2-access-token"
+message.send.backend.auth.refresh-token.keyring = "gmail-oauth2-refresh-token"
+message.send.backend.auth.auth-url = "https://accounts.google.com/o/oauth2/v2/auth"
+message.send.backend.auth.token-url = "https://oauth2.googleapis.com/token"
+message.send.backend.auth.scope = "https://mail.google.com/"
+Before running Himalaya, store your client secret in the system keyring:
+
+```bash
+secret-tool store --label="gmail-oauth2-client-secret" service himalaya account gmail-oauth2-client-secret
+Then run `himalaya envelope list` (or any command that triggers a connection). Himalaya will open your browser, ask you to sign in to Google, and store the resulting tokens in your keyring automatically.
+
+## Outlook OAuth2 setup
+
+Outlook requires an Azure AD app registration. Go to the [Azure Portal](https://portal.azure.com/), navigate to **Azure Active Directory > App registrations**, and create a new registration. Set the redirect URI to `http://localhost` (or whatever Himalaya's local redirect expects). Under **API permissions**, add `https://outlook.office.com/IMAP.AccessAsUser.All` and `https://outlook.office.com/SMTP.Send`.
+
+Outlook's config is similar, but with different URLs and an important addition: PKCE.
+
+```toml
+[accounts.outlook]
+email = "you@outlook.com"
+backend.type = "imap"
+backend.host = "outlook.office365.com"
+backend.port = 993
+backend.login = "you@outlook.com"
+backend.auth.type = "oauth2"
+backend.auth.client-id = "YOUR_AZURE_CLIENT_ID"
+backend.auth.client-secret.keyring = "outlook-oauth2-client-secret"
+backend.auth.access-token.keyring = "outlook-oauth2-access-token"
+backend.auth.refresh-token.keyring = "outlook-oauth2-refresh-token"
+backend.auth.auth-url = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize"
+backend.auth.token-url = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
+backend.auth.pkce = true
+backend.auth.scope = "https://outlook.office.com/IMAP.AccessAsUser.All"
+```
+
+The `pkce = true` line is required for most Azure AD configurations. Without it, you'll get authorization errors that don't explain what went wrong. PKCE (Proof Key for Code Exchange) adds a challenge/verifier pair to the OAuth flow, which Azure expects for public clients.
+
+## Gmail vs Outlook OAuth2: a quick comparison
+
+| Setting | Gmail | Outlook |
+|---|---|---|
+| Auth URL | `accounts.google.com/o/oauth2/v2/auth` | `login.microsoftonline.com/common/oauth2/v2.0/authorize` |
+| Token URL | `oauth2.googleapis.com/token` | `login.microsoftonline.com/common/oauth2/v2.0/token` |
+| IMAP scope | `https://mail.google.com/` | `https://outlook.office.com/IMAP.AccessAsUser.All` |
+| PKCE required | No | Yes |
+| App registration | Google Cloud Console | Azure AD Portal |
+| App passwords available | Yes (with 2FA) | Being phased out |
+
+## xoauth2 vs oauthbearer
+
+Himalaya supports two OAuth2 authentication methods: `xoauth2` and `oauthbearer`. Most providers (Gmail and Outlook included) use XOAUTH2, which is the default. OAUTHBEARER is a newer standard defined in RFC 7628, but provider support is still spotty. Unless your mail server specifically requires OAUTHBEARER, stick with the default.
+
+You can set this explicitly in your config with `backend.auth.method = "xoauth2"`, but it's rarely necessary.
+
+## Fixing the "cannot wait for redirection" error
+
+This is the most common Himalaya OAuth2 error, and the Reddit threads are full of it. When Himalaya starts the OAuth2 flow, it spins up a temporary local HTTP server to catch the redirect from your browser. If something is already using that port, or if the redirect URI in your provider config doesn't match what Himalaya expects, you get a vague "cannot wait for redirection" message.
+
+Three things to check:
+
+- Make sure no other process is listening on the port Himalaya uses for the redirect (typically `localhost:9090` or similar)
+- Verify that the redirect URI in your Google Cloud or Azure AD app registration matches exactly
+- On some Linux distros, try running with `BROWSER=xdg-open himalaya envelope list` to ensure the browser actually opens
+
+## Keyring vs plaintext token storage
+
+Himalaya gives you two choices for storing OAuth2 tokens. The `.keyring` suffix tells Himalaya to use your system's secret store (GNOME Keyring, KDE Wallet, macOS Keychain). The alternative is storing tokens as plaintext in the TOML file with `backend.auth.access-token = "ya29.a0..."`.
+
+For personal use on a single machine, keyring is the right call. It encrypts at rest and integrates with your OS login. For server-side deployments or CI pipelines, the keyring often isn't available, and you'll need to either inject tokens via environment variables or find a workaround.
+
+This is where things get uncomfortable for automation. OAuth2 access tokens expire (usually after an hour). Himalaya handles refresh automatically when it's running interactively and the refresh token is in the keyring. But in a headless environment with no keyring daemon, the initial authorization flow requires a browser, and token refresh can fail silently if the keyring isn't unlocked.
+
+## The headless problem (and why agents struggle here)
+
+If you're trying to use Himalaya as an email backend for an AI agent or bot, the OAuth2 flow is the main obstacle. The initial authorization requires a human to click through a consent screen in a browser. There's no way around this for Gmail or Outlook. It's by design.
+
+After that first authorization, Himalaya can refresh tokens automatically. But if the refresh token expires or gets revoked (Google refresh tokens can expire after 7 days for apps in "Testing" mode), you're back to needing a browser.
+
+Some people work around this by pre-authenticating manually, exporting the tokens, and injecting them into the headless environment. It works until it doesn't. Others use app passwords where available (Gmail still supports them with 2FA enabled), which avoids OAuth2 entirely but limits you to basic auth.
+
+For agents that need to provision their own email without any human intervention, this whole dance is a non-starter. That's one of the reasons we built [LobsterMail](/) the way we did. Your agent calls `LobsterMail.create()`, gets an inbox, and starts sending and receiving. No OAuth2 registration, no consent screens, no token refresh logic. The agent handles it on its own.
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create();
+const inbox = await lm.createSmartInbox({ name: 'My Agent' });
+const emails = await inbox.receive();
+```
+
+That's not a knock on Himalaya. It's a genuinely good tool for humans who want CLI email. But the OAuth2 requirement from Gmail and Outlook creates a wall that headless automation can't easily climb over.
+
+## When to use Himalaya, and when not to
+
+Himalaya with OAuth2 makes sense when you're a developer who wants terminal-based email access to your existing Gmail or Outlook account. The setup takes 15-20 minutes, and once it's done, you have a fast, scriptable email client.
+
+It doesn't make sense when you need programmatic email provisioning without human setup, when you're running in CI/CD or serverless environments without a keyring, or when your agent needs to spin up fresh inboxes on demand.
+
+Pick the tool that fits your use case. If you need help with the OAuth2 config, the [Himalaya GitHub repo](https://github.com/pimalaya/himalaya) has solid documentation. If you want your agent to skip the OAuth2 maze entirely, [the getting started guide](/docs/getting-started) takes about two minutes.
+
+<FAQ>
+  <FAQItem question="What OAuth2 methods does Himalaya support: xoauth2 or oauthbearer?">
+    Himalaya supports both XOAUTH2 and OAUTHBEARER. XOAUTH2 is the default and works with Gmail and Outlook. OAUTHBEARER (RFC 7628) is available but rarely needed since most major providers still use XOAUTH2.
+  </FAQItem>
+  <FAQItem question="How do I get a client ID and client secret for Gmail OAuth2 in Himalaya?">
+    Create a project in the [Google Cloud Console](https://console.cloud.google.com/), enable the Gmail API, and create an OAuth 2.0 Client ID under **APIs & Services > Credentials**. Choose "Desktop app" as the application type. Google will display your client ID and client secret.
+  </FAQItem>
+  <FAQItem question="What Cargo feature flags do I need to enable OAuth2 support when building Himalaya from source?">
+    If you're compiling Himalaya from source, you may need to enable the `oauth2` feature flag with `cargo install himalaya --features oauth2`. Pre-built binaries from the releases page typically include OAuth2 support already.
+  </FAQItem>
+  <FAQItem question="How do I store OAuth2 tokens in the system keyring on Linux for Himalaya?">
+    Use `secret-tool` (part of `libsecret`). For example: `secret-tool store --label="gmail-oauth2-client-secret" service himalaya account gmail-oauth2-client-secret`. Then reference it in your TOML config with the `.keyring` suffix. GNOME Keyring or KDE Wallet must be running.
+  </FAQItem>
+  <FAQItem question="Why does Himalaya throw a 'cannot wait for redirection' error during OAuth2?">
+    This usually means the local redirect server can't start. Check that no other process is using the redirect port, that your redirect URI in the provider's app registration matches what Himalaya expects, and that your browser can actually open from the terminal.
+  </FAQItem>
+  <FAQItem question="How do I enable PKCE in Himalaya's OAuth2 configuration for Outlook?">
+    Add `backend.auth.pkce = true` to your account's auth block in the TOML config. Azure AD requires PKCE for public clients, and without it, the authorization will fail without a clear error message.
+  </FAQItem>
+  <FAQItem question="Can I use Himalaya OAuth2 in a headless server environment without a browser?">
+    Not for the initial authorization, which requires a browser-based consent flow. After the first auth, Himalaya can refresh tokens automatically if the keyring is available. For fully headless email, consider [LobsterMail](/docs/getting-started), which requires no browser or OAuth2 setup.
+  </FAQItem>
+  <FAQItem question="How does Himalaya refresh expired OAuth2 access tokens?">
+    Himalaya automatically uses the stored refresh token to get a new access token when the current one expires. This happens transparently as long as the keyring is unlocked and the refresh token is still valid. Google may expire refresh tokens after 7 days for apps in "Testing" mode.
+  </FAQItem>
+  <FAQItem question="Is OAuth2 required for Gmail in Himalaya, or can I use app passwords?">
+    Gmail still supports app passwords if you have 2FA enabled on your Google account. App passwords use basic auth, so you'd set `backend.auth.type = "password"` instead of `oauth2`. This avoids the OAuth2 flow entirely but doesn't work with accounts that have app passwords disabled by an admin.
+  </FAQItem>
+  <FAQItem question="What do the auth-url and token-url fields mean in Himalaya's TOML config?">
+    `auth-url` is the provider's authorization endpoint where the user grants consent. `token-url` is the endpoint where Himalaya exchanges the authorization code for access and refresh tokens. Each provider has different URLs (see the Gmail vs Outlook comparison table above).
+  </FAQItem>
+  <FAQItem question="How does Himalaya compare to other CLI email clients that support OAuth2?">
+    Himalaya, aerc, and neomutt all support OAuth2, but Himalaya's JSON output and scriptability make it more popular for automation use cases. Aerc has built-in OAuth2 with a smoother interactive flow, while neomutt typically relies on external scripts for token management.
+  </FAQItem>
+  <FAQItem question="How do I register an Azure AD app for Himalaya's Outlook OAuth2 setup?">
+    Go to the Azure Portal, navigate to **Azure Active Directory > App registrations**, and create a new registration. Set the redirect URI to `http://localhost`, and under **API permissions**, add `IMAP.AccessAsUser.All` and `SMTP.Send` from the Office 365 Exchange Online permissions.
+  </FAQItem>
+  <FAQItem question="What is the difference between keyring and plaintext token storage in Himalaya?">
+    Keyring storage (`.keyring` suffix) encrypts tokens using your OS secret store. Plaintext storage puts tokens directly in the TOML file, which is readable by anyone with file access. Use keyring for personal machines and consider the security tradeoffs carefully for shared or server environments.
+  </FAQItem>
+  <FAQItem question="How do I configure Himalaya OAuth2 for an AI agent or automation bot?">
+    You'll need to complete the initial OAuth2 authorization manually in a browser, then ensure the tokens are stored where the agent can access them (keyring or exported). For agents that need self-service email without human setup steps, [LobsterMail's SDK](/docs/getting-started) handles provisioning automatically.
+  </FAQItem>
+</FAQ>
