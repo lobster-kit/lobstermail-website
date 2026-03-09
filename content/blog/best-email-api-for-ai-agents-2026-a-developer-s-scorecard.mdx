@@ -97,7 +97,7 @@ SendGrid and Resend are both good at what they do. SendGrid has been reliable ou
 
 Neither was designed for agents.
 
-Neither supports receiving email out of the box. SendGrid has an inbound parse webhook that technically forwards incoming email to a URL, but it requires DNS configuration on a verified domain, behaves inconsistently, and isn't the same as a proper agent inbox. Both require a human to create an account, generate API keys, verify a sending domain, and configure everything before the agent can do anything at all.
+Neither supports receiving email out of the box. SendGrid has an inbound parse [webhook](/glossary/webhook) that technically forwards incoming email to a URL, but it requires DNS configuration on a verified domain, behaves inconsistently, and isn't the same as a proper agent inbox. Both require a human to create an account, generate API keys, verify a sending domain, and configure everything before the agent can do anything at all.
 
 For sending at scale, bulk transactional email, notifications to thousands of users, they're the right choice and you probably already know it. [The comparison post](/blog/agent-email-api-comparison) covers the outbound tradeoffs in detail. For agents that need to receive email or operate without human setup, they're the wrong tool.
 
@@ -149,7 +149,7 @@ Getting the use case right before picking an API will save more time than any be
   </FAQItem>
 
   <FAQItem question="Can SendGrid receive emails for an AI agent?">
-    SendGrid has an inbound parse webhook that can forward incoming email to a URL, but it requires manual DNS configuration on a verified domain and isn't designed for programmatic inbox provisioning. It works for narrow use cases but doesn't behave like an agent inbox.
+    SendGrid has an inbound parse webhook that can forward incoming email to a URL, but it requires manual DNS configuration on a verified domain and isn't designed for programmatic [inbox provisioning](/glossary/inbox-provisioning). It works for narrow use cases but doesn't behave like an agent inbox.
   </FAQItem>
 
   <FAQItem question="What is prompt injection in email, and should I worry about it?">
@@ -193,7 +193,7 @@ Getting the use case right before picking an API will save more time than any be
   </FAQItem>
 
   <FAQItem question="Can I use LobsterMail with any AI agent framework?">
-    LobsterMail works with any framework that runs JavaScript or TypeScript. There's also an MCP server if you want to give an agent email tools without writing SDK code directly. For agents running on ClawHub, the [LobsterMail agent skill](https://clawhub.ai/samuelchenardlovesboards/lobstermail-agent-email) handles the full setup automatically.
+    LobsterMail works with any framework that runs JavaScript or TypeScript. There's also an [MCP](/glossary/mcp) server if you want to give an agent email tools without writing SDK code directly. For agents running on [ClawHub](/glossary/clawhub), the [LobsterMail agent skill](https://clawhub.ai/samuelchenardlovesboards/lobstermail-agent-email) handles the full setup automatically.
   </FAQItem>
 
   <FAQItem question="What's the difference between createInbox() and createSmartInbox()?">

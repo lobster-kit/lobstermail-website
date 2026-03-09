@@ -1,0 +1,63 @@
+---
+title: "DMARC Alignment"
+shortDefinition: "The requirement that the domain in SPF or DKIM authentication matches the domain in the email's visible From header."
+category: "email-infrastructure"
+relatedTerms: ["dmarc", "spf", "dkim"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is DMARC Alignment?
+
+DMARC alignment is the check that connects email authentication (SPF and DKIM) to the domain the recipient actually sees in the From header. An email can pass SPF and DKIM individually but still fail DMARC if the authenticated domains don't align with the visible sender domain.
+
+There are two alignment modes:
+
+1. **Strict alignment:** The authenticated domain must exactly match the From header domain. If your From address is `agent@lobstermail.ai`, SPF must validate against `lobstermail.ai` specifically, and DKIM must be signed with a `d=lobstermail.ai` key.
+
+2. **Relaxed alignment:** The authenticated domain and From header domain must share the same organizational domain. So `mail.lobstermail.ai` in SPF would align with a From address of `agent@lobstermail.ai` because both share `lobstermail.ai` as the parent domain.
+
+DMARC requires at least one of SPF or DKIM to both pass and align. An email that passes SPF but the SPF domain doesn't align with the From header will fail DMARC, even though SPF itself succeeded.
+
+## Why it matters for AI agents
+
+Alignment is where most agent email configurations break. An AI agent might use a third-party email service that authenticates emails with its own domain for SPF, but the agent's From address shows a completely different domain. SPF passes, but DMARC alignment fails because the domains don't match.
+
+This is common when agents send through shared infrastructure. The SMTP relay authenticates with its own domain, not the agent's domain. Without proper configuration — like custom DKIM signing on the agent's domain or envelope sender rewriting — every email the agent sends will fail DMARC alignment.
+
+For agents using managed email services like LobsterMail, alignment is handled automatically. The service signs emails with DKIM keys on the agent's domain and configures the envelope sender to align with the From address. But agents stitching together their own email stack need to verify alignment manually.
+
+Testing alignment is straightforward: send a test email to a Gmail account and check the "Show original" view. It shows SPF, DKIM, and DMARC results including whether alignment passed. Catching misalignment before an agent goes into production prevents deliverability problems at scale.
+
+<FAQ>
+<FAQItem question="What is DMARC alignment?">
+DMARC alignment checks that the domain authenticated by SPF or DKIM matches the domain shown in the email's From header. Even if SPF and DKIM pass individually, DMARC fails without proper alignment between the authenticated domain and the visible sender domain.
+</FAQItem>
+<FAQItem question="What is the difference between strict and relaxed alignment?">
+Strict alignment requires an exact domain match between the authenticated domain and the From header domain. Relaxed alignment allows subdomains to count — so `mail.example.com` would align with `example.com`. Most DMARC policies use relaxed alignment by default.
+</FAQItem>
+<FAQItem question="Why do agent emails fail DMARC even when SPF passes?">
+This usually happens because the SPF-authenticated domain (the envelope sender or return-path domain) doesn't match the domain in the From header. The agent's email service authenticates with its own domain, not the agent's domain, causing an alignment mismatch.
+</FAQItem>
+<FAQItem question="How do you test DMARC alignment before going to production?">
+Send a test email to a Gmail account, open the message, and click "Show original." Gmail displays SPF, DKIM, and DMARC results including alignment status. You can also use tools like MXToolbox or dmarcanalyzer.com to check alignment. Always test before deploying an agent to avoid deliverability failures at scale.
+</FAQItem>
+<FAQItem question="Does DMARC alignment require both SPF and DKIM to align?">
+No. DMARC requires at least one of SPF or DKIM to both pass and align with the From header domain. If DKIM passes and aligns but SPF fails, DMARC still passes. This is why having both SPF and DKIM properly configured provides redundancy — either one aligning is sufficient for DMARC.
+</FAQItem>
+<FAQItem question="What is the envelope sender and how does it affect alignment?">
+The envelope sender (also called return-path or bounce address) is the address used in the SMTP MAIL FROM command. It is separate from the visible From header. SPF authenticates the envelope sender's domain. If the envelope sender domain does not match the From header domain, SPF alignment fails even though SPF itself passed.
+</FAQItem>
+<FAQItem question="How does DMARC alignment work with third-party email services?">
+When an agent sends through a third-party service, the service's domain often appears in SPF and DKIM authentication. For alignment, the service must either sign with DKIM on the agent's domain (via custom DKIM setup) or set the envelope sender to match the agent's From domain. Without this configuration, DMARC alignment will fail.
+</FAQItem>
+<FAQItem question="What happens when DMARC alignment fails?">
+The outcome depends on the domain's DMARC policy. With `p=none`, the email is delivered but the failure is reported. With `p=quarantine`, the email goes to spam. With `p=reject`, the email is blocked entirely. As more domains adopt strict DMARC policies, alignment failures increasingly mean lost messages.
+</FAQItem>
+<FAQItem question="Should AI agents use strict or relaxed DMARC alignment?">
+Relaxed alignment is recommended for most agent deployments. It allows subdomains like `mail.yourdomain.com` to align with `yourdomain.com`, giving you flexibility to use subdomain-based sending infrastructure. Strict alignment is appropriate for high-security environments where you need exact domain matching for every message.
+</FAQItem>
+<FAQItem question="How does LobsterMail ensure DMARC alignment for agent emails?">
+LobsterMail configures both DKIM signing and envelope sender settings to align with the agent's From domain automatically. When an agent provisions an inbox, the platform sets up custom DKIM keys on the agent's domain and configures the return-path to match, ensuring DMARC alignment passes without manual DNS configuration.
+</FAQItem>
+</FAQ>

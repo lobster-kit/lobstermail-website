@@ -60,7 +60,7 @@ const lm = await LobsterMail.create({
 
 If you're deploying to a server where `~/.lobstermail/` isn't writable, pass an explicit `token` from an environment variable. The auto-signup path is mainly useful for local development, one-off scripts, and agents running on machines you control.
 
-Tokens follow the format `lm_sk_test_*` for sandbox environments and `lm_sk_live_*` for production. The SDK validates the format on initialization and surfaces a clear error if you mix them up.
+[Tokens](/glossary/tokens) follow the format `lm_sk_test_*` for sandbox environments and `lm_sk_live_*` for production. The SDK validates the format on initialization and surfaces a clear error if you mix them up.
 
 ---
 
@@ -224,7 +224,7 @@ Returns a sanitized version of an email body, safe to pass directly into an LLM 
 const safeContent = email.safeBodyForLLM();
 ```
 
-Email bodies are untrusted input. Anyone can send your agent an email, and nothing stops them from embedding prompt injection attempts in the body. "Ignore all previous instructions" in a nicely formatted invoice is a real attack vector. `safeBodyForLLM()` does two things: it wraps the content in boundary markers (`[EMAIL_CONTENT_START]` / `[EMAIL_CONTENT_END]`) that help LLMs distinguish email data from their own instructions, and it wraps potentially dangerous sections in untrusted data markers so the model treats them as content, not commands.
+Email bodies are untrusted input. Anyone can send your agent an email, and nothing stops them from embedding [prompt injection](/glossary/prompt-injection) attempts in the body. "Ignore all previous instructions" in a nicely formatted invoice is a real attack vector. `safeBodyForLLM()` does two things: it wraps the content in boundary markers (`[EMAIL_CONTENT_START]` / `[EMAIL_CONTENT_END]`) that help LLMs distinguish email data from their own instructions, and it wraps potentially dangerous sections in untrusted data markers so the model treats them as content, not commands.
 
 ```typescript
 const emails = await inbox.receive();

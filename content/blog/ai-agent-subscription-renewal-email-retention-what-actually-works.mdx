@@ -54,7 +54,7 @@ Traditional ESPs handle deliverability for human-managed campaigns. But when an 
 
 | Capability | Traditional ESP | Agent-first infrastructure |
 |---|---|---|
-| Inbox provisioning | Human creates account, configures DNS | Agent provisions its own inbox programmatically |
+| [Inbox provisioning](/glossary/inbox-provisioning) | Human creates account, configures DNS | Agent provisions its own inbox programmatically |
 | Send timing | Scheduled by campaign manager | Agent decides per-recipient based on engagement data |
 | Bounce handling | Dashboard alerts, manual review | Agent detects bounce, triggers fallback channel automatically |
 | Suppression lists | Uploaded CSV, manual sync | Agent manages opt-outs in real time within the workflow |
@@ -87,7 +87,7 @@ Here's where I see teams get stuck. An AI agent sending renewal emails at scale 
 - **Unsubscribe headers** in every commercial email (CAN-SPAM requires this, and Gmail/Yahoo enforce it at the infrastructure level since 2024)
 - **Opt-out processing** within 10 business days (though best practice is immediate)
 - **Jurisdiction-aware consent tracking** for GDPR, CCPA, and whatever Canada is doing this quarter
-- **Suppression list sync** so the agent never emails someone who opted out, even if a different system ingested the opt-out
+- **[Suppression list](/glossary/suppression-list) sync** so the agent never emails someone who opted out, even if a different system ingested the opt-out
 
 Most billing platforms don't handle this for you. Stripe will tell you a payment failed. It won't manage your email suppression list. That's on your agent, and on whatever email infrastructure it's running on.
 
@@ -137,7 +137,7 @@ The point isn't that you can't build renewal email infrastructure yourself. You 
   </FAQItem>
 
   <FAQItem question="How do AI agents handle dunning sequences for failed subscription payments?">
-    The agent monitors payment webhook events (like a declined card from Stripe), then initiates a multi-step dunning sequence: payment update email, retry with alternate payment method, grace period notification, and final account pause warning. Each step adapts based on the customer's response.
+    The agent monitors payment [webhook](/glossary/webhook) events (like a declined card from Stripe), then initiates a multi-step dunning sequence: payment update email, retry with alternate payment method, grace period notification, and final account pause warning. Each step adapts based on the customer's response.
   </FAQItem>
 
   <FAQItem question="What churn risk signals does an AI agent monitor to trigger a retention email?">
@@ -152,7 +152,7 @@ The point isn't that you can't build renewal email infrastructure yourself. You 
     Agent-first infrastructure lets the agent provision inboxes, manage deliverability, and enforce compliance programmatically. Traditional ESPs require human configuration through dashboards. The difference matters when your agent needs to act autonomously at scale.
   </FAQItem>
 
-  <FAQItem question="What compliance guardrails should be built into an AI agent managing renewal emails?">
+  <FAQItem question="What compliance [guardrails](/glossary/guardrails) should be built into an AI agent managing renewal emails?">
     At minimum: automatic unsubscribe header insertion, real-time suppression list checks before every send, jurisdiction-aware consent tracking (GDPR, CAN-SPAM, CCPA), and audit logging of every email sent. The agent should enforce these in code, not rely on manual processes.
   </FAQItem>
 

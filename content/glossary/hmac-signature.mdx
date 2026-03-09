@@ -1,0 +1,65 @@
+---
+title: "HMAC Signature"
+shortDefinition: "A cryptographic hash used to verify that a webhook payload was sent by a trusted source and hasn't been tampered with."
+category: "email-infrastructure"
+relatedTerms: ["webhook", "idempotency"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is an HMAC Signature?
+
+HMAC (Hash-based Message Authentication Code) is a cryptographic method for verifying the integrity and authenticity of a message. In the context of web services and email infrastructure, HMAC signatures are most commonly used to verify webhook payloads — confirming that the data was sent by a trusted source and hasn't been modified in transit.
+
+Here's how HMAC webhook verification works:
+
+1. The service provider (e.g., your email platform) and your application share a secret key
+2. When the provider sends a webhook, it computes an HMAC hash of the payload using the shared secret
+3. The hash is included in the webhook request as an HTTP header (often `X-Signature` or `X-Webhook-Signature`)
+4. Your application receives the webhook, computes the same HMAC hash using its copy of the secret, and compares the two
+5. If the hashes match, the payload is authentic and unmodified
+
+HMAC uses a hash function (typically SHA-256) combined with the secret key. Without knowing the secret, an attacker cannot forge a valid signature, even if they can see the payload contents. This makes HMAC resistant to both tampering and forgery.
+
+## Why it matters for AI agents
+
+AI agents that receive webhooks — delivery notifications, bounce events, inbound email alerts — must verify HMAC signatures before processing the payload. An agent that blindly trusts incoming webhook data is vulnerable to injection attacks where a malicious actor sends fake webhook payloads to manipulate the agent's behavior.
+
+Consider an agent that processes delivery status webhooks. If an attacker can send a fake "delivered" webhook, they could make the agent believe an email was delivered when it wasn't. Or a fake "bounce" webhook could trick the agent into suppressing a valid address. HMAC verification prevents this by ensuring only payloads from the legitimate service provider are processed.
+
+For agents that operate autonomously without human oversight, webhook verification is especially critical. There's no human reviewing incoming events to catch suspicious payloads. The HMAC check is the only line of defense between the agent and forged data.
+
+Implementation is straightforward in most languages. The agent extracts the signature header, computes the expected HMAC of the raw request body using the shared secret, and compares the two using a constant-time comparison function (to prevent timing attacks). If they don't match, the webhook is rejected.
+
+<FAQ>
+<FAQItem question="What is an HMAC signature?">
+An HMAC signature is a cryptographic hash generated using a shared secret key and the message content. It's used to verify that a message (typically a webhook payload) was sent by a trusted source and hasn't been modified in transit. Only parties with the secret key can generate a valid signature.
+</FAQItem>
+<FAQItem question="Why do AI agents need HMAC verification?">
+AI agents that receive webhooks need HMAC verification to ensure they only process authentic events. Without signature verification, an attacker could send fake webhook payloads to manipulate agent behavior — triggering false bounces, spoofing delivery confirmations, or injecting malicious data.
+</FAQItem>
+<FAQItem question="What happens if you skip HMAC verification?">
+Skipping HMAC verification means any HTTP request sent to your webhook endpoint will be processed as if it came from the legitimate service. Attackers can forge payloads to trigger unintended agent behavior, corrupt data, or exploit your system. Always verify the signature before processing any webhook.
+</FAQItem>
+<FAQItem question="How do you implement HMAC verification in code?">
+Extract the signature from the webhook request header, compute an HMAC hash of the raw request body using your shared secret and the same hash algorithm (usually SHA-256), then compare the computed hash with the received signature using a constant-time comparison function to prevent timing attacks.
+</FAQItem>
+<FAQItem question="What hash algorithm does HMAC typically use?">
+HMAC most commonly uses SHA-256 (HMAC-SHA256), which provides a strong balance of security and performance. Some services use SHA-1 or SHA-512. The algorithm must match between the sender and receiver. Check your email service's webhook documentation for the specific algorithm used.
+</FAQItem>
+<FAQItem question="What is a constant-time comparison and why does it matter?">
+A constant-time comparison takes the same amount of time regardless of how many characters match. Standard string comparison exits early on the first mismatch, which lets attackers measure response times to guess valid signatures byte by byte. Constant-time comparison prevents this timing attack.
+</FAQItem>
+<FAQItem question="How should agents store HMAC shared secrets?">
+Store HMAC shared secrets in environment variables or a secrets manager, never in source code or version control. Rotate secrets periodically and ensure they are unique per webhook endpoint. If a secret is compromised, rotate it immediately and update both the service provider and your agent's configuration.
+</FAQItem>
+<FAQItem question="Can HMAC signatures be replayed?">
+Yes. An attacker who captures a valid webhook request can replay it later with the same valid signature. To prevent replay attacks, include a timestamp in the payload and reject webhooks older than a few minutes. Many services include a timestamp header specifically for this purpose.
+</FAQItem>
+<FAQItem question="What is the difference between HMAC and digital signatures?">
+HMAC uses a shared secret key known to both parties, while digital signatures use asymmetric key pairs where the sender signs with a private key and the receiver verifies with a public key. HMAC is simpler and faster but requires secure secret sharing. Digital signatures provide non-repudiation.
+</FAQItem>
+<FAQItem question="How does HMAC relate to webhook security for email services?">
+Email services use HMAC to sign webhook payloads for events like delivery confirmations, bounces, and inbound messages. The agent verifies each webhook's HMAC signature before processing the event. This prevents attackers from injecting fake delivery status updates or spoofed inbound email notifications.
+</FAQItem>
+</FAQ>

@@ -183,7 +183,7 @@ Both patterns are available on every LobsterMail tier, including the free plan. 
 
 If you go the webhook route, a few things to get right from the start:
 
-**Verify signatures.** Every webhook from LobsterMail includes an HMAC signature in the `x-lobstermail-signature` header. Always verify it before processing the payload. This prevents attackers from sending spoofed emails to your endpoint.
+**Verify signatures.** Every webhook from LobsterMail includes an [HMAC signature](/glossary/hmac-signature) in the `x-lobstermail-signature` header. Always verify it before processing the payload. This prevents attackers from sending spoofed emails to your endpoint.
 
 **Acknowledge fast, process later.** Return a 200 response within 5 seconds. Queue the message for async processing. If your handler takes too long, LobsterMail assumes the delivery failed and retries, which means your agent could process the same message twice (another reason to make handlers idempotent).
 

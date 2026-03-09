@@ -78,12 +78,12 @@ Specific flags identify what was detected:
 |---|---|
 | `prompt_injection` | Detected instruction-override patterns in the body |
 | `phishing_url` | One or more URLs flagged as phishing |
-| `spoofed_sender` | SPF/DKIM authentication failed |
+| `spoofed_sender` | [SPF](/glossary/spf)/[DKIM](/glossary/dkim) authentication failed |
 | `social_engineering` | Manipulative language patterns detected |
 
 ### Email authentication
 
-SPF, DKIM, and DMARC don't stop prompt injection directly, but a spoofed sender is a strong signal something is off. An email claiming to be from a trusted domain but failing DKIM deserves extra scrutiny regardless of what the body says:
+SPF, DKIM, and [DMARC](/glossary/dmarc) don't stop prompt injection directly, but a spoofed sender is a strong signal something is off. An email claiming to be from a trusted domain but failing DKIM deserves extra scrutiny regardless of what the body says:
 
 ```typescript
 email.security.injectionRisk   // 'low' | 'medium' | 'high'
@@ -131,7 +131,7 @@ That last one is underrated. A support agent reading cold inbound email should h
 
 ## The thing that makes this hard
 
-LLMs don't have a clean separation between "instructions I should follow" and "data I should process." That distinction is enforced by convention, system prompts, fine-tuning, boundary markers, not by the model's architecture. Attackers exploit the gap.
+LLMs don't have a clean separation between "instructions I should follow" and "data I should process." That distinction is enforced by convention, system prompts, [fine-tuning](/glossary/fine-tuning), boundary markers, not by the model's architecture. Attackers exploit the gap.
 
 For a deeper look at how these attacks play out once an agent is running, [the full breakdown of prompt injection in email agents](/blog/prompt-injection-email-agents) covers real-world patterns and mitigation decisions. And if you're weighing whether to give your agent access to a shared human inbox rather than its own, read [the security risks of sharing an inbox](/blog/security-risks-sharing-inbox) before going that route.
 

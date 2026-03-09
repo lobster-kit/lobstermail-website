@@ -1,0 +1,68 @@
+---
+title: "Idempotency"
+shortDefinition: "A property where performing the same operation multiple times produces the same result as performing it once."
+category: "email-infrastructure"
+relatedTerms: ["exponential-backoff", "webhook"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is Idempotency?
+
+Idempotency means that performing an operation multiple times has the same effect as performing it once. In the context of APIs and email systems, an idempotent operation can be safely retried without causing unintended side effects like duplicate emails, double charges, or repeated actions.
+
+For example, a `DELETE /emails/123` request is idempotent — deleting the same email twice results in the same state (the email is gone). But a `POST /emails/send` request is not inherently idempotent — calling it twice might send two copies of the same email.
+
+APIs implement idempotency through idempotency keys. The client includes a unique key (typically a UUID) with each request. The server stores the key along with the response. If the same key is sent again, the server returns the stored response instead of processing the request a second time.
+
+The pattern works like this:
+
+1. The client generates a unique idempotency key (e.g., `idem_a1b2c3d4`)
+2. The client sends a request with the key in a header (e.g., `Idempotency-Key: idem_a1b2c3d4`)
+3. The server processes the request and stores the result alongside the key
+4. If the client retries with the same key, the server returns the cached result without re-executing
+
+Most idempotency keys expire after 24 to 48 hours, which is long enough to handle retries but short enough to avoid unbounded storage growth.
+
+## Why it matters for AI agents
+
+Idempotency is essential for AI agents because agents operate in unreliable environments. Network timeouts, process crashes, and infrastructure failures are inevitable. When an agent sends an email and the connection drops before receiving a confirmation, the agent doesn't know if the email was sent or not. Without idempotency, retrying the request risks sending a duplicate.
+
+For email-sending agents, duplicate messages are more than just annoying — they damage sender reputation, confuse recipients, and can trigger spam filters. An agent that sends the same verification code email three times because of network retries looks broken to the end user.
+
+Agents processing webhooks also need idempotent handling. Webhook providers may deliver the same event multiple times (at-least-once delivery). If an agent's webhook handler isn't idempotent, it might process the same bounce event twice, sending duplicate notifications or incorrectly updating state.
+
+The implementation pattern for agents is to track processed event IDs. When a webhook arrives, the agent checks if it has already processed an event with that ID. If so, it returns a success response without reprocessing. This is simple to implement and prevents the cascading effects of duplicate event processing.
+
+<FAQ>
+<FAQItem question="What does idempotency mean?">
+Idempotency means an operation produces the same result whether it's performed once or multiple times. In APIs, an idempotent request can be safely retried without causing duplicate side effects. This is essential for reliable systems where network failures and retries are common.
+</FAQItem>
+<FAQItem question="Why is idempotency important for AI agents sending email?">
+AI agents operate in unreliable environments where network failures, timeouts, and crashes happen regularly. Without idempotency, retrying a failed email send request risks sending duplicate messages. Idempotency keys ensure that retries produce the same result as the original request.
+</FAQItem>
+<FAQItem question="How do you implement idempotent webhook handling?">
+Track the unique event ID from each webhook payload. When a webhook arrives, check if you've already processed that event ID. If yes, return a success response without reprocessing. If no, process the event and record the ID. This prevents duplicate processing from at-least-once delivery.
+</FAQItem>
+<FAQItem question="What is an idempotency key?">
+An idempotency key is a unique identifier (typically a UUID) that a client sends with each API request. The server uses this key to detect duplicate requests. If the same key is sent again, the server returns the cached response from the original request instead of processing it a second time.
+</FAQItem>
+<FAQItem question="Which HTTP methods are naturally idempotent?">
+GET, PUT, and DELETE are idempotent by design. GET retrieves data without changing state. PUT replaces a resource with the same result regardless of repetition. DELETE removes a resource, and deleting it again has no additional effect. POST is not naturally idempotent, which is why idempotency keys are needed for create operations.
+</FAQItem>
+<FAQItem question="How long should idempotency keys be stored?">
+Most implementations store idempotency keys for 24 to 48 hours. This window is long enough to handle retries from network failures and process restarts but short enough to avoid unbounded storage growth. After expiration, the same key could theoretically be reused, but UUID collision is effectively impossible.
+</FAQItem>
+<FAQItem question="What happens if an agent sends a duplicate email without idempotency?">
+Duplicate emails damage sender reputation, confuse recipients, and can trigger spam filters. A customer receiving the same verification code or receipt three times perceives the system as broken. For transactional emails, duplicates may also cause accounting issues or trigger duplicate actions on the recipient's end.
+</FAQItem>
+<FAQItem question="How does idempotency work with exponential backoff?">
+Exponential backoff controls retry timing, while idempotency prevents duplicate side effects from those retries. The agent retries with increasing delays using the same idempotency key. If the original request actually succeeded, the retry returns the cached result. If it failed, the retry processes normally.
+</FAQItem>
+<FAQItem question="What is at-least-once delivery and how does it relate to idempotency?">
+At-least-once delivery guarantees that a message is delivered one or more times but not that it arrives exactly once. Webhook providers commonly use this model, meaning the same event may be delivered multiple times. Idempotent handlers are required to ensure duplicate deliveries do not cause duplicate processing.
+</FAQItem>
+<FAQItem question="How do you make database operations idempotent?">
+Use unique constraints and upsert operations instead of blind inserts. Check for existing records before creating new ones, and use the idempotency key or natural business key as the unique identifier. This ensures that retried operations update existing records rather than creating duplicates.
+</FAQItem>
+</FAQ>

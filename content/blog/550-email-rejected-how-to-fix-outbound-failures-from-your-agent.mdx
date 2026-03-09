@@ -78,7 +78,7 @@ Your agent needs to distinguish between these. Suppressing an address that bounc
     A 550 error is an SMTP response indicating the recipient's server permanently refused the message. Unlike 4xx codes (temporary failures where retrying may succeed), a 5xx code signals a hard failure; the same message sent again will be rejected again.
   </FAQItem>
   <FAQItem question="What is the difference between a 550 rejection and a 4xx temporary bounce?">
-    A 4xx response means the server encountered a temporary issue (full mailbox, server overload, greylisting) and your agent can retry later. A 550 means the rejection is permanent: the address doesn't exist, authentication failed, or a policy explicitly blocks the message.
+    A 4xx response means the server encountered a temporary issue (full mailbox, server overload, [greylisting](/glossary/greylisting)) and your agent can retry later. A 550 means the rejection is permanent: the address doesn't exist, authentication failed, or a policy explicitly blocks the message.
   </FAQItem>
   <FAQItem question="Should my sending agent automatically retry an email after receiving a 550 error?">
     No. Retrying a 550 wastes resources and damages your sender reputation. Each retry generates another bounce event, which inbox providers use to evaluate your domain. Your agent should suppress the address immediately and log the full SMTP response for debugging.
@@ -90,7 +90,7 @@ Your agent needs to distinguish between these. Suppressing an address that bounc
     Microsoft doesn't publish a guaranteed timeline. In practice, most accounts become eligible for manual release within an hour after the triggering activity stops. An admin must actively release the account from the Defender portal; it won't unblock on its own.
   </FAQItem>
   <FAQItem question="What causes the 550 5.7.1 error in Exchange Online and how do I fix it?">
-    The 550 5.7.1 error means the recipient's server or your own transport rules rejected the message based on policy. Common causes include misconfigured transport rules, the recipient blocking external senders, or missing authentication records. Audit your outbound rules and verify SPF/DKIM/DMARC alignment.
+    The 550 5.7.1 error means the recipient's server or your own transport rules rejected the message based on policy. Common causes include misconfigured transport rules, the recipient blocking external senders, or missing authentication records. Audit your outbound rules and verify SPF/DKIM/[DMARC alignment](/glossary/dmarc-alignment).
   </FAQItem>
   <FAQItem question="Can SPF, DKIM, or DMARC failures trigger a 550 outbound rejection?">
     Yes. Many receiving servers now reject messages outright when authentication fails, rather than routing them to spam. If your agent sends through a path that isn't listed in your SPF record or lacks a valid DKIM signature, the receiving server may respond with a 550. Check our [deliverability guide](/blog/email-deliverability-ai-agents) for setup details.

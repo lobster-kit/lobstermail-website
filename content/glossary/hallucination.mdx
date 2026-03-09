@@ -1,0 +1,39 @@
+---
+title: "Hallucination"
+shortDefinition: "When an AI model generates confident-sounding information that is factually incorrect or entirely fabricated."
+category: "trending-ai"
+relatedTerms: ["guardrails", "rag", "context-engineering"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is Hallucination?
+
+Hallucination in AI refers to instances where a language model generates text that sounds plausible and confident but is factually wrong, internally inconsistent, or completely made up. The model is not lying in any intentional sense. It is producing statistically likely sequences of words based on its training, and sometimes those sequences do not correspond to reality.
+
+Common hallucinations include fabricated citations (papers and URLs that do not exist), invented statistics, incorrect dates, made-up product features, and fictional historical events presented as fact. The model has no internal mechanism to verify whether its output is true. It generates text that fits the pattern of what a correct answer would look like, even when it lacks the actual knowledge.
+
+Hallucination rates vary by model, task, and domain. Models tend to hallucinate more on niche topics with limited training data, when asked for very specific details like exact numbers or dates, and when operating without relevant context. The problem is compounded by the model's confident tone: hallucinated content reads exactly like accurate content, making it difficult for users to distinguish without independent verification.
+
+## Why It Matters for AI Agents
+
+Hallucination is arguably the single biggest risk for AI agents that communicate with humans on behalf of a business. When an email agent sends a customer incorrect pricing, fabricates a return policy, or cites a support article that does not exist, the consequences are real: lost trust, frustrated customers, and potential legal exposure.
+
+For agents handling email communications, every hallucinated fact goes out as a written record. Unlike a chatbot conversation that disappears, emails are saved, forwarded, and referenced. A hallucinated shipping date or warranty claim in an email becomes a documented commitment that the business may be held to.
+
+Retrieval-augmented generation (RAG) is the primary technical defense against hallucination in agent systems. By retrieving relevant documents and including them in the model's context, you give it factual source material to draw from rather than relying on parametric memory. Context engineering practices further reduce hallucination by structuring prompts to encourage the model to cite its sources and say "I don't know" when information is unavailable.
+
+For platforms like LobsterMail serving agent email infrastructure, hallucination prevention is part of the deliverability equation. Agents that consistently send accurate, grounded emails build sender reputation over time. Agents that send hallucinated content generate complaints and unsubscribes that damage the sending domain.
+
+<FAQ>
+<FAQItem question="Why do language models hallucinate?">Language models predict the next most likely token based on patterns in their training data. They have no internal fact-checking mechanism and no concept of truth. When the model lacks sufficient training data on a topic or when the prompt is ambiguous, it fills gaps with plausible-sounding but potentially incorrect content.</FAQItem>
+<FAQItem question="Can hallucination be completely eliminated?">Not with current technology. However, it can be significantly reduced through RAG (grounding responses in retrieved documents), careful prompt design that instructs the model to acknowledge uncertainty, output validation against known data sources, and human review for critical communications.</FAQItem>
+<FAQItem question="How should AI email agents handle hallucination risk?">Email agents should use RAG to ground responses in verified information, include confidence indicators when responses draw from training data rather than retrieved sources, implement validation checks before sending, and escalate to human review when the agent is uncertain. Never let an agent send financial figures or policy statements without verification.</FAQItem>
+<FAQItem question="What is the difference between hallucination and confabulation?">In AI contexts, hallucination and confabulation are often used interchangeably. Both refer to the model generating false information presented as fact. Some researchers prefer confabulation because hallucination implies perception, while LLMs are generating text, not perceiving reality.</FAQItem>
+<FAQItem question="How does RAG reduce hallucination?">RAG retrieves relevant documents and includes them in the model's context before generating a response. The model can then draw from real source material instead of relying on its parametric memory. This grounds responses in facts, though the model can still misinterpret or selectively ignore retrieved content.</FAQItem>
+<FAQItem question="What types of content are most likely to be hallucinated?">Models hallucinate most frequently on specific facts: exact numbers, dates, URLs, citations, product details, and technical specifications. They also hallucinate more on niche topics with limited training data. General conceptual explanations are less prone to hallucination than precise factual claims.</FAQItem>
+<FAQItem question="How do you detect hallucination in AI-generated emails?">Automated detection methods include cross-referencing generated claims against a knowledge base, using a second model to fact-check the output, checking for fabricated URLs or citations, and flagging statistical claims for verification. No single method catches all hallucinations, so layered approaches work best.</FAQItem>
+<FAQItem question="Why is hallucination especially dangerous in email?">Emails are persistent written records that recipients save, forward, and reference. A hallucinated price, policy, or deadline in an email becomes a documented statement that the business may be held to. Unlike chat conversations, emails carry an implicit authority that makes false information more consequential.</FAQItem>
+<FAQItem question="Does temperature affect hallucination rates?">Yes. Higher temperature settings increase randomness in token selection, which can increase hallucination rates. Lower temperatures produce more deterministic outputs that stick closer to high-probability tokens. For factual email responses, using a lower temperature (0.1-0.3) reduces hallucination risk.</FAQItem>
+<FAQItem question="Can fine-tuning reduce hallucination?">Fine-tuning can reduce hallucination for specific domains by giving the model more exposure to accurate domain-specific content. However, it does not eliminate hallucination, and the model can still generate false information on topics outside its fine-tuning data. RAG remains the stronger defense for factual grounding.</FAQItem>
+</FAQ>

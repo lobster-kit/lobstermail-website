@@ -1,10 +1,16 @@
 import { getGuides } from "@/lib/docs";
+import { getAllTerms } from "@/lib/glossary";
 
 export async function GET() {
   const guides = await getGuides();
+  const terms = getAllTerms();
 
   const guideLinks = guides
     .map((g) => `- [${g.title}](https://lobstermail.ai/docs/${g.slug}): ${g.description}`)
+    .join("\n");
+
+  const glossaryLinks = terms
+    .map((t) => `- [${t.title}](https://lobstermail.ai/glossary/${t.slug}): ${t.shortDefinition}`)
     .join("\n");
 
   const content = `# LobsterMail
@@ -15,11 +21,16 @@ export async function GET() {
 
 ${guideLinks}
 
+## Glossary
+
+${glossaryLinks}
+
 ## Links
 
 - [Homepage](https://lobstermail.ai)
 - [API Base URL](https://api.lobstermail.ai)
 - [OpenAPI Spec](https://api.lobstermail.ai/v1/docs/openapi)
+- [Glossary](https://lobstermail.ai/glossary)
 
 ## Quick Start
 

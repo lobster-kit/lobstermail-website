@@ -153,7 +153,7 @@ class SendEmailTool(BaseTool):
         return f"Send failed: {resp.text}"
 ```
 
-Three tools, each under 30 lines. `CreateInboxTool` handles signup and inbox provisioning in one call. `CheckEmailTool` polls for messages. `SendEmailTool` fires off a reply. They share state through CrewAI's `_shared_state` dict so the token and inbox ID persist across tool calls within a crew execution.
+Three tools, each under 30 lines. `CreateInboxTool` handles signup and [inbox provisioning](/glossary/inbox-provisioning) in one call. `CheckEmailTool` polls for messages. `SendEmailTool` fires off a reply. They share state through CrewAI's `_shared_state` dict so the token and inbox ID persist across tool calls within a crew execution.
 
 <Callout type="tip">
   Sending requires the Builder plan ($9/mo). On the free tier your agent can create inboxes and receive email immediately, which is enough to test the full receive flow before upgrading.
@@ -259,7 +259,7 @@ So far we've covered sending. For receiving, you have two options:
 
 **Polling.** The `CheckEmailTool` above polls the inbox on demand. Good for periodic checks or when a task explicitly says "check for replies."
 
-**Webhooks.** For real-time processing, configure a webhook URL when creating the inbox. LobsterMail POSTs a JSON payload to your endpoint every time a message arrives:
+**Webhooks.** For real-time processing, configure a [webhook](/glossary/webhook) URL when creating the inbox. LobsterMail POSTs a JSON payload to your endpoint every time a message arrives:
 
 ```python
 # modify CreateInboxTool to accept a webhook URL
@@ -276,12 +276,12 @@ resp = requests.post(
 Your webhook endpoint receives the email payload, and you can trigger a new crew execution for each incoming message. This is the pattern for building agents that respond to email in real time rather than on a schedule.
 
 <Callout type="info">
-  LobsterMail scans every incoming email for prompt injection across six categories before your agent sees it. The API response includes an `isInjectionRisk` flag so your tools can filter out malicious messages before they hit the LLM's context window.
+  LobsterMail scans every incoming email for [prompt injection](/glossary/prompt-injection) across six categories before your agent sees it. The API response includes an `isInjectionRisk` flag so your tools can filter out malicious messages before they hit the LLM's [context window](/glossary/context-window).
 </Callout>
 
 ## why not just use smtplib?
 
-You could wire up Python's `smtplib` and `imaplib` directly. But then you're managing SMTP credentials, handling bounce processing, configuring SPF/DKIM/DMARC for deliverability, and writing polling logic with error handling. That's a lot of infrastructure code sitting between your agent and a working email.
+You could wire up Python's `smtplib` and `imaplib` directly. But then you're managing SMTP credentials, handling bounce processing, configuring [SPF](/glossary/spf)/[DKIM](/glossary/dkim)/[DMARC](/glossary/dmarc) for deliverability, and writing polling logic with error handling. That's a lot of infrastructure code sitting between your agent and a working email.
 
 LobsterMail handles the infrastructure. Your CrewAI tools stay focused on what the agent should do with email, not how email works. And the prompt injection scanning is something you'd have to build from scratch if you rolled your own.
 
@@ -319,7 +319,7 @@ The tools are portable. Copy them into any CrewAI project and your agents have e
     They can, but it's better to give each agent its own address. This keeps responsibilities clear and avoids agents processing each other's messages. Inbox creation is free, so there's no cost penalty for separate inboxes.
   </FAQItem>
   <FAQItem question="Does LobsterMail protect against prompt injection in emails?">
-    Yes. Every incoming email is scanned across six categories including boundary manipulation, system prompt override, and data exfiltration. The API includes an `isInjectionRisk` flag so your CrewAI tools can filter out malicious content before it reaches the LLM.
+    Yes. Every incoming email is scanned across six categories including boundary manipulation, [system prompt](/glossary/system-prompt) override, and data exfiltration. The API includes an `isInjectionRisk` flag so your CrewAI tools can filter out malicious content before it reaches the LLM.
   </FAQItem>
   <FAQItem question="Can I use these tools with CrewAI's @tool decorator instead of BaseTool?">
     Yes. CrewAI supports both the `@tool` decorator for simple functions and the `BaseTool` class for tools that need shared state. We use `BaseTool` here because the tools need to share the auth token and inbox ID across calls, but you could adapt the pattern to use `@tool` with a module-level state dict.

@@ -1,0 +1,69 @@
+---
+title: "Transformer"
+shortDefinition: "The neural network architecture behind all modern LLMs, using self-attention to process sequences of tokens in parallel rather than one at a time."
+category: "trending-ai"
+relatedTerms: ["attention-mechanism", "tokens", "inference"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is a transformer?
+
+The transformer is the neural network architecture that powers every major large language model — GPT, Claude, Llama, Gemini, and others. Introduced in the 2017 paper "Attention Is All You Need" by Google researchers, the transformer replaced older sequential architectures (RNNs, LSTMs) with a parallel approach based on self-attention.
+
+Before transformers, language models processed text one token at a time, left to right. This sequential processing was slow and made it hard for models to connect distant words in a sentence. The transformer architecture processes all tokens simultaneously and uses attention mechanisms to let every token "attend to" every other token, regardless of distance.
+
+A transformer consists of stacked layers, each containing:
+
+- **Self-attention** — computes how much each token should attend to every other token
+- **Feed-forward network** — processes each token's representation through a neural network
+- **Normalization and residual connections** — stabilize training and help gradients flow
+
+The original architecture had both an encoder (processes input) and a decoder (generates output). Most modern LLMs use decoder-only architectures, which generate text autoregressively — one token at a time, using all previous tokens as context.
+
+Transformers scale remarkably well. Increasing the number of parameters, training data, and compute generally produces better models. This scaling property is why the industry has invested billions in building ever-larger transformer-based models.
+
+## Why it matters for AI agents
+
+Every AI agent that uses an LLM is running on a transformer. Understanding the architecture explains many practical constraints that agent developers face daily.
+
+The context window limit exists because the attention mechanism's memory and compute cost scales quadratically with sequence length. A 128K context window model needs 4x the attention compute of a 64K model. This directly impacts how much email history an agent can process in a single call and why context engineering matters.
+
+Token-based pricing comes from the transformer architecture: input tokens are processed in parallel through the model's layers, and output tokens are generated one at a time. Input is cheaper because it's parallelized. Output is more expensive because each token requires a full forward pass through the model. For email agents, this means short classification responses are cheap, but long drafted replies are more expensive.
+
+The autoregressive nature of transformers (generating one token at a time based on all previous tokens) is why streaming responses work. An email agent can start displaying a drafted reply before the full response is generated. It also explains why longer outputs take proportionally longer — each new token requires processing the entire preceding sequence.
+
+For agent developers, the transformer architecture is an implementation detail you rarely interact with directly. But it shapes every constraint you work within: context limits, token costs, latency characteristics, and the fundamental capabilities and limitations of the models your agents rely on.
+
+<FAQ>
+<FAQItem question="Why are transformers better than previous architectures?">
+Transformers process all tokens in parallel (during training) and use attention to connect any two positions regardless of distance. Previous architectures like RNNs processed tokens sequentially, making them slow to train and prone to "forgetting" early parts of long sequences. Transformers also scale better — larger models consistently produce better results.
+</FAQItem>
+<FAQItem question="Are all LLMs based on transformers?">
+Nearly all major LLMs today use the transformer architecture or close variants. Some researchers are exploring alternatives like state-space models (Mamba) and hybrid architectures that mix attention with other mechanisms. But as of now, transformers remain the dominant architecture for language models and the foundation of every commercially deployed LLM.
+</FAQItem>
+<FAQItem question="How does the transformer architecture affect agent costs?">
+Transformer inference costs are driven by two factors: the number of input tokens (processed in parallel) and the number of output tokens (generated sequentially). Input tokens are cheaper per token than output tokens. For email agents, this means loading long email threads as context is relatively affordable, but generating lengthy responses is where costs accumulate. Optimizing output length is often more impactful than trimming input context.
+</FAQItem>
+<FAQItem question="What is self-attention in transformers?">
+Self-attention is the mechanism that lets each token in a sequence compute a relevance score with every other token. This allows the model to understand relationships between distant words, like connecting a pronoun at the end of a paragraph to the noun it refers to at the beginning. It is the core innovation that makes transformers effective.
+</FAQItem>
+<FAQItem question="What does 'Attention Is All You Need' refer to?">
+It is the title of the 2017 Google research paper that introduced the transformer architecture. The paper demonstrated that attention mechanisms alone, without recurrence or convolution, could achieve state-of-the-art performance on language tasks. This paper is the foundation of all modern LLMs.
+</FAQItem>
+<FAQItem question="What is the difference between encoder and decoder transformers?">
+Encoder transformers process input bidirectionally and are used for understanding tasks like classification and entity extraction (e.g., BERT). Decoder transformers generate text autoregressively, one token at a time, and power most modern LLMs (e.g., GPT, Claude). Some models use both (e.g., the original T5 architecture).
+</FAQItem>
+<FAQItem question="Why do larger transformer models perform better?">
+Larger transformers have more parameters, allowing them to capture more nuanced patterns in language. Research has shown consistent scaling laws: performance improves predictably with more parameters, more training data, and more compute. This is why the AI industry has invested heavily in training increasingly large models.
+</FAQItem>
+<FAQItem question="Why does context window size matter for email agents?">
+The context window determines how much text an agent can process in a single request. Email agents often need to handle long threads, attached documents, and conversation history. A larger context window lets the agent process more of this information at once without truncation, leading to more informed and accurate responses.
+</FAQItem>
+<FAQItem question="What causes transformer inference latency?">
+Output generation is the main source of latency because each token is generated sequentially, with each new token requiring a full forward pass through the model. Input processing is faster because it runs in parallel. For email agents, this means short classification responses are fast, while longer drafted replies take proportionally longer.
+</FAQItem>
+<FAQItem question="Will transformers be replaced by other architectures?">
+Research into alternatives like state-space models (Mamba), RWKV, and hybrid architectures is active, with some showing promising efficiency gains for long sequences. However, transformers remain dominant for quality and have massive ecosystem investment. Any replacement would need to match transformer quality while offering significant practical advantages.
+</FAQItem>
+</FAQ>

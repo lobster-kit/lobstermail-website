@@ -1,0 +1,41 @@
+---
+title: "Structured Output"
+shortDefinition: "AI model responses formatted in a predictable schema like JSON, enabling reliable machine-to-machine communication."
+category: "trending-ai"
+relatedTerms: ["tokens", "tool-use"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is Structured Output?
+
+Structured output is when a language model generates its response in a specific, machine-readable format rather than free-form natural language. The most common format is JSON, but structured output can also mean XML, YAML, CSV, or any schema that a downstream system can reliably parse.
+
+Without structured output, parsing AI responses is fragile. If you ask a model "extract the sender name and date from this email" and it responds in natural language, you need additional logic to find the name and date in the prose. With structured output, the model returns something like `{"sender": "Jane Smith", "date": "2026-03-08"}`, which your code can parse directly and deterministically.
+
+Modern AI APIs support structured output through features like JSON mode, function calling, and schema enforcement. These features constrain the model's generation so that the output always conforms to a specified schema. If you define that the response must include fields like "action", "recipient", and "body", the model will always include those fields in the correct format, eliminating parsing errors.
+
+The reliability of structured output has improved significantly. Early implementations would sometimes produce invalid JSON or miss required fields. Current implementations with schema enforcement guarantee valid output that matches the provided schema, making AI responses as predictable as traditional API responses.
+
+## Why It Matters for AI Agents
+
+Structured output is the backbone of reliable agent systems. When an AI agent processes an incoming email and needs to decide what to do, it must output a decision in a format that the orchestration layer can act on. A structured response like `{"action": "reply", "priority": "high", "draft": "..."}` is far more reliable than trying to parse the model's intent from a free-text response.
+
+For email agents built on infrastructure like LobsterMail, structured output enables clean integration between the AI model and the email API. The model extracts structured data from incoming messages (sender, intent, entities, urgency), and the agent code uses that data to route, respond, or escalate. No regex parsing of natural language, no brittle string matching.
+
+Multi-agent systems depend heavily on structured output for inter-agent communication. When one agent hands off work to another, structured messages ensure nothing is lost in translation. An intake agent might output `{"escalate_to": "billing", "customer_id": "12345", "issue": "refund_request", "amount": 49.99}` which the billing agent can process without ambiguity.
+
+Structured output also enables tool use. When a model decides to call a function or API, it must specify the function name and arguments in a structured format. This is what makes agentic tool use possible: the model outputs a structured tool call, the system executes it, and the result feeds back into the model's context.
+
+<FAQ>
+<FAQItem question="What is the difference between structured output and tool use?">Structured output is the broader concept of getting the model to respond in a machine-readable format. Tool use is a specific application of structured output where the model generates a structured function call (function name plus arguments) that the system executes. Tool use relies on structured output but adds the execution layer.</FAQItem>
+<FAQItem question="Does structured output reduce hallucination?">It reduces certain types of errors. By constraining the output to a defined schema, you prevent the model from adding unsolicited information or drifting off-topic. However, the values within the structured fields can still be hallucinated. Structured output ensures format correctness, not factual correctness.</FAQItem>
+<FAQItem question="How do email agents use structured output?">Email agents use structured output to classify incoming messages (spam, support, sales), extract key entities (names, dates, amounts), determine actions (reply, forward, escalate), and generate responses in formats the email API expects. This makes the entire email processing pipeline deterministic and debuggable.</FAQItem>
+<FAQItem question="What is JSON mode in AI APIs?">JSON mode constrains the model to output only valid JSON. Some APIs go further with schema enforcement, where you provide a JSON Schema and the model is guaranteed to produce output matching that exact structure. This eliminates parsing failures and makes AI responses as reliable as traditional API responses.</FAQItem>
+<FAQItem question="How does structured output work with multi-agent systems?">In multi-agent architectures, structured output provides a contract between agents. Each agent outputs data in a defined schema that the next agent expects, preventing miscommunication. This is more reliable than passing natural language between agents, where intent can be ambiguous or lost.</FAQItem>
+<FAQItem question="What formats can structured output use besides JSON?">Structured output can use XML, YAML, CSV, or any schema-based format. JSON is most common because AI APIs natively support it and most programming languages parse it easily. XML is sometimes used when integrating with legacy systems. The choice depends on what your downstream system expects.</FAQItem>
+<FAQItem question="Does structured output cost more tokens?">Structured output typically uses slightly more tokens than a minimal natural language answer because of JSON syntax overhead (braces, quotes, field names). However, it often saves tokens overall by eliminating verbose prose and making responses more concise and predictable.</FAQItem>
+<FAQItem question="Can structured output handle complex nested data?">Yes. Modern schema enforcement supports deeply nested objects, arrays, enums, and optional fields. An email agent can output a nested structure like an email classification containing sender info, extracted entities, a list of action items, and a suggested response, all in a single validated JSON object.</FAQItem>
+<FAQItem question="What happens when structured output fails to match the schema?">With strict schema enforcement (available in most modern AI APIs), the output is guaranteed to match the schema, so validation failures don't occur. Without schema enforcement, invalid output can happen. Agents should validate the response against the schema and retry the request if it doesn't conform.</FAQItem>
+<FAQItem question="Is structured output necessary for production AI agents?">For any agent that feeds its output into downstream code or other systems, structured output is effectively required. Without it, you're parsing natural language with regex or heuristics, which is brittle and breaks on edge cases. Structured output turns AI responses into reliable data your system can act on deterministically.</FAQItem>
+</FAQ>

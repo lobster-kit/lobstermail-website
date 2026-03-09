@@ -1,10 +1,15 @@
 ---
-title: "self-hosted agent email vs managed: what actually makes sense"
-description: "Self-hosting gives you full control. Managed gives you speed. Here's an honest breakdown of the real tradeoffs for AI agent email infrastructure."
-date: "2026-02-14"
-author: "Samuel Chenard"
-tags: ["infrastructure", "email", "guides"]
-image: "/blog/self-hosted-vs-managed-agent-email.png"
+title: 'self-hosted agent email vs managed: what actually makes sense'
+description: >-
+  Self-hosting gives you full control. Managed gives you speed. Here's an honest
+  breakdown of the real tradeoffs for AI agent email infrastructure.
+date: '2026-02-14'
+author: Samuel Chenard
+tags:
+  - infrastructure
+  - email
+  - guides
+image: /blog/self-hosted-vs-managed-agent-email.png
 ---
 
 Your agent needs email. You've settled on that much. Now you're staring at two paths: run the infrastructure yourself, or pay someone else to run it. Both paths work. Neither is free of consequences.
@@ -73,7 +78,7 @@ The tradeoff is dependency. You're trusting a third party with your email pipeli
 | Monthly cost (infrastructure) | $5-40/month (VPS, DNS, monitoring) | $0-99/month (provider plan) |
 | Monthly cost (your time) | 2-10+ hours/month ongoing | Near zero |
 | DNS/authentication setup | Manual, error-prone | Automated or guided |
-| IP warmup | 4-8 weeks, manual monitoring | Pre-warmed or managed |
+| [IP warmup](/glossary/ip-warmup) | 4-8 weeks, manual monitoring | Pre-warmed or managed |
 | Deliverability management | You handle it | Provider handles it |
 | Data control | Complete | Provider-dependent |
 | Security patching | Your responsibility | Provider's responsibility |
@@ -108,10 +113,10 @@ There's no single correct architecture. But there is a wrong time to self-host: 
     Infrastructure costs range from $5-40/month for a VPS, domain, and monitoring tools. But the real cost is your time: DNS configuration, IP warming (4-8 weeks), deliverability monitoring, security updates, and troubleshooting. Plan for 2-10+ hours per month of ongoing maintenance depending on volume and complexity.
   </FAQItem>
   <FAQItem question="What is IP warming and why does it matter for agent email?">
-    IP warming is the process of gradually increasing email volume from a new IP address to build sender reputation with inbox providers. A brand new IP has no history, so sending hundreds of messages immediately looks like spam. The process typically takes four to eight weeks. Managed services usually provide pre-warmed IPs or handle the warmup automatically.
+    IP warming is the process of gradually increasing email volume from a new IP address to build [sender reputation](/glossary/sender-reputation) with inbox providers. A brand new IP has no history, so sending hundreds of messages immediately looks like spam. The process typically takes four to eight weeks. Managed services usually provide pre-warmed IPs or handle the warmup automatically.
   </FAQItem>
   <FAQItem question="Can I use AWS SES directly instead of a managed agent email service?">
-    Yes, but SES is an email sending API, not a complete agent email platform. You'll need to build the inbox management layer, webhook handling, bounce processing, and agent SDK yourself. SES handles delivery but you handle everything else. LobsterMail actually uses SES under the hood but wraps it with agent-specific infrastructure including inbox provisioning, prompt injection scanning, and reputation isolation.
+    Yes, but SES is an email sending API, not a complete agent email platform. You'll need to build the inbox management layer, [webhook](/glossary/webhook) handling, bounce processing, and agent SDK yourself. SES handles delivery but you handle everything else. LobsterMail actually uses SES under the hood but wraps it with agent-specific infrastructure including [inbox provisioning](/glossary/inbox-provisioning), [prompt injection](/glossary/prompt-injection) scanning, and reputation isolation.
   </FAQItem>
   <FAQItem question="What DNS records do I need for self-hosted agent email?">
     At minimum: MX records pointing to your mail server, an SPF TXT record listing authorized sending IPs, DKIM key pairs for cryptographic message signing, and a DMARC policy record. Each has specific formatting requirements and common pitfalls. SPF has a 10 DNS lookup limit, DKIM keys should be 2048-bit minimum, and DMARC should start at `p=none` before ramping to `p=reject`.

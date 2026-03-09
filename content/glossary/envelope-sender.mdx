@@ -1,0 +1,64 @@
+---
+title: "Envelope Sender"
+shortDefinition: "The return-path address used during SMTP transmission, which may differ from the visible From address the recipient sees."
+category: "email-infrastructure"
+relatedTerms: ["spf", "dmarc-alignment", "smtp-relay"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is the Envelope Sender?
+
+The envelope sender (also called the return-path, bounce address, or MAIL FROM) is the email address used during the SMTP transaction to identify who sent the message. It's separate from the From address that recipients see in their email client.
+
+Think of it like postal mail: the envelope sender is the return address on the envelope, while the From header is the letterhead inside. They can be different addresses, and both serve distinct purposes.
+
+The envelope sender is set during the SMTP `MAIL FROM` command, before the email content is transmitted. It serves two functions:
+
+1. **Bounce destination:** When an email can't be delivered, the bounce notification is sent to the envelope sender address, not the From address
+2. **SPF authentication:** SPF checks validate the envelope sender domain against authorized sending IPs
+
+In many simple email setups, the envelope sender and From address are the same. But when email is sent through third-party services, relays, or mailing list software, they often differ. An email might show `agent@yourdomain.com` in the From header but use `bounces+agent=yourdomain.com@emailservice.com` as the envelope sender.
+
+## Why it matters for AI agents
+
+The envelope sender is where DMARC alignment issues most commonly surface for AI agents. When an agent sends email through a third-party service, the service often sets its own domain as the envelope sender for bounce handling. This means SPF validates against the service's domain, not the agent's domain. If the agent's DMARC policy requires SPF alignment, the email fails DMARC even though SPF itself passed.
+
+Agents need to understand this distinction to debug deliverability issues. An email that shows `From: agent@mydomain.com` might actually have an envelope sender of `bounce@emailservice.com`. SPF passes for `emailservice.com`, but DMARC alignment fails because the From domain (`mydomain.com`) doesn't match the SPF domain (`emailservice.com`).
+
+The fix is to configure the envelope sender on the agent's own domain. Many email services support custom return-path domains — you set up a CNAME record like `bounces.mydomain.com` pointing to the service's bounce handling infrastructure. This way, the envelope sender uses your domain, SPF alignment passes, and DMARC is satisfied.
+
+For agents processing bounces, the envelope sender determines where bounce notifications arrive. If the envelope sender points to a different system than the agent monitors, bounce notifications go unprocessed. The agent keeps sending to invalid addresses without knowing they're bouncing.
+
+<FAQ>
+<FAQItem question="What is the envelope sender in email?">
+The envelope sender is the return-path address used in the SMTP transaction, separate from the From address recipients see. It determines where bounce notifications are sent and is the address validated by SPF authentication. It's set during the SMTP MAIL FROM command.
+</FAQItem>
+<FAQItem question="Why is the envelope sender different from the From address?">
+The envelope sender and From address serve different purposes. The envelope sender handles bounces and SPF authentication at the SMTP level. The From address is what recipients see. They differ when email is sent through third-party services, relays, or when custom bounce handling is configured.
+</FAQItem>
+<FAQItem question="How does the envelope sender affect DMARC for AI agents?">
+DMARC requires that the domain authenticated by SPF (the envelope sender domain) aligns with the From header domain. When an agent sends through a third-party service that uses its own envelope sender domain, SPF alignment fails and DMARC rejects the email, even if SPF itself passed.
+</FAQItem>
+<FAQItem question="How do I set a custom envelope sender?">
+Most email services let you configure a custom return-path domain by adding a CNAME record like `bounces.yourdomain.com` pointing to their bounce handling infrastructure. This aligns the envelope sender with your From domain, satisfying DMARC SPF alignment requirements.
+</FAQItem>
+<FAQItem question="What is the return-path header?">
+The return-path header is set by the receiving server based on the envelope sender from the SMTP transaction. It records where bounces should be sent. You cannot set it directly in the email headers — it is derived from the MAIL FROM command during SMTP delivery.
+</FAQItem>
+<FAQItem question="Where do bounce notifications go?">
+Bounce notifications (DSN — Delivery Status Notifications) are sent to the envelope sender address, not the From address. This is why configuring the correct envelope sender matters for AI agents — if bounces go to an unmonitored address, the agent never learns about delivery failures.
+</FAQItem>
+<FAQItem question="Can the envelope sender be spoofed?">
+The envelope sender can be set to any address during the SMTP transaction, but SPF authentication checks whether the sending IP is authorized for the envelope sender's domain. A spoofed envelope sender will fail SPF, and with DMARC enforcement, the email will be rejected or quarantined.
+</FAQItem>
+<FAQItem question="How does the envelope sender relate to SPF?">
+SPF validates the envelope sender domain, not the From header domain. The receiving server checks whether the sending IP is listed in the DNS SPF record of the envelope sender's domain. This is why the envelope sender domain must have a valid SPF record for authentication to pass.
+</FAQItem>
+<FAQItem question="What happens if the envelope sender domain has no SPF record?">
+If the envelope sender domain has no SPF record, the SPF check returns a "none" result. This means there is no authentication for that domain, and DMARC alignment via SPF will fail. The email may still pass if DKIM alignment succeeds, but missing SPF is a deliverability risk.
+</FAQItem>
+<FAQItem question="Should AI agents monitor envelope sender bounce addresses?">
+Yes. Agents should actively monitor the address used as the envelope sender for incoming bounce notifications. Unprocessed bounces lead to repeated sends to invalid addresses, which damages sender reputation and can result in the agent's sending IP being blocklisted.
+</FAQItem>
+</FAQ>

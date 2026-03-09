@@ -1,0 +1,68 @@
+---
+title: "MX Record"
+shortDefinition: "A DNS record that specifies which mail server should receive email for a domain."
+category: "email-infrastructure"
+relatedTerms: ["spf", "dkim", "smtp-relay"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is an MX Record?
+
+An MX (Mail Exchanger) record is a type of DNS record that tells the internet which mail server handles incoming email for a domain. When someone sends an email to `you@example.com`, the sending server looks up the MX records for `example.com` to find out where to deliver the message.
+
+MX records have two components:
+
+- **Priority:** A number that determines the order in which servers are tried. Lower numbers have higher priority.
+- **Mail server hostname:** The domain name of the server that accepts email (e.g., `mail.example.com`)
+
+A domain can have multiple MX records with different priorities for redundancy. If the highest-priority server is unavailable, the sending server tries the next one in order. This is how email stays reliable even when individual servers go down.
+
+For example, a domain might have:
+- `10 primary.mail.example.com`
+- `20 backup.mail.example.com`
+
+The sending server tries `primary` first (priority 10), and falls back to `backup` (priority 20) if the primary is unreachable.
+
+## Why it matters for AI agents
+
+MX records are the foundation of agent email receiving. If an AI agent needs its own inbox — to receive verification emails, process inbound customer messages, or communicate with other agents — the agent's domain must have MX records pointing to a mail server that routes messages to the agent.
+
+Setting up MX records is the first step in giving an agent the ability to receive email. Without them, emails sent to the agent's domain have nowhere to go. The sending server looks up MX records, finds nothing, and returns a permanent delivery failure (a hard bounce) to the sender.
+
+For agent platforms like LobsterMail, MX records are configured to point to LobsterMail's receiving infrastructure. When an email arrives for an agent's address, the MX record routes it to LobsterMail's servers, which process the message and deliver it to the agent's inbox via API or webhook.
+
+Agents that need to receive email on custom domains must ensure their MX records are correctly configured and don't conflict with existing email services. A common mistake is overwriting MX records when setting up agent email, which breaks email delivery for human users on the same domain. Using a subdomain (like `agents.example.com`) with its own MX records avoids this problem.
+
+<FAQ>
+<FAQItem question="What is an MX record?">
+An MX record is a DNS record that specifies which mail server should receive email for a domain. When someone sends an email to your domain, the sending server looks up your MX records to find out where to deliver the message.
+</FAQItem>
+<FAQItem question="Do AI agents need MX records?">
+AI agents need MX records only if they need to receive email. If an agent has its own email address and needs to process incoming messages — verification emails, customer inquiries, agent-to-agent communication — its domain must have MX records pointing to a mail server that can route messages to the agent.
+</FAQItem>
+<FAQItem question="Can I have multiple MX records for one domain?">
+Yes. Multiple MX records with different priority values provide redundancy. If the highest-priority mail server is unavailable, the sending server tries the next server in priority order. This ensures email delivery continues even when a server goes down.
+</FAQItem>
+<FAQItem question="What does MX record priority mean?">
+MX priority is a number that determines the order in which mail servers are tried. Lower numbers have higher priority. A server with priority 10 is tried before one with priority 20. If multiple records share the same priority, the sending server picks randomly among them for load balancing.
+</FAQItem>
+<FAQItem question="How long do MX record changes take to propagate?">
+MX record changes propagate based on the record's TTL (Time to Live), typically between 1 and 24 hours. During propagation, some senders may use the old record while others use the new one. When switching email providers, keep both old and new servers active during the transition.
+</FAQItem>
+<FAQItem question="Can I use a subdomain for agent email MX records?">
+Yes, and this is the recommended approach. Setting MX records on a subdomain like agents.example.com lets your agents receive email without affecting human email on example.com. Each subdomain can have its own independent MX records pointing to different mail servers.
+</FAQItem>
+<FAQItem question="What happens if a domain has no MX records?">
+If a domain has no MX records, sending servers will attempt to deliver email to the domain's A record as a fallback (per RFC 5321). However, this is unreliable and many senders will return a hard bounce. Any domain that needs to receive email should have properly configured MX records.
+</FAQItem>
+<FAQItem question="How do MX records relate to SPF, DKIM, and DMARC?">
+MX records handle email routing — where messages are delivered. SPF, DKIM, and DMARC handle email authentication — verifying the sender is legitimate. They work together: MX records get the email to your server, and authentication records ensure outgoing email from your domain is trusted by recipients.
+</FAQItem>
+<FAQItem question="Do MX records affect email sending?">
+No. MX records only control where incoming email is delivered. Sending email uses different DNS records (SPF, DKIM) and SMTP server configuration. An agent can send email from a domain even if that domain's MX records point elsewhere, as long as sending authentication is properly configured.
+</FAQItem>
+<FAQItem question="How do I set up MX records for LobsterMail?">
+You add MX records to your domain's DNS settings pointing to LobsterMail's receiving servers. LobsterMail provides the exact hostnames and priority values during domain setup. Once configured, incoming email for your domain is routed to LobsterMail and delivered to your agent's inbox via API or webhook.
+</FAQItem>
+</FAQ>

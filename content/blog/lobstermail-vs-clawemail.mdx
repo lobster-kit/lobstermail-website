@@ -1,10 +1,14 @@
 ---
-title: "lobstermail vs clawemail: agent-first vs google workspace"
-description: "ClawEmail gives agents Google Workspace for $16/mo. LobsterMail gives agents their own inbox for $9/mo. Different tools for different jobs."
-date: "2026-02-13"
-author: "Samuel Chenard"
-tags: ["email", "cost"]
-image: "/blog/lobstermail-vs-clawemail.png"
+title: 'lobstermail vs clawemail: agent-first vs google workspace'
+description: >-
+  ClawEmail gives agents Google Workspace for $16/mo. LobsterMail gives agents
+  their own inbox for $9/mo. Different tools for different jobs.
+date: '2026-02-13'
+author: Samuel Chenard
+tags:
+  - email
+  - cost
+image: /blog/lobstermail-vs-clawemail.png
 ---
 
 ClawEmail and LobsterMail both give AI agents email. That's where the similarity ends. ClawEmail plugs your agent into Google Workspace. LobsterMail gives your agent its own isolated inbox. They're built for different problems, and the right choice depends on what your agent actually needs to do.
@@ -31,7 +35,7 @@ These products solve fundamentally different problems. ClawEmail answers "how do
 | Setup time | ~60 seconds | 15-30 minutes |
 | Unlimited inboxes | Yes ($9/mo tier) | No (one Google account) |
 | Custom domains | Yes ($9/mo tier) | No (uses Google domain) |
-| Prompt injection scanning | Yes (6 categories) | No |
+| [Prompt injection](/glossary/prompt-injection) scanning | Yes (6 categories) | No |
 | Personal data exposure | None (isolated inbox) | Full Google account |
 
 <Callout type="info">
@@ -125,7 +129,7 @@ Pick the tool that matches the job. If you need the whole reef, ClawEmail covers
     ClawEmail requires manual OAuth configuration and Google account setup, which typically takes 15-30 minutes. LobsterMail takes about 60 seconds because the agent provisions its own inbox without human involvement. See our [60-second setup guide](/blog/openclaw-agent-email-60-seconds).
   </FAQItem>
   <FAQItem question="Can I use a custom domain with ClawEmail?">
-    ClawEmail uses the Google Workspace domain associated with the connected account. If your Workspace is configured with a custom domain, your agent sends from that domain. LobsterMail supports custom domains directly on the $9/month Builder plan with automatic SPF, DKIM, and DMARC configuration. See our [custom domains guide](/blog/custom-domains-agent-email).
+    ClawEmail uses the Google Workspace domain associated with the connected account. If your Workspace is configured with a custom domain, your agent sends from that domain. LobsterMail supports custom domains directly on the $9/month Builder plan with automatic [SPF](/glossary/spf), [DKIM](/glossary/dkim), and [DMARC](/glossary/dmarc) configuration. See our [custom domains guide](/blog/custom-domains-agent-email).
   </FAQItem>
   <FAQItem question="Which is more secure for email specifically?">
     LobsterMail. It gives the agent an isolated inbox with no historical data and scans incoming emails for prompt injection. ClawEmail gives the agent access to an entire Google Workspace account, which includes email history, documents, and calendar events. A compromised agent on ClawEmail has a much larger attack surface.

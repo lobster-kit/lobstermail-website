@@ -1,0 +1,41 @@
+---
+title: "Tool Use"
+shortDefinition: "The ability of an AI model to call external functions, APIs, or services to take actions and retrieve real-time information."
+category: "trending-ai"
+relatedTerms: ["mcp", "structured-output", "agentic-ai"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is Tool Use?
+
+Tool use (also called function calling) is the capability that allows a language model to interact with external systems. Instead of only generating text, a model with tool use can decide to call a function, API, or service when it determines that doing so would help accomplish the task. The model outputs a structured tool call specifying which function to invoke and what arguments to pass. The host application executes the call and returns the result to the model, which then continues its response informed by the real data.
+
+For example, if a user asks "What is the weather in Portland?", a model without tools can only guess based on training data. A model with tools can call a weather API, get the current conditions, and provide an accurate, real-time answer. This simple pattern extends to virtually any external service: databases, email systems, calendars, payment processors, CRMs, and more.
+
+Tool use transforms language models from sophisticated text generators into capable agents that can observe, decide, and act. The model reasons about which tool to use and when, plans multi-step sequences of tool calls, and adapts its approach based on results. This decision-making loop is what makes agentic AI possible.
+
+The tools available to a model are defined by the developer as part of the API request. Each tool has a name, description, and parameter schema. The model uses these descriptions to understand when and how to use each tool, similar to how a developer reads API documentation.
+
+## Why It Matters for AI Agents
+
+Tool use is what separates an AI agent from a chatbot. Without tools, a model can only talk about sending emails. With tools, it can actually send them. An email agent built on LobsterMail uses tool calls to check its inbox, read messages, compose replies, and send them, all driven by the model's reasoning about what actions to take.
+
+The quality of tool definitions directly affects agent reliability. Well-described tools with clear parameter schemas help the model make correct calls. Poorly described tools lead to incorrect arguments, missed calls, or hallucinated tool names. This is why standards like MCP (Model Context Protocol) matter: they provide a consistent way to describe and discover tools across different systems.
+
+In email agent workflows, common tools include: sending messages, searching inbox, retrieving thread history, adding attachments, managing contacts, and checking delivery status. Each tool call is a structured output that the agent runtime executes against the email API. The model never directly accesses the email system; it requests actions through well-defined interfaces.
+
+Tool use also enables agent composability. An agent can use a tool that itself invokes another agent, creating chains of specialized agents that collaborate on complex tasks. An email triage agent might call a "classify intent" tool backed by a specialized model, then call a "draft response" tool backed by another, with each agent doing what it does best.
+
+<FAQ>
+<FAQItem question="How does tool use differ from MCP?">Tool use is the general capability of a model to call external functions. MCP (Model Context Protocol) is a specific open standard that defines how tools, resources, and prompts are described and served to AI models. MCP standardizes tool discovery and invocation across different platforms so tools written once work with any MCP-compatible model.</FAQItem>
+<FAQItem question="Can an AI agent use multiple tools in a single response?">Yes. Most modern AI APIs support parallel tool use, where the model outputs multiple tool calls in a single turn. This is useful when actions are independent, like checking a calendar and looking up a contact simultaneously. The system executes all calls, returns the results, and the model continues with the combined information.</FAQItem>
+<FAQItem question="What tools do email agents typically need?">Common tools for email agents include: send_email, read_email, search_inbox, list_threads, get_attachments, create_draft, add_contact, and check_delivery_status. The exact set depends on the agent's purpose. A simple auto-responder might need only read and send, while a full email management agent needs the complete set.</FAQItem>
+<FAQItem question="How do tool descriptions affect agent reliability?">Tool descriptions are the model's only documentation for understanding when and how to use each tool. Vague or misleading descriptions lead to incorrect tool selection, wrong arguments, or missed tool calls entirely. Writing clear, specific tool descriptions with example inputs is one of the highest-leverage improvements for agent reliability.</FAQItem>
+<FAQItem question="What is the tool use loop in AI agents?">The tool use loop is the cycle where the model reasons about a task, decides to call a tool, the system executes the call, and the result is fed back to the model. The model then reasons about the result and may call another tool or produce a final response. This loop can repeat multiple times per request.</FAQItem>
+<FAQItem question="Can tool use fail, and how should agents handle it?">Yes. Tools can fail due to network errors, invalid arguments, rate limits, or downstream service outages. Well-designed agents handle tool failures gracefully by retrying with corrected arguments, falling back to alternative tools, or informing the user that the action could not be completed.</FAQItem>
+<FAQItem question="How does tool use relate to email infrastructure?">Email infrastructure like LobsterMail exposes email operations as tools that AI agents can call. Instead of the agent managing SMTP connections directly, it calls tools like send_email or search_inbox through a clean API. The infrastructure handles authentication, delivery, and reliability behind the tool interface.</FAQItem>
+<FAQItem question="What is the difference between tool use and function calling?">They refer to the same capability. "Function calling" was the term popularized by OpenAI when they introduced the feature. "Tool use" is the more general term adopted by the broader AI community, including Anthropic. Both describe the model generating structured calls to external functions that the host system executes.</FAQItem>
+<FAQItem question="How many tools can an AI agent have?">There is no hard technical limit, but practical limits exist. Models perform best with 10-30 well-described tools. Beyond that, the model may struggle to select the right tool or may confuse similar tools. If you need more capabilities, consider grouping related functions under a single tool with sub-actions.</FAQItem>
+<FAQItem question="Does tool use increase token costs?">Yes. Tool definitions are included in the prompt as input tokens, and each tool call generates output tokens for the structured call. Multiple rounds of the tool use loop multiply these costs. However, the value of accurate, real-time actions typically outweighs the marginal token cost increase.</FAQItem>
+</FAQ>

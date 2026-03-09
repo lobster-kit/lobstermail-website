@@ -163,7 +163,7 @@ For more on the architectural tradeoffs between webhooks and polling, including 
     Retries use exponential backoff, so the gap between attempts grows with each failure. The first retry is near-immediate; later ones are spaced further apart. The exact timing means 10 failures can represent anywhere from a few minutes to several hours of downtime before the webhook is disabled.
   </FAQItem>
 
-  <FAQItem question="My HMAC signature verification keeps failing even though my secret is correct. What's wrong?">
+  <FAQItem question="My [HMAC signature](/glossary/hmac-signature) verification keeps failing even though my secret is correct. What's wrong?">
     Almost certainly a body parsing issue. You're likely signing a re-serialized JSON object instead of the original raw bytes. See the raw body section above, use `express.raw()` or your framework's equivalent to capture the body before any JSON parsing happens.
   </FAQItem>
 
@@ -188,7 +188,7 @@ For more on the architectural tradeoffs between webhooks and polling, including 
   </FAQItem>
 
   <FAQItem question="What's the right way to handle duplicate webhook deliveries?">
-    Implement idempotency using the `emailId` field in the payload. Store processed IDs and skip re-processing if you've already handled a given `emailId`. LobsterMail retries can deliver the same event more than once if your endpoint acknowledged it slowly or returned a borderline status.
+    Implement [idempotency](/glossary/idempotency) using the `emailId` field in the payload. Store processed IDs and skip re-processing if you've already handled a given `emailId`. LobsterMail retries can deliver the same event more than once if your endpoint acknowledged it slowly or returned a borderline status.
   </FAQItem>
 
   <FAQItem question="My handler returns 200 but deliveries still show as failed in LobsterMail. Why?">

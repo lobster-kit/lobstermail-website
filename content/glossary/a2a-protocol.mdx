@@ -1,0 +1,41 @@
+---
+title: "A2A Protocol (Agent-to-Agent)"
+shortDefinition: "Google's open protocol for AI agents to discover, communicate, and collaborate with each other across different platforms."
+category: "protocols-ecosystem"
+relatedTerms: ["mcp", "acp"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is the A2A Protocol?
+
+The Agent-to-Agent (A2A) protocol is an open standard introduced by Google in April 2025 that defines how AI agents communicate with each other, regardless of which framework or vendor built them. It addresses a fundamental challenge in multi-agent systems: how does an agent built with one platform discover and interact with an agent built on a different platform?
+
+A2A provides three core capabilities. First, agent discovery: agents publish "Agent Cards" that describe their skills, capabilities, and how to communicate with them. Other agents can find and read these cards to determine if a particular agent can help with a task. Second, task management: A2A defines a standard lifecycle for tasks (submitted, working, completed, failed) so agents can hand off work and track its progress. Third, communication: agents exchange messages in a standard format, supporting both synchronous request-response patterns and asynchronous long-running tasks.
+
+The protocol is designed to be complementary to MCP (Model Context Protocol), not a replacement. Where MCP focuses on connecting a model to tools and data sources within a single agent, A2A focuses on communication between separate agents. Think of MCP as how an agent uses its own tools and A2A as how agents talk to each other.
+
+A2A launched with backing from over 50 technology companies and is designed to be framework-agnostic, working with agents built on LangChain, CrewAI, Google ADK, and other platforms.
+
+## Why It Matters for AI Agents
+
+A2A matters because real-world agent workflows increasingly require multiple specialized agents working together. A customer service system might have one agent handling email intake, another managing order lookups, and a third processing refunds. Without a standard protocol, these agents end up tightly coupled to each other's implementations, making the system brittle and hard to extend.
+
+For email-based agent systems, A2A is particularly relevant. Email is already an asynchronous messaging protocol for humans. A2A brings similar standardized messaging to agent-to-agent interactions. An email agent running on LobsterMail could use A2A to delegate tasks to specialized agents: "check this customer's order status," "verify this refund request," or "translate this message to Spanish." Each request follows a standard format, and the email agent can track task completion without knowing the implementation details of the downstream agent.
+
+A2A's agent discovery mechanism also has implications for the agent ecosystem. As more agents publish Agent Cards, it becomes possible for agents to dynamically find and use other agents' capabilities at runtime rather than having every integration hardcoded at development time. This is the infrastructure layer that enables a true agent marketplace where specialized agents offer their services to other agents.
+
+The protocol's support for long-running tasks maps naturally to email workflows, which are inherently asynchronous. An email agent can delegate a task via A2A, continue processing other messages, and handle the result when the downstream agent completes its work.
+
+<FAQ>
+<FAQItem question="What is the difference between A2A and MCP?">MCP connects an AI model to tools and data sources within a single agent system. A2A connects separate, independently built agents to each other. MCP is about what an agent can do. A2A is about how agents collaborate. They are complementary standards that work together in multi-agent architectures.</FAQItem>
+<FAQItem question="Does A2A work with email agents?">Yes. A2A's asynchronous task model aligns well with email workflows. An email agent can use A2A to delegate tasks to other agents (order lookups, translations, approvals) and handle results when they arrive. The standardized message format ensures clean hand-offs between agents regardless of their underlying platforms.</FAQItem>
+<FAQItem question="Is A2A production-ready?">A2A was announced in April 2025 and is in active development with contributions from over 50 companies. The core specification is stable enough for early adopters, but the ecosystem of A2A-compatible agents is still growing. Teams building multi-agent systems today should evaluate A2A alongside other integration patterns.</FAQItem>
+<FAQItem question="What is an Agent Card in A2A?">An Agent Card is a JSON document that an agent publishes to describe its capabilities, supported input/output formats, and communication endpoints. Other agents read Agent Cards to discover what a given agent can do and how to interact with it, enabling dynamic agent-to-agent collaboration without hardcoded integrations.</FAQItem>
+<FAQItem question="How does A2A handle long-running tasks?">A2A defines a task lifecycle with states like submitted, working, completed, and failed. For tasks that take minutes or hours, agents can poll for status updates or receive asynchronous notifications when the task state changes. This maps naturally to email workflows where responses may not be immediate.</FAQItem>
+<FAQItem question="Can A2A work across different AI frameworks?">Yes. A2A is framework-agnostic by design. Agents built with LangChain, CrewAI, Google ADK, AutoGen, or custom frameworks can all communicate using A2A as long as they implement the protocol specification. The protocol defines the message format, not the agent's internal architecture.</FAQItem>
+<FAQItem question="What is the relationship between A2A and agent orchestration?">A2A provides the communication layer between agents but does not dictate how agents are orchestrated. You can use A2A in a centralized orchestrator pattern (one agent delegates to others) or a decentralized pattern (agents discover and collaborate peer-to-peer). The protocol supports both approaches.</FAQItem>
+<FAQItem question="How does A2A discovery work for email-based agents?">An email agent can publish an Agent Card at a well-known URL on its domain, listing email as a supported transport alongside HTTP. Other agents discover this card, see the agent's email capabilities, and send A2A-formatted task requests via email. The receiving agent processes the task and replies with a structured A2A response.</FAQItem>
+<FAQItem question="What security features does A2A include?">A2A supports authentication and authorization at the transport layer. Agents can require credentials before accepting tasks, and the protocol supports OAuth-based identity verification. For email-based A2A interactions, existing email authentication standards like DKIM and SPF provide an additional trust layer.</FAQItem>
+<FAQItem question="How is A2A different from simple API calls between agents?">Direct API calls create tight coupling between specific agents. A2A provides a standardized interface with agent discovery, capability negotiation, and task lifecycle management. This means agents can find and work with new agents at runtime without code changes, and any A2A-compatible agent can be swapped in as a replacement.</FAQItem>
+</FAQ>

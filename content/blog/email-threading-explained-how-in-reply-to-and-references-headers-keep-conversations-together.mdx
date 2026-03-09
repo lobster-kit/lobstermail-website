@@ -157,7 +157,7 @@ There's a less-discussed angle to threading headers: they can be spoofed. If an 
 
 This is called thread hijacking, and it's a real vector for phishing. The attacker's message appears inside a thread the recipient already trusts, making them more likely to click a link or share information.
 
-There's no perfect defense at the header level since `Message-ID` values aren't cryptographically signed in standard email. DKIM signatures cover some headers but not all clients validate them strictly. The practical defense is awareness: if an email appears in a thread but the sender address doesn't match previous participants, treat it with suspicion.
+There's no perfect defense at the header level since `Message-ID` values aren't cryptographically signed in standard email. [DKIM](/glossary/dkim) signatures cover some headers but not all clients validate them strictly. The practical defense is awareness: if an email appears in a thread but the sender address doesn't match previous participants, treat it with suspicion.
 
 For agents processing inbound email, this is another reason to check sender identity independently rather than trusting thread context alone.
 

@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getGuides } from "@/lib/docs";
 import { getAllPosts, getAllTags, getPostsByTag } from "@/lib/blog";
+import { getAllTerms } from "@/lib/glossary";
 
 const BASE_URL = "https://lobstermail.ai";
 const POSTS_PER_PAGE = 12;
@@ -40,6 +41,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${BASE_URL}/terms`,
       changeFrequency: "yearly",
       priority: 0.3,
+    },
+    {
+      url: `${BASE_URL}/glossary`,
+      changeFrequency: "weekly",
+      priority: 0.8,
     },
   ];
 
@@ -91,6 +97,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
+  const glossaryTerms = getAllTerms();
+  const glossaryPages: MetadataRoute.Sitemap = glossaryTerms.map((term) => ({
+    url: `${BASE_URL}/glossary/${term.slug}`,
+    lastModified: term.updatedDate
+      ? new Date(term.updatedDate)
+      : term.date
+        ? new Date(term.date)
+        : undefined,
+    changeFrequency: "monthly",
+    priority: 0.6,
+  }));
+
   return [
     ...staticPages,
     ...blogPaginationPages,
@@ -98,5 +116,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...blogPages,
     ...tagPages,
     ...tagPaginationPages,
+    ...glossaryPages,
   ];
 }

@@ -1,0 +1,62 @@
+---
+title: "Guardrails"
+shortDefinition: "Constraints and safety mechanisms built around AI agents to prevent harmful, off-topic, or unauthorized behavior."
+category: "agent-developer"
+relatedTerms: ["prompt-injection", "hallucination", "human-in-the-loop"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is a guardrail?
+
+Guardrails are safety mechanisms that constrain what an AI agent can do. They define boundaries — what topics the agent can discuss, what actions it can take, what data it can access, and what outputs are acceptable. Guardrails prevent agents from going off-script, leaking sensitive information, or taking harmful actions.
+
+Guardrails operate at multiple levels:
+
+- **Input guardrails** filter and validate what goes into the model. They block prompt injection attempts, strip sensitive data from context, and reject malformed requests.
+- **Output guardrails** check what comes out. They scan responses for hallucinated content, PII leakage, toxic language, or policy violations before the output reaches the user.
+- **Action guardrails** limit what the agent can do. They restrict which tools the agent can call, require approval for high-impact actions, and enforce rate limits.
+- **Behavioral guardrails** are baked into the system prompt. They tell the agent to stay on topic, refuse certain requests, and follow specific response formats.
+
+Guardrails can be rule-based (regex patterns, word lists, explicit policies) or model-based (using a second LLM to evaluate the primary agent's output). Most production systems use both.
+
+## Why it matters for AI agents
+
+When AI agents send emails on behalf of users or organizations, guardrails become non-negotiable. An agent with access to an email API can send messages to anyone, reply to sensitive threads, and forward confidential information. Without guardrails, a hallucinating agent might send incorrect information to a customer, or a prompt-injected agent might forward internal emails to an attacker.
+
+Effective guardrails for email agents include restricting which domains the agent can send to, requiring human approval for messages above a certain sensitivity threshold, limiting the agent to specific email templates for outbound communication, and blocking any response that contains internal company data not already present in the conversation thread.
+
+The challenge is finding the right balance. Too many guardrails and the agent becomes useless — it asks for approval on every action and can't operate autonomously. Too few and you're one bad prompt away from an incident. The best approach is tiered guardrails: let the agent handle routine tasks freely while requiring human-in-the-loop approval for high-stakes actions like sending emails to new contacts or replying to escalated complaints.
+
+<FAQ>
+<FAQItem question="What is the difference between guardrails and prompt engineering?">
+Prompt engineering shapes how the model behaves through instructions. Guardrails are external checks that validate behavior regardless of what the prompt says. A well-engineered prompt tells the agent to be helpful. Guardrails catch it when it tries to do something it shouldn't, even if the prompt was manipulated or the model hallucinated.
+</FAQItem>
+<FAQItem question="Can guardrails prevent all AI failures?">
+No. Guardrails reduce risk but can't eliminate it entirely. A sufficiently creative prompt injection might bypass input filters. A subtle hallucination might pass output validation. Guardrails are one layer in a defense-in-depth strategy that also includes monitoring, logging, human review, and incident response plans.
+</FAQItem>
+<FAQItem question="How do guardrails affect agent performance?">
+Guardrails add latency and cost. Input validation runs before inference, output scanning runs after, and action restrictions require additional checks during tool use. For email agents processing high volumes, guardrails need to be fast. Rule-based checks (regex, allowlists) add milliseconds. Model-based checks (running a second LLM) add seconds and double inference costs for checked messages.
+</FAQItem>
+<FAQItem question="What guardrails should an email-sending AI agent have?">
+At minimum: domain allowlists restricting who the agent can email, rate limits on sends per hour, content scanning for PII leakage, template enforcement for outbound messages, and human approval gates for emails to new contacts or sensitive threads. The specific set depends on your risk tolerance.
+</FAQItem>
+<FAQItem question="What are input guardrails vs output guardrails?">
+Input guardrails filter what goes into the model, blocking prompt injections, stripping sensitive data, and validating request formats. Output guardrails check what comes out, scanning for hallucinations, PII, policy violations, and toxic content before the response reaches users. Both layers are needed for defense in depth.
+</FAQItem>
+<FAQItem question="How do you implement guardrails without slowing down the agent?">
+Use fast rule-based checks (regex, allowlists, format validation) for the majority of validations. Reserve expensive model-based checks for high-risk actions like sending external emails or accessing sensitive data. Async logging and monitoring can run in the background without blocking the agent's main workflow.
+</FAQItem>
+<FAQItem question="What is a model-based guardrail?">
+A model-based guardrail uses a second LLM to evaluate the primary agent's output. For example, a classifier model might check whether a response contains hallucinated information, violates content policies, or leaks confidential data. These are more flexible than rule-based checks but add latency and cost.
+</FAQItem>
+<FAQItem question="How do guardrails protect against prompt injection?">
+Input guardrails scan incoming content for patterns that look like prompt injection attempts, such as instructions embedded in email bodies or user messages. They can strip suspicious content, flag it for review, or reject the request entirely. No single technique catches all injections, so layered detection is important.
+</FAQItem>
+<FAQItem question="Should guardrails be configurable per agent or global?">
+Both. Global guardrails enforce organization-wide policies like PII protection and rate limits. Per-agent guardrails let you tune restrictions based on each agent's role and risk level. A customer support agent might have stricter content rules than an internal summarization agent.
+</FAQItem>
+<FAQItem question="How do you test whether your guardrails are working?">
+Run adversarial testing with known-bad inputs: prompt injection attempts, PII-containing content, out-of-scope requests, and edge cases. Track how often each guardrail fires in production to identify gaps. Red-team your agent regularly to find bypasses before they are exploited.
+</FAQItem>
+</FAQ>

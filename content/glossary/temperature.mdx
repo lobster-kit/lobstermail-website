@@ -1,0 +1,65 @@
+---
+title: "Temperature"
+shortDefinition: "A parameter that controls the randomness of an LLM's output, where lower values produce more predictable responses and higher values produce more creative ones."
+category: "trending-ai"
+relatedTerms: ["inference", "tokens"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is temperature?
+
+Temperature is a parameter you set when calling an LLM API that controls how random or deterministic the model's output is. It's a number, typically between 0 and 2, that adjusts the probability distribution the model uses to pick each next token.
+
+At **temperature 0**, the model always picks the most probable next token. Output is highly deterministic — running the same prompt twice will produce very similar (often identical) responses. The model plays it safe, sticking to the most likely completions.
+
+At **temperature 1** (the default for most models), the model samples from the full probability distribution. Less likely tokens have a real chance of being selected, producing more varied and creative output.
+
+At **temperatures above 1**, the distribution flattens further, making unlikely tokens almost as probable as likely ones. Output becomes increasingly random, creative, and sometimes incoherent.
+
+Technically, temperature works by dividing the model's logits (raw prediction scores) by the temperature value before applying the softmax function. A lower divisor sharpens the distribution. A higher divisor flattens it.
+
+## Why it matters for AI agents
+
+Temperature is one of the most impactful parameters for agent behavior, and getting it wrong causes real problems.
+
+For email agents, temperature should almost always be low — typically between 0 and 0.3. When an agent drafts a customer support reply, you want consistent, accurate, on-topic responses. A high temperature might produce a creative response one time and an off-brand, hallucination-filled response the next. Consistency matters when your agent represents your organization in written communication.
+
+There are specific tasks where slightly higher temperatures help. Generating subject lines, brainstorming email campaign angles, or drafting marketing copy can benefit from temperature 0.5-0.7 to produce more varied options. But the core agent logic — classification, routing, extraction, decision-making — should run at low temperature.
+
+A common pattern for email agents is using different temperatures for different stages of a workflow. The classification step (is this a support request, sales inquiry, or spam?) runs at temperature 0 for maximum reliability. The response drafting step runs at temperature 0.3 for slight variation while staying coherent. The subject line generation step runs at temperature 0.7 for creativity.
+
+Temperature interacts with other sampling parameters like top_p and top_k. In practice, you should adjust one at a time and test the results rather than changing multiple parameters simultaneously.
+
+<FAQ>
+<FAQItem question="What temperature should I use for AI agents?">
+For most agent tasks — classification, extraction, routing, and structured responses — use temperature 0 to 0.3. For creative tasks like drafting marketing copy or generating alternatives, use 0.5 to 0.7. Avoid temperatures above 1.0 for production agents, as output becomes unpredictable and may include hallucinations.
+</FAQItem>
+<FAQItem question="Does temperature 0 always produce the same output?">
+Nearly, but not exactly. Temperature 0 is deterministic in theory, but implementation details like floating-point arithmetic, batching, and GPU parallelism can introduce minor variations across runs. For practical purposes, temperature 0 produces highly consistent output, but don't rely on exact character-for-character reproducibility.
+</FAQItem>
+<FAQItem question="What is the difference between temperature and top_p?">
+Both control randomness, but differently. Temperature adjusts the sharpness of the entire probability distribution. Top_p (nucleus sampling) cuts off the distribution at a cumulative probability threshold — only tokens within the top p% of probability are considered. Most practitioners adjust one or the other, not both simultaneously.
+</FAQItem>
+<FAQItem question="What temperature should email agents use for drafting replies?">
+Email reply drafting works best at temperature 0.2 to 0.4. This provides slight variation to avoid robotic-sounding responses while keeping the tone consistent and on-brand. Lower temperatures risk sounding formulaic; higher temperatures risk off-brand or factually inconsistent replies.
+</FAQItem>
+<FAQItem question="Does higher temperature increase hallucination?">
+Yes. Higher temperatures make the model more likely to select low-probability tokens, which increases the chance of generating plausible-sounding but incorrect information. For agent tasks that require factual accuracy, like answering customer questions or extracting data from emails, keep temperature low.
+</FAQItem>
+<FAQItem question="Can you use different temperatures for different agent tasks?">
+Yes, and this is a recommended practice. Use temperature 0 for classification and data extraction, 0.2-0.3 for response drafting, and 0.5-0.7 for creative tasks like subject line generation. This gives you reliability where it matters and variety where it helps.
+</FAQItem>
+<FAQItem question="What happens if you set temperature above 1.0?">
+Temperatures above 1.0 flatten the probability distribution, making unlikely tokens nearly as probable as likely ones. Output becomes increasingly random, often producing incoherent or nonsensical text. There is almost no production use case for temperatures above 1.0 in agent systems.
+</FAQItem>
+<FAQItem question="How does temperature affect token costs?">
+Temperature itself doesn't change token costs directly. However, higher temperatures tend to produce longer, more meandering outputs because the model is more likely to go on tangents. Lower temperatures produce more focused, concise responses, which can indirectly reduce output token costs.
+</FAQItem>
+<FAQItem question="Should temperature be set per request or globally for an agent?">
+It depends on the agent's architecture. If the agent performs a single task type (like email classification), a global setting works fine. If the agent handles multiple task types in a pipeline, set temperature per request based on the specific task. Most agent frameworks support per-call temperature configuration.
+</FAQItem>
+<FAQItem question="What is the default temperature for most AI models?">
+Most AI APIs default to temperature 1.0, which provides a balance between coherence and variety. For agent applications, this default is typically too high. Developers should explicitly set a lower temperature rather than relying on the default, especially for tasks requiring consistency and accuracy.
+</FAQItem>
+</FAQ>

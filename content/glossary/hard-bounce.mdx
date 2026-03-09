@@ -1,0 +1,66 @@
+---
+title: "Hard Bounce"
+shortDefinition: "A permanent email delivery failure caused by an invalid address, non-existent domain, or blocked recipient."
+category: "email-infrastructure"
+relatedTerms: ["soft-bounce", "sender-reputation", "suppression-list"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is a Hard Bounce?
+
+A hard bounce is a permanent email delivery failure. The receiving mail server has rejected the email with a definitive error, meaning retrying delivery won't help. The email will never be delivered to that address.
+
+Common causes of hard bounces:
+
+- **Invalid email address:** The recipient address doesn't exist (e.g., a typo like `usre@example.com`)
+- **Non-existent domain:** The domain in the email address has no MX records or doesn't exist at all
+- **Blocked sender:** The receiving server has permanently blocked your sending domain or IP
+- **Mailbox disabled:** The recipient's account has been deactivated or deleted
+
+Hard bounces return SMTP error codes in the 5xx range, such as `550 User not found` or `550 Mailbox unavailable`. These codes signal a permanent failure, distinguishing hard bounces from temporary soft bounces (4xx codes).
+
+Every hard bounce should trigger an immediate removal of that address from your sending list. Continuing to send to addresses that hard bounce wastes resources and damages your sender reputation. Email providers track your bounce rate and penalize senders who repeatedly hit invalid addresses.
+
+## Why it matters for AI agents
+
+AI agents are particularly vulnerable to hard bounce damage because they can generate and send to email addresses programmatically. An agent that scrapes contact forms, processes user signups, or pulls addresses from external systems might encounter invalid addresses at a much higher rate than a human sender who manually maintains a contact list.
+
+A single batch send to a list with 10% invalid addresses can push an agent's bounce rate above the threshold that triggers reputation penalties. Gmail, for example, starts flagging senders with hard bounce rates above 2%.
+
+Agents need automated hard bounce handling built into their sending pipeline. When a hard bounce occurs, the agent should immediately add the address to a suppression list and never attempt to send to it again. This isn't optional — it's table stakes for maintaining deliverability.
+
+For agents processing inbound email, hard bounces on reply addresses are a signal too. If an agent tries to respond to a customer email and gets a hard bounce, that likely means the sender address was spoofed or the account no longer exists. The agent should log this and move on rather than retrying.
+
+<FAQ>
+<FAQItem question="What is a hard bounce in email?">
+A hard bounce is a permanent email delivery failure. It means the email cannot be delivered to the recipient address and retrying won't change the result. Common causes include invalid email addresses, non-existent domains, and permanently blocked senders.
+</FAQItem>
+<FAQItem question="How should AI agents handle hard bounces?">
+AI agents should immediately add hard-bounced addresses to a suppression list and never send to them again. Agents should also monitor their overall hard bounce rate and alert if it exceeds 1-2%, as high bounce rates damage sender reputation and can lead to sending restrictions.
+</FAQItem>
+<FAQItem question="What is the difference between a hard bounce and a soft bounce?">
+A hard bounce is a permanent delivery failure (invalid address, non-existent domain) that will never succeed. A soft bounce is a temporary failure (full mailbox, server temporarily unavailable) that may succeed if retried later. Hard bounces require immediate address removal; soft bounces can be retried.
+</FAQItem>
+<FAQItem question="What SMTP error codes indicate a hard bounce?">
+Hard bounces return 5xx SMTP status codes. Common ones include 550 (user not found), 551 (user not local), 552 (mailbox full, sometimes treated as soft), and 553 (mailbox name invalid). The specific code helps diagnose whether the issue is an invalid address, a blocked sender, or a policy rejection.
+</FAQItem>
+<FAQItem question="What is an acceptable hard bounce rate?">
+Most email providers consider a hard bounce rate above 2% to be problematic. Gmail specifically flags senders exceeding this threshold. For AI agents, aim for well under 1% by validating addresses before sending and maintaining an up-to-date suppression list.
+</FAQItem>
+<FAQItem question="What is a suppression list and why do agents need one?">
+A suppression list is a record of email addresses that should never be sent to again, typically populated from hard bounce events and unsubscribe requests. AI agents must check every outbound email against this list before sending to avoid repeated bounces that damage sender reputation.
+</FAQItem>
+<FAQItem question="How do hard bounces affect sender reputation?">
+High hard bounce rates signal to email providers that the sender is using a low-quality or unverified contact list. This degrades sender reputation, causing more emails to land in spam or be rejected outright. Repeated sends to hard-bounced addresses can result in the sending IP or domain being blocklisted.
+</FAQItem>
+<FAQItem question="Can you validate email addresses before sending to prevent hard bounces?">
+Yes. Syntax validation catches malformed addresses, DNS lookups confirm the domain has MX records, and email verification APIs can check whether a specific mailbox exists without sending a full message. Pre-send validation significantly reduces hard bounce rates for AI agents.
+</FAQItem>
+<FAQItem question="Should an agent retry after a hard bounce?">
+No. Hard bounces are permanent failures and should never be retried. Retrying wastes resources and further damages sender reputation. The address should be added to a suppression list immediately. Only soft bounces (4xx codes) warrant retry attempts.
+</FAQItem>
+<FAQItem question="How do hard bounces on replies affect inbound email agents?">
+When an agent tries to reply to an incoming email and gets a hard bounce, it usually means the sender address was spoofed, the account was deleted, or the mailbox has been disabled. The agent should log the failure, skip the reply, and flag the original message for review rather than retrying.
+</FAQItem>
+</FAQ>

@@ -1,0 +1,67 @@
+---
+title: "Context Engineering"
+shortDefinition: "The discipline of designing and managing everything that flows into an AI model's context window — not just the prompt, but instructions, state, tool definitions, memory, and output constraints."
+category: "trending-ai"
+relatedTerms: ["context-window", "prompt-injection", "rag"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is context engineering?
+
+Context engineering is the practice of controlling the full information environment that an LLM sees when it generates a response. While prompt engineering focuses on how you phrase a question, context engineering focuses on what the model knows when it answers.
+
+A well-engineered context includes:
+
+- **System instructions** that define the model's role and constraints
+- **Relevant state** pulled from databases, APIs, or prior conversations
+- **Tool definitions** that tell the model what actions it can take
+- **Memory** selected from past interactions or external knowledge bases
+- **Output shaping** via structured output schemas or examples
+
+## Why it matters for AI agents
+
+Agents that send and receive email need carefully engineered context. When an agent reads an incoming email, the context determines whether it responds accurately or hallucinates. The agent needs the right customer history, product knowledge, and conversation thread loaded into its context window before it can draft a useful reply.
+
+Without proper context engineering, an agent might:
+
+- Respond to a support email without knowing the customer's plan or history
+- Send a follow-up that contradicts a previous message in the thread
+- Miss critical details buried in a long email chain
+
+## Context engineering vs prompt engineering
+
+Prompt engineering is a subset of context engineering. A prompt is what you type. Context is everything the model sees — including data the user never wrote. As agent systems grow more complex, the engineering challenge shifts from writing better prompts to building better pipelines that assemble the right context automatically.
+
+<FAQ>
+<FAQItem question="What is context engineering in AI?">
+Context engineering is the discipline of designing and managing everything that flows into an AI model's context window. This includes system instructions, retrieved documents, tool definitions, conversation history, and output constraints — not just the user's prompt.
+</FAQItem>
+<FAQItem question="How is context engineering different from prompt engineering?">
+Prompt engineering focuses on how you phrase a question to an LLM. Context engineering is broader — it controls the entire information environment the model sees, including data the user never wrote. Prompt engineering is a subset of context engineering.
+</FAQItem>
+<FAQItem question="Why does context engineering matter for AI agents?">
+AI agents need the right information loaded into their context window to make good decisions. An email agent, for example, needs customer history, product knowledge, and the full conversation thread to draft accurate replies. Context engineering ensures agents have what they need.
+</FAQItem>
+<FAQItem question="What are the components of a well-engineered context?">
+A complete context typically includes system instructions defining the agent's role, relevant state from databases or APIs, tool definitions describing available actions, selected memory from past interactions, retrieved documents from knowledge bases, and output format constraints. Each component is carefully chosen and ordered for maximum relevance.
+</FAQItem>
+<FAQItem question="How does context engineering improve email agent accuracy?">
+By loading the right customer history, product documentation, and conversation thread into the context window before the agent drafts a reply. Without this context, the agent guesses or hallucinates. With it, the agent grounds its responses in facts specific to the customer and situation.
+</FAQItem>
+<FAQItem question="What is the biggest mistake in context engineering?">
+Stuffing too much irrelevant information into the context window. More context is not always better. Irrelevant content dilutes the model's attention and can lead to worse responses than a smaller, focused context. The goal is maximum signal-to-noise ratio, not maximum token count.
+</FAQItem>
+<FAQItem question="How does RAG relate to context engineering?">
+Retrieval-augmented generation (RAG) is a context engineering technique that dynamically retrieves relevant documents and inserts them into the context window at inference time. For email agents, RAG pulls the most relevant knowledge base articles or past conversations instead of loading everything, keeping the context focused and within token limits.
+</FAQItem>
+<FAQItem question="How do you test context engineering for an AI agent?">
+Create a benchmark set of inputs with known correct outputs. Test the agent with different context configurations — varying what information is included, how it is ordered, and how much is provided. Measure accuracy, relevance, and hallucination rate across configurations to find the optimal context design for your use case.
+</FAQItem>
+<FAQItem question="Does the order of information in context matter?">
+Yes. Models tend to pay more attention to information at the beginning and end of the context window. Place the most important information — like the customer's current email and the agent's instructions — at the edges, and put supplementary context like knowledge base excerpts in the middle.
+</FAQItem>
+<FAQItem question="How does context engineering handle multi-turn email conversations?">
+For long email threads, context engineering involves summarizing older messages, keeping recent messages in full, extracting key facts into structured state, and selectively retrieving relevant past interactions. The goal is to preserve essential thread context without exceeding the model's token limit or diluting attention with stale information.
+</FAQItem>
+</FAQ>

@@ -96,7 +96,7 @@ Tools like Structurely and Lindy AI track signals like: how often a buyer opens 
 
 A buyer who hasn't opened an alert in three weeks doesn't need more emails at the same frequency. The agent should slow down, change the subject line approach, or send a "here's what you missed" digest instead. Conversely, a buyer who clicked on four listings in the same zip code yesterday is probably heating up. The agent should prioritize speed and send alerts within minutes of a matching listing going live.
 
-This is where [webhooks vs. polling](/blog/webhooks-vs-polling-email) becomes a real architectural decision. If your agent polls for new listings every 30 minutes, a hot buyer might see a listing hours after it went live. With webhook-based delivery, the agent gets notified instantly and can fire off an alert before competing agents even know the listing exists.
+This is where [webhooks vs. polling](/blog/webhooks-vs-polling-email) becomes a real architectural decision. If your agent polls for new listings every 30 minutes, a hot buyer might see a listing hours after it went live. With [webhook](/glossary/webhook)-based delivery, the agent gets notified instantly and can fire off an alert before competing agents even know the listing exists.
 
 ## Compliance isn't optional
 
@@ -158,7 +158,7 @@ The agents that win in real estate over the next year won't be the ones with the
   </FAQItem>
 
   <FAQItem question="What email deliverability best practices apply to automated AI listing alert campaigns?">
-    Authenticate your sending domain with SPF, DKIM, and DMARC. Send from a consistent address. Include a working unsubscribe link in every email. Avoid sending too many alerts to unengaged buyers, as low open rates damage sender reputation over time.
+    Authenticate your sending domain with [SPF](/glossary/spf), [DKIM](/glossary/dkim), and [DMARC](/glossary/dmarc). Send from a consistent address. Include a working unsubscribe link in every email. Avoid sending too many alerts to unengaged buyers, as low open rates damage sender reputation over time.
   </FAQItem>
 
   <FAQItem question="Are there compliance requirements for sending automated listing alert emails to buyers?">

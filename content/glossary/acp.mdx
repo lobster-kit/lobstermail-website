@@ -1,0 +1,66 @@
+---
+title: "ACP (Agent Communication Protocol)"
+shortDefinition: "An open protocol that standardizes how AI agents discover each other and exchange structured messages."
+category: "protocols-ecosystem"
+relatedTerms: ["mcp", "a2a-protocol"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is ACP?
+
+ACP (Agent Communication Protocol) is an open protocol for agent-to-agent communication. It defines how AI agents discover each other, negotiate capabilities, and exchange structured messages in a standardized way.
+
+The protocol addresses a core problem in multi-agent systems: agents built by different teams, using different frameworks, running on different infrastructure need a common language to work together. Without a standard protocol, every agent-to-agent integration requires custom code.
+
+ACP defines several key concepts:
+
+- **Agent discovery:** How agents find and identify other agents they can communicate with
+- **Capability negotiation:** How agents declare what they can do and query what other agents offer
+- **Message format:** A structured envelope for requests, responses, and event notifications
+- **Transport layer:** How messages are physically delivered between agents (HTTP, WebSocket, etc.)
+
+ACP is transport-agnostic by design. Agents can communicate over HTTP APIs, message queues, WebSockets, or any other transport — including email. The protocol defines the message structure and interaction patterns, not the delivery mechanism.
+
+## Why it matters for AI agents
+
+ACP gives agents a standardized way to collaborate without requiring every pair of agents to build custom integrations. An agent that implements ACP can communicate with any other ACP-compatible agent, regardless of what framework or language it was built with.
+
+Email is one of the most practical transport layers for ACP messages. Unlike HTTP-based protocols that require both agents to be online simultaneously, email is asynchronous and store-and-forward. An agent can send an ACP message via email, and the receiving agent processes it whenever it comes online. This makes email-based ACP particularly useful for agents that run periodically rather than continuously.
+
+For agent developers building on LobsterMail, email provides a ready-made transport for agent-to-agent communication. Each agent gets its own inbox, messages are authenticated via DKIM and SPF, and the infrastructure handles delivery, retries, and bounce management. The agent only needs to implement ACP message parsing and response logic on top of LobsterMail's email primitives.
+
+ACP complements protocols like MCP (Model Context Protocol), which focuses on connecting agents to tools and data sources. Where MCP is about agent-to-tool communication, ACP is about agent-to-agent communication. A well-built agent system uses both.
+
+<FAQ>
+<FAQItem question="What is the Agent Communication Protocol?">
+ACP is an open protocol that standardizes how AI agents communicate with each other. It defines message formats, discovery mechanisms, and capability negotiation so agents built by different teams can interoperate without custom integration code.
+</FAQItem>
+<FAQItem question="How does ACP relate to email?">
+Email can serve as a transport layer for ACP messages. Because email is asynchronous and store-and-forward, it's well-suited for agent-to-agent communication where both agents don't need to be online simultaneously. Agents can send and receive ACP-structured messages through their email inboxes.
+</FAQItem>
+<FAQItem question="What is the difference between ACP and MCP?">
+ACP focuses on agent-to-agent communication — how agents discover each other, negotiate capabilities, and exchange messages. MCP focuses on agent-to-tool communication — how agents connect to data sources, APIs, and external tools. They serve complementary roles in agent systems.
+</FAQItem>
+<FAQItem question="How does ACP handle agent discovery?">
+ACP defines a discovery mechanism where agents advertise their capabilities and communication endpoints. Other agents query these advertisements to find agents that can handle specific tasks. This eliminates the need for hardcoded agent-to-agent connections and enables dynamic collaboration.
+</FAQItem>
+<FAQItem question="What is capability negotiation in ACP?">
+Capability negotiation is the process where two agents exchange information about what they can do before starting a task. The requesting agent describes what it needs, the receiving agent confirms whether it can fulfill the request, and they agree on message formats and expected outputs before work begins.
+</FAQItem>
+<FAQItem question="Can ACP work with agents built on different frameworks?">
+Yes. ACP is framework-agnostic and transport-agnostic. Agents built with any framework or language can communicate via ACP as long as they implement the protocol's message format and interaction patterns. This interoperability is the protocol's core purpose.
+</FAQItem>
+<FAQItem question="How does ACP compare to the A2A protocol?">
+Both ACP and A2A address agent-to-agent communication, but they differ in origin, governance, and ecosystem. A2A was introduced by Google with backing from 50+ companies. ACP emerged from the open-source agent community. The protocols share similar goals around standardized agent interoperability.
+</FAQItem>
+<FAQItem question="What transport layers does ACP support?">
+ACP is transport-agnostic and can work over HTTP, WebSockets, message queues, or email. Email is particularly useful because it provides built-in authentication (DKIM, SPF), asynchronous delivery, and store-and-forward semantics that match how many agents operate.
+</FAQItem>
+<FAQItem question="Why do multi-agent systems need a communication protocol?">
+Without a standard protocol, every pair of agents needs custom integration code. A system with 10 agents could require up to 45 custom integrations. A standard protocol like ACP lets each agent implement one interface and communicate with any compatible agent, reducing integration complexity from quadratic to linear.
+</FAQItem>
+<FAQItem question="How does ACP handle errors and retries?">
+ACP includes standardized error responses and status codes so agents can understand why a request failed and decide whether to retry. Combined with email's built-in retry and bounce handling, ACP over email provides a resilient communication layer where failed messages are not silently lost.
+</FAQItem>
+</FAQ>

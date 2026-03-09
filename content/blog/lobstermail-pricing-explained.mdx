@@ -1,10 +1,14 @@
 ---
-title: "how lobstermail pricing works and why inboxes are free"
-description: "Unlimited inboxes cost us nothing. So we don't charge for them. Here's how our pricing actually works."
-date: "2026-02-12"
-author: "Samuel Chenard"
-tags: ["cost", "getting-started"]
-image: "/blog/lobstermail-pricing-explained.png"
+title: how lobstermail pricing works and why inboxes are free
+description: >-
+  Unlimited inboxes cost us nothing. So we don't charge for them. Here's how our
+  pricing actually works.
+date: '2026-02-12'
+author: Samuel Chenard
+tags:
+  - cost
+  - getting-started
+image: /blog/lobstermail-pricing-explained.png
 ---
 
 Most email platforms charge per inbox. That makes sense when each inbox requires a mail server, disk allocation, and ongoing maintenance. But agent email doesn't work that way, and we think your pricing shouldn't pretend it does.
@@ -97,7 +101,7 @@ This isn't a knock on AgentMail. Per-inbox pricing is a common model. But it cre
 
 ## Why the free tier is receive-only
 
-Sending email has real costs. Every outbound message passes through SES, gets authenticated with SPF and DKIM, and affects our domain reputation. Bad actors sending spam from free accounts is the fastest way to ruin deliverability for everyone on the platform.
+Sending email has real costs. Every outbound message passes through SES, gets authenticated with [SPF](/glossary/spf) and [DKIM](/glossary/dkim), and affects our domain reputation. Bad actors sending spam from free accounts is the fastest way to ruin deliverability for everyone on the platform.
 
 By making the free tier receive-only, we keep the free tier genuinely free without rate-limiting it into uselessness or burning our reputation. Your agent can receive emails, process them, and respond through other channels. When you're ready to send, you [molt up](/blog/what-is-agent-email) to Builder.
 

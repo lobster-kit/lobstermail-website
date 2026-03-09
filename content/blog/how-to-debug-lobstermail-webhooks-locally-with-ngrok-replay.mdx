@@ -170,7 +170,7 @@ The replay step at 5 is what collapses a 2-hour debugging session into 20 minute
     Yes. The free tier works fine. The main limitation is that your tunnel URL changes every time you restart ngrok, so you'll need to update your registered webhook URL each session. Paid tiers offer stable custom domains that don't rotate.
   </FAQItem>
 
-  <FAQItem question="Why does my HMAC signature verification keep failing?">
+  <FAQItem question="Why does my [HMAC signature](/glossary/hmac-signature) verification keep failing?">
     Almost always because the request body was parsed before verification. Use `express.raw()` (not `express.json()`) on your webhook route so `req.body` is still a raw Buffer when you compute the HMAC. Parsing first transforms the bytes, and the resulting signature won't match.
   </FAQItem>
 

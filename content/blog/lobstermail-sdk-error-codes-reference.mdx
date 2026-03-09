@@ -73,7 +73,7 @@ The token exists but the API rejected it. Common causes: the token was revoked f
 
 **HTTP status:** 403
 
-You passed a test token to a live endpoint or vice versa. Test tokens start with `lm_sk_test_`, live tokens with `lm_sk_live_`. They're not interchangeable.
+You passed a test token to a live endpoint or vice versa. Test [tokens](/glossary/tokens) start with `lm_sk_test_`, live tokens with `lm_sk_live_`. They're not interchangeable.
 
 **Fix:** Check which token prefix you're using and confirm it matches the environment. In CI/CD, this often surfaces when a local dev token gets committed or copied into production config.
 
@@ -213,7 +213,7 @@ if (err.code === 'LM_VALIDATION_ERROR') {
 
 The SDK couldn't reach the API at all. DNS failure, timeout before connection, or the local network is down.
 
-**Fix:** Retry with exponential backoff. Most agent frameworks have retry middleware; if yours doesn't, wrap SDK calls in a simple retry loop with a max attempt count.
+**Fix:** Retry with [exponential backoff](/glossary/exponential-backoff). Most agent frameworks have retry middleware; if yours doesn't, wrap SDK calls in a simple retry loop with a max attempt count.
 
 ### `LM_API_UNAVAILABLE`
 

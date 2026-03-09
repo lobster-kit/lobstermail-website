@@ -1,0 +1,66 @@
+---
+title: "Episodic Memory"
+shortDefinition: "A memory system that stores and retrieves specific past experiences or interactions, giving an AI agent the ability to recall what happened in previous sessions."
+category: "agent-developer"
+relatedTerms: ["stateless-agent", "rag", "context-window"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is episodic memory?
+
+Episodic memory is a memory system for AI agents that stores records of specific past events and interactions. Named after the human cognitive concept, it lets an agent recall what happened during a particular conversation, task, or session — not just general knowledge, but specific experiences.
+
+In human cognition, episodic memory is what lets you remember that you had coffee with a friend last Tuesday and discussed their job search. It's different from semantic memory (knowing that coffee is a beverage) or procedural memory (knowing how to make coffee). For AI agents, the distinction works the same way.
+
+An episodic memory system typically stores:
+
+- **Event records** with timestamps, participants, and context
+- **Interaction summaries** from previous conversations
+- **Task outcomes** — what was attempted and whether it succeeded
+- **User preferences** observed during past interactions
+
+When the agent processes a new request, it queries episodic memory for relevant past experiences and includes them in its context. This gives the agent continuity across sessions without requiring the user to repeat background information every time.
+
+## Why it matters for AI agents
+
+LLMs are fundamentally stateless. Once a conversation ends, the model retains nothing. Episodic memory is the bridge that turns a stateless model into an agent that feels persistent and aware.
+
+For email agents, episodic memory is especially valuable. An agent managing a customer support inbox needs to remember that this particular customer had a billing issue last month that was resolved with a credit. Without episodic memory, the agent would treat every new message from that customer as a first interaction, missing critical context and potentially re-explaining things the customer already knows.
+
+Implementation usually works through RAG (retrieval-augmented generation). Past interactions are embedded as vectors and stored in a database. When a new email arrives, the agent searches its episodic memory for relevant history — previous threads with this sender, similar issues, past resolutions — and loads that context into the prompt before generating a response.
+
+The key constraint is the context window. An agent can't load its entire history into every prompt. Episodic memory systems need effective retrieval: surfacing the most relevant past experiences while staying within token limits. Poor retrieval means the agent either misses important context or wastes tokens on irrelevant history.
+
+<FAQ>
+<FAQItem question="How is episodic memory different from RAG?">
+RAG is the mechanism — retrieving relevant documents and injecting them into context. Episodic memory is a specific application of RAG where the stored documents are records of the agent's own past interactions and experiences, rather than external knowledge bases. You use RAG to implement episodic memory, but not all RAG systems are episodic memory.
+</FAQItem>
+<FAQItem question="Do agents need episodic memory?">
+Not all agents do. Stateless agents that perform one-shot tasks (classify this email, extract this invoice number) work fine without it. Episodic memory matters when the agent has ongoing relationships — with users, customers, or other agents — where past interactions inform how to handle current ones.
+</FAQItem>
+<FAQItem question="How do you store episodic memories efficiently?">
+Most implementations use vector databases to store embedded summaries of past interactions. When the agent needs context, it performs a similarity search to find relevant memories. Summaries work better than raw transcripts because they compress information, fitting more history into the context window. Periodic memory consolidation — merging related episodes into higher-level summaries — further improves efficiency.
+</FAQItem>
+<FAQItem question="What is the difference between episodic and semantic memory in AI?">
+Episodic memory stores specific past events and interactions (what happened with this customer last week). Semantic memory stores general knowledge and facts (product specs, policies, FAQs). Agents typically need both: semantic memory for domain knowledge and episodic memory for relationship context.
+</FAQItem>
+<FAQItem question="How does episodic memory help email agents?">
+An email agent with episodic memory can recall previous conversations with a sender, remember how similar issues were resolved, and avoid repeating information the recipient already received. This makes responses more contextual and reduces the frustrating experience of being treated as a stranger in every interaction.
+</FAQItem>
+<FAQItem question="What are the context window limits for episodic memory?">
+Context windows range from 8K to 200K+ tokens depending on the model. Episodic memory must fit relevant past experiences within this limit alongside the current prompt. Effective retrieval and summarization are necessary to maximize the value of each token spent on historical context.
+</FAQItem>
+<FAQItem question="How do you handle memory consolidation for agents?">
+Memory consolidation merges multiple related episodic memories into higher-level summaries over time. For example, ten separate support interactions with the same customer might be consolidated into a single summary capturing key issues, preferences, and outcomes. This reduces storage and retrieval costs while preserving the most useful information.
+</FAQItem>
+<FAQItem question="Can episodic memory introduce bias in agent behavior?">
+Yes. If an agent's episodic memory contains negative past interactions with a user or category, it may respond differently in future interactions based on that history. Periodic review and pruning of episodic memories can help prevent outdated or unrepresentative experiences from skewing agent behavior.
+</FAQItem>
+<FAQItem question="What happens when episodic memory gets too large?">
+As episodic memory grows, retrieval becomes slower and less precise. Strategies to manage this include time-based decay (older memories are summarized or removed), relevance-based pruning (low-value memories are dropped), and hierarchical summarization (detailed memories are rolled up into broader summaries).
+</FAQItem>
+<FAQItem question="How is episodic memory implemented in multi-agent systems?">
+In multi-agent systems, each agent can maintain its own episodic memory, or agents can share a common memory store. Shared episodic memory lets agents learn from each other's interactions, but it requires careful access control to prevent one agent from acting on another agent's context inappropriately.
+</FAQItem>
+</FAQ>

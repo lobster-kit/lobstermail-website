@@ -1,10 +1,15 @@
 ---
-title: "running 50 agent inboxes without losing your mind (or your budget)"
-description: "Scaling from a few agent inboxes to fifty hits a pricing dead zone and an ops nightmare. Here's the cost math and how to stay sane."
-date: "2026-02-21"
-author: "Samuel Chenard"
-tags: ["cost", "email", "infrastructure"]
-image: "/blog/running-50-agent-inboxes.png"
+title: running 50 agent inboxes without losing your mind (or your budget)
+description: >-
+  Scaling from a few agent inboxes to fifty hits a pricing dead zone and an ops
+  nightmare. Here's the cost math and how to stay sane.
+date: '2026-02-21'
+author: Samuel Chenard
+tags:
+  - cost
+  - email
+  - infrastructure
+image: /blog/running-50-agent-inboxes.png
 ---
 
 You started with three agents. A support bot, a lead qualifier, and a scheduling assistant. Each one has its own inbox. Everything is manageable. You can see what each agent is doing, the costs are reasonable, and life is good.
@@ -138,7 +143,7 @@ If you're approaching this scale, start with the [pricing breakdown](/blog/lobst
     $200/month. AgentMail's Developer plan caps at 10 inboxes for $20/month. There's no middle tier, so needing even 11 inboxes requires their Startup plan at $200/month for 150 inboxes.
   </FAQItem>
   <FAQItem question="Can I use Google Workspace for 50 agent inboxes?">
-    Technically yes, but it means 50 user accounts at $6-18 each ($300-900/month). You'd also need to manage OAuth tokens per agent, handle account provisioning, and risk Google flagging automated accounts for policy violations.
+    Technically yes, but it means 50 user accounts at $6-18 each ($300-900/month). You'd also need to manage OAuth [tokens](/glossary/tokens) per agent, handle account provisioning, and risk Google flagging automated accounts for policy violations.
   </FAQItem>
   <FAQItem question="How does LobsterMail handle inbox naming at scale?">
     The `createSmartInbox()` method uses 8+ fallback strategies when your preferred handle is taken. It tries readable variations like `support-bot@`, `support-ai@`, and `support-agent@` before falling back to short identifiers. Every agent gets a human-readable address.

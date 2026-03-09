@@ -55,7 +55,7 @@ An AI agent handling transactional email needs to:
 
 1. **Send immediately on trigger.** No batching, no queue delays. A verification code that arrives 30 seconds late is a failed user experience.
 2. **Keep content purely functional.** The moment you add "Check out our spring sale!" to an order receipt, you've turned a transactional email into a marketing email in the eyes of regulators.
-3. **Use a separate sending infrastructure.** Dedicated IPs or subdomains for transactional sends protect your sender reputation from the natural fluctuations of marketing campaigns.
+3. **Use a separate sending infrastructure.** Dedicated IPs or subdomains for transactional sends protect your [sender reputation](/glossary/sender-reputation) from the natural fluctuations of marketing campaigns.
 
 Do transactional emails need an unsubscribe link? Under CAN-SPAM, no, as long as the email's primary purpose is transactional. Under GDPR, you still need a lawful basis for processing (usually "legitimate interest" or "contract performance"), but explicit opt-in isn't required for order confirmations and account notifications.
 
@@ -125,11 +125,11 @@ The key insight: don't let your AI agent treat all email as one category. The co
   </FAQItem>
 
   <FAQItem question="What infrastructure does an AI agent need to handle high-volume transactional email in real time?">
-    The agent needs a dedicated sending IP or subdomain, low-latency delivery (sub-second for verification codes), proper SPF/DKIM/DMARC authentication, and monitoring for bounce rates. LobsterMail handles this at the infrastructure level so the agent doesn't have to configure it manually.
+    The agent needs a dedicated sending IP or subdomain, low-latency delivery (sub-second for verification codes), proper [SPF](/glossary/spf)/[DKIM](/glossary/dkim)/[DMARC](/glossary/dmarc) authentication, and monitoring for bounce rates. LobsterMail handles this at the infrastructure level so the agent doesn't have to configure it manually.
   </FAQItem>
 
   <FAQItem question="How can an AI agent add marketing content to a transactional email without violating compliance rules?">
-    The FTC's "primary purpose" test applies. If a reasonable recipient would still see the email as transactional, a small promotional block is acceptable. But the transactional content must dominate. AI agents should have guardrails that cap promotional content at a fixed percentage of the email body.
+    The FTC's "primary purpose" test applies. If a reasonable recipient would still see the email as transactional, a small promotional block is acceptable. But the transactional content must dominate. AI agents should have [guardrails](/glossary/guardrails) that cap promotional content at a fixed percentage of the email body.
   </FAQItem>
 
   <FAQItem question="What metrics should an AI agent optimize for transactional emails vs marketing emails?">
@@ -153,7 +153,7 @@ The key insight: don't let your AI agent treat all email as one category. The co
   </FAQItem>
 
   <FAQItem question="How should an AI agent handle a transactional email trigger that fires after a user has unsubscribed from marketing emails?">
-    The agent should still send the transactional email. An unsubscribe from marketing does not revoke consent for transactional messages. A user who unsubscribes from your newsletter still expects to receive their order confirmation. The agent needs to check the correct suppression list for the email type being sent.
+    The agent should still send the transactional email. An unsubscribe from marketing does not revoke consent for transactional messages. A user who unsubscribes from your newsletter still expects to receive their order confirmation. The agent needs to check the correct [suppression list](/glossary/suppression-list) for the email type being sent.
   </FAQItem>
 
   <FAQItem question="What is an AI email agent?">

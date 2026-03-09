@@ -168,7 +168,7 @@ console.log(inbox.address); // my-agent@yourdomain.com
     Domain verification is required for sending from a custom domain address. You can receive emails to LobsterMail inboxes immediately after setup. The verification gate exists to confirm you control the domain before we let your agent send outbound email under it.
   </FAQItem>
 
-  <FAQItem question="Do I need DMARC in addition to SPF and DKIM?">
+  <FAQItem question="Do I need [DMARC](/glossary/dmarc) in addition to SPF and DKIM?">
     SPF and DKIM are required for LobsterMail custom domain setup. DMARC is strongly recommended. Google and Yahoo now require DMARC for bulk senders, and it's increasingly expected for any transactional volume. Start with `p=none` for monitoring and tighten the policy once you've confirmed alignment. See the [custom domains guide](/blog/custom-domains-agent-email) for a full walkthrough.
   </FAQItem>
 

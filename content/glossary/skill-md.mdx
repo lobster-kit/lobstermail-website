@@ -1,0 +1,70 @@
+---
+title: "SKILL.md"
+shortDefinition: "A markdown file that describes an agent skill's capabilities, inputs, and usage instructions so other agents and platforms can discover and use it."
+category: "protocols-ecosystem"
+relatedTerms: ["mcp", "clawhub"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is SKILL.md?
+
+SKILL.md is a standardized markdown file that describes what an agent skill does, how to use it, and what inputs it expects. It serves as both human-readable documentation and machine-readable metadata for agent skills published on platforms like ClawHub.
+
+A SKILL.md file typically includes:
+
+- **Name and description:** What the skill does in plain language
+- **Capabilities:** Specific actions the skill can perform
+- **Input parameters:** What data the skill needs, with types and examples
+- **Output format:** What the skill returns
+- **Authentication:** Any API keys or credentials required
+- **Usage examples:** Concrete examples showing how to invoke the skill
+
+The format is intentionally simple — it's a markdown file, not a JSON schema or YAML config. This makes it easy for developers to write and for AI agents to parse. An LLM can read a SKILL.md file and understand how to use the skill without any special adapter code.
+
+SKILL.md bridges the gap between human documentation and agent-readable specs. A developer can read it to understand what a skill does. An agent can read it to figure out how to invoke the skill correctly. The same file serves both audiences.
+
+## Why it matters for AI agents
+
+SKILL.md is the standard way agents discover and learn to use new capabilities. When an agent installs a skill from ClawHub, the first thing it reads is the SKILL.md file. The file tells the agent what the skill can do, what parameters to pass, and what to expect back.
+
+This self-describing pattern is what makes agent skill ecosystems work at scale. Without a standard format, every skill would require custom integration code. With SKILL.md, an agent can dynamically discover and use new skills without its developer writing explicit integration logic.
+
+For email-related skills — like LobsterMail's agent email skill on ClawHub — the SKILL.md describes capabilities like sending email, reading inboxes, managing contacts, and handling webhooks. An agent reads the SKILL.md, understands the available actions, and starts using email without any human configuration.
+
+The format also enables skill marketplaces to index and search skills by capability. ClawHub can parse SKILL.md files to categorize skills, match them to agent queries, and recommend relevant skills based on what an agent needs to accomplish.
+
+Writing a good SKILL.md is the difference between a skill that gets adopted and one that doesn't. Clear descriptions, realistic examples, and explicit parameter documentation make it easy for both agents and developers to start using the skill immediately.
+
+<FAQ>
+<FAQItem question="What is a SKILL.md file?">
+SKILL.md is a standardized markdown file that describes an agent skill's capabilities, inputs, outputs, and usage instructions. It serves as both human-readable documentation and machine-readable metadata, allowing agents and developers to understand and use the skill without custom integration.
+</FAQItem>
+<FAQItem question="How do AI agents use SKILL.md files?">
+When an agent installs a skill, it reads the SKILL.md file to understand what the skill can do and how to invoke it. The agent parses the capability descriptions, input parameters, and examples to figure out how to use the skill correctly without any human guidance.
+</FAQItem>
+<FAQItem question="Where are SKILL.md files published?">
+SKILL.md files are published alongside agent skills on platforms like ClawHub. They live in the root of the skill's repository or package. The marketplace indexes these files to help agents and developers discover skills that match their needs.
+</FAQItem>
+<FAQItem question="What should a good SKILL.md include?">
+A good SKILL.md includes a clear description of what the skill does, a list of capabilities, input parameters with types and examples, expected output format, authentication requirements, and concrete usage examples. The more specific and example-driven the file is, the more reliably agents can use the skill.
+</FAQItem>
+<FAQItem question="How is SKILL.md different from an API reference?">
+An API reference documents endpoints, request formats, and response schemas for developers to write code against. SKILL.md describes capabilities in natural language that both humans and LLMs can understand. It bridges the gap between formal API documentation and agent-readable instructions.
+</FAQItem>
+<FAQItem question="Can an agent install a skill automatically using SKILL.md?">
+Yes. An agent can read a SKILL.md file, understand the skill's capabilities and requirements, and begin using it without human intervention. This self-discovery pattern is what enables agent skill marketplaces where agents can find and adopt new capabilities autonomously.
+</FAQItem>
+<FAQItem question="How does SKILL.md work with email skills like LobsterMail?">
+LobsterMail's SKILL.md on ClawHub describes email capabilities like sending messages, reading inboxes, and managing contacts. An agent reads the file, learns the available actions and required parameters, and starts using email infrastructure without any manual configuration or custom integration code.
+</FAQItem>
+<FAQItem question="What is ClawHub and how does it use SKILL.md?">
+ClawHub is a marketplace for agent skills. It indexes SKILL.md files from published skills to enable search, categorization, and discovery. Agents browse ClawHub to find skills that match their needs, read the SKILL.md to understand how to use them, and install them into their workflow.
+</FAQItem>
+<FAQItem question="Do I need to write a SKILL.md for my agent skill?">
+If you want your skill to be discoverable and usable by other agents, yes. Without a SKILL.md, agents have no standardized way to understand your skill's capabilities. A well-written SKILL.md is the difference between a skill that gets adopted and one that requires manual integration.
+</FAQItem>
+<FAQItem question="What format should SKILL.md parameters use?">
+Parameters should include the name, type (string, number, boolean, object), whether they are required or optional, a brief description, and an example value. Using consistent formatting makes it easier for LLMs to parse and for developers to scan quickly. Keep parameter descriptions concise and actionable.
+</FAQItem>
+</FAQ>

@@ -179,7 +179,7 @@ For email, I'd pick `CodeAgent` unless you need strict output control. The abili
     Yes, by default `forward()` executes without human approval. To add a confirmation step, check for a flag in `forward()` and prompt the user before sending, or use smolagents' built-in `human_approval` callback if available.
   </FAQItem>
   <FAQItem question="What is smolagents and how is it different from the older HfAgent?">
-    `smolagents` is Hugging Face's current agent library, replacing the older `transformers.agents` module. It's lighter, supports `CodeAgent` and `ToolCallingAgent` patterns, works with any LLM provider, and has better tool management including MCP server support.
+    `smolagents` is Hugging Face's current agent library, replacing the older `transformers.agents` module. It's lighter, supports `CodeAgent` and `ToolCallingAgent` patterns, works with any LLM provider, and has better tool management including [MCP](/glossary/mcp) server support.
   </FAQItem>
   <FAQItem question="How do I pass dynamic recipient addresses and email body content to an agent tool at runtime?">
     The agent extracts arguments from the user's natural language prompt and maps them to your tool's `inputs` schema. If you ask it to "email ops@example.com about the build results," it fills in `to`, `subject`, and `body` from context.

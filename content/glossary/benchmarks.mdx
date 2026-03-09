@@ -1,0 +1,70 @@
+---
+title: "Benchmarks"
+shortDefinition: "Standardized tests used to measure and compare AI model performance across specific tasks like reasoning, coding, math, and language understanding."
+category: "trending-ai"
+relatedTerms: ["inference", "hallucination"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What are benchmarks?
+
+Benchmarks are standardized evaluation suites that measure how well AI models perform on specific tasks. They provide a common measuring stick for comparing models across capabilities like reasoning, coding, mathematics, reading comprehension, and factual accuracy.
+
+Popular benchmarks in the LLM space include:
+
+- **MMLU** — tests broad knowledge across 57 subjects (history, science, law, etc.)
+- **HumanEval / SWE-bench** — measures code generation and software engineering ability
+- **GSM8K / MATH** — evaluates mathematical reasoning
+- **TruthfulQA** — tests whether models produce factually accurate responses
+- **MT-Bench / Chatbot Arena** — evaluates conversational quality using human preferences
+- **GPQA** — graduate-level science questions that test deep reasoning
+
+Each benchmark consists of a dataset of questions or tasks with known correct answers. Models are evaluated on accuracy, and results are reported as scores that can be compared across models. Leaderboards rank models by benchmark performance, giving developers a quick way to assess relative capabilities.
+
+Benchmarks serve several purposes: they help model developers track progress, give users a rough guide for model selection, and provide the research community with shared evaluation standards.
+
+## Why it matters for AI agents
+
+Benchmarks tell you what a model is good at in theory. For AI agents, what matters is whether the model performs well on your specific task. Those two things are related but not identical.
+
+An email agent developer choosing between models might look at benchmarks for reading comprehension (can the model understand email content?), instruction following (will it follow the system prompt?), and coding (can it generate structured outputs like JSON?). But no benchmark directly measures "how well can this model triage customer support emails" — you need to build your own evaluation for that.
+
+The most useful approach for email agents is to create a task-specific benchmark: a set of representative emails with expected classifications, responses, and actions. Run each candidate model against this set and measure accuracy on your actual use case. A model that scores 5% lower on MMLU but handles your email patterns better is the right choice for your agent.
+
+Benchmarks also help identify where models hallucinate. TruthfulQA and similar evaluations measure whether a model makes things up. For email agents, hallucination is a serious risk — an agent that fabricates order numbers, invents company policies, or hallucinates customer history can cause real damage. Models that score well on factuality benchmarks are generally safer choices for agents that generate customer-facing content.
+
+Be skeptical of benchmark scores as the sole decision criteria. Models can be optimized specifically for benchmark performance in ways that don't transfer to real-world tasks. Some models train directly on benchmark datasets, inflating their scores. Always validate with your own evaluation data before deploying an agent in production.
+
+<FAQ>
+<FAQItem question="Which benchmark matters most for AI agents?">
+No single benchmark captures agent capability. For email agents, prioritize instruction following (MT-Bench), reading comprehension (MMLU English/reasoning subsets), factual accuracy (TruthfulQA), and structured output (code generation benchmarks). Most importantly, build your own task-specific evaluation using real emails and expected outcomes from your domain.
+</FAQItem>
+<FAQItem question="Can benchmark scores be misleading?">
+Yes. Models can overfit to benchmark datasets, producing inflated scores that don't reflect real-world performance. Some benchmarks test narrow skills that may not transfer to your use case. Leaderboard rankings change frequently, and small score differences are often within noise margins. Treat benchmarks as a starting filter, not a final decision. Always test on your own data.
+</FAQItem>
+<FAQItem question="How do I create a benchmark for my email agent?">
+Collect 100-500 representative emails from your actual workflow. Label each with the correct classification, expected action, and ideal response. Run your agent against this set and measure accuracy, response quality, and error rates. Track results over time as you change models, prompts, or configurations. This custom benchmark will be far more predictive of production performance than any public leaderboard.
+</FAQItem>
+<FAQItem question="What is benchmark contamination?">
+Benchmark contamination occurs when a model has seen benchmark questions during training, inflating its scores without reflecting genuine capability. This is a growing concern as benchmark datasets become widely available on the internet. Contaminated scores give a false sense of model quality and can lead to poor model selection for production agents.
+</FAQItem>
+<FAQItem question="How often do AI benchmark rankings change?">
+Frequently. New models can leapfrog existing leaders within weeks, and benchmark methodologies are updated as researchers identify flaws. A model that tops a leaderboard today may not hold that position for long. For agent developers, this means model selection should be based on your own evaluations, not a snapshot of public rankings.
+</FAQItem>
+<FAQItem question="What is SWE-bench and why does it matter for agents?">
+SWE-bench evaluates a model's ability to solve real software engineering tasks from GitHub issues. It matters for agents because it tests practical coding ability — writing patches, understanding codebases, and following complex instructions. Agents that need to generate structured outputs, parse data, or interact with APIs benefit from models that score well on SWE-bench.
+</FAQItem>
+<FAQItem question="Should I pick the highest-scoring model for my email agent?">
+Not necessarily. The highest-scoring model on public benchmarks is often the most expensive and slowest. For email agents handling routine classification and response, a mid-tier model with good instruction-following scores may deliver 95% of the quality at 10% of the cost. Match the model to the complexity of your actual tasks.
+</FAQItem>
+<FAQItem question="What is the difference between automated and human evaluation benchmarks?">
+Automated benchmarks like MMLU use objective answer keys and can be scored programmatically. Human evaluation benchmarks like Chatbot Arena use human judges to rate response quality. Human evaluations better capture subjective qualities like helpfulness and naturalness, but they are expensive and slower to run. Both types provide useful but different signals.
+</FAQItem>
+<FAQItem question="How do benchmarks measure hallucination in AI models?">
+Benchmarks like TruthfulQA and HaluEval test whether models produce factually incorrect statements. They present questions where common misconceptions or plausible-sounding falsehoods could trip up a model. For email agents, hallucination benchmarks help identify models less likely to fabricate order numbers, invent policies, or misstate facts in customer communications.
+</FAQItem>
+<FAQItem question="Can I benchmark my AI agent end-to-end, not just the model?">
+Yes, and you should. End-to-end benchmarks test the complete agent pipeline — prompt construction, context retrieval, model inference, tool use, and output formatting. A model might score well in isolation but underperform when combined with your specific prompts and data pipeline. Test the full system against labeled examples from your email workflow.
+</FAQItem>
+</FAQ>

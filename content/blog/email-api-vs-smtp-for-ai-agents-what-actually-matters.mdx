@@ -36,9 +36,9 @@ Here's how they compare across the dimensions that matter most for agent workflo
 | Setup complexity | Configure host, port, TLS, credentials | Single API key or SDK call |
 | Connection model | Persistent TCP session | Stateless HTTP request |
 | Speed per message | Slower (handshake overhead) | Faster (single round-trip) |
-| Deliverability tools | Manual SPF/DKIM setup | Usually handled by provider |
-| Authentication | Username/password or app passwords | API keys, OAuth tokens, or auto-provisioned |
-| Bounce handling | Parse async bounce emails | Webhook callbacks or status endpoints |
+| Deliverability tools | Manual [SPF](/glossary/spf)/[DKIM](/glossary/dkim) setup | Usually handled by provider |
+| Authentication | Username/password or app passwords | API keys, OAuth [tokens](/glossary/tokens), or auto-provisioned |
+| Bounce handling | Parse async bounce emails | [Webhook](/glossary/webhook) callbacks or status endpoints |
 | AI agent compatibility | Requires connection management | Works naturally with agent tool-calling patterns |
 | Observability | Server logs only | Delivery status, open tracking, event streams |
 
@@ -67,7 +67,7 @@ There's also the credential problem. SMTP authentication typically uses a userna
 
 An email API is stateless. Your agent sends an HTTP POST with a JSON body containing the recipient, subject, and message. The API responds with a status code and a message ID. Done.
 
-This maps directly to how agent tool-calling works. When an LLM-powered agent needs to send an email, it calls a function. That function makes an HTTP request. The response tells the agent whether it succeeded. No connection management, no protocol negotiation, no parsing multi-line SMTP response codes.
+This maps directly to how agent tool-calling works. When an LLM-powered agent needs to send an email, it calls a function. That function makes an HTTP request. The response tells the agent whether it succeeded. No connection management, no protocol negotiation, no parsing multi-line [SMTP response codes](/glossary/smtp-response-codes).
 
 ```typescript
 // SMTP approach: agent needs to manage connection lifecycle

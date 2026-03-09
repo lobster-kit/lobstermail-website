@@ -1,0 +1,69 @@
+---
+title: "System Prompt"
+shortDefinition: "A hidden instruction given to an LLM before the user's message that defines the model's role, behavior, constraints, and personality."
+category: "agent-developer"
+relatedTerms: ["context-engineering", "context-window", "guardrails"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is a system prompt?
+
+A system prompt is a set of instructions provided to an LLM at the start of a conversation that defines how the model should behave. It sits above the user's messages in the conversation structure and tells the model who it is, what it should do, what it should avoid, and how it should format its responses.
+
+Most LLM APIs accept three message roles: `system`, `user`, and `assistant`. The system message is processed first and shapes everything that follows. It's how developers turn a general-purpose language model into a specialized tool.
+
+A typical system prompt for an AI agent includes:
+
+- **Role definition** — "You are a customer support agent for a SaaS company"
+- **Behavioral rules** — "Always be polite. Never speculate about product roadmap"
+- **Knowledge context** — key facts, product details, or policies the agent needs
+- **Output format** — "Respond in JSON" or "Keep responses under 200 words"
+- **Constraints** — "Never share internal pricing. Escalate billing disputes to a human"
+
+System prompts are not visible to end users in most implementations, though they're not truly secret — they can sometimes be extracted through clever prompting. Security-sensitive instructions should be enforced through guardrails rather than relying solely on the system prompt.
+
+## Why it matters for AI agents
+
+The system prompt is the most direct lever developers have for controlling agent behavior. For email agents, the system prompt defines the agent's entire personality and operational boundaries.
+
+An email agent's system prompt might specify the company's tone of voice, which types of emails the agent can respond to autonomously versus which require human review, what information it can and cannot share, and how to handle edge cases like angry customers or legal requests.
+
+Getting the system prompt right is the difference between an agent that handles 80% of incoming emails correctly and one that causes problems. Too vague, and the agent makes unpredictable decisions. Too rigid, and it fails on any input that doesn't match the expected pattern exactly.
+
+For email infrastructure, system prompts often include dynamic context — the current customer's account status, their recent order history, or relevant knowledge base articles. This is where system prompts intersect with context engineering: structuring the right information at the right time within the available context window.
+
+A well-designed system prompt for an email agent is typically 500 to 2,000 tokens. It's tempting to make it longer, cramming in every possible instruction, but bloated system prompts waste tokens on every single inference call. Since email agents might process thousands of messages per day, even small system prompt optimizations compound into significant cost savings.
+
+<FAQ>
+<FAQItem question="Can users see the system prompt?">
+Not in normal usage — system prompts are hidden from end users in most interfaces. However, they're not cryptographically protected. Prompt injection techniques can sometimes trick a model into revealing its system prompt. Treat system prompts as guidance, not secrets. Enforce security-critical rules through external guardrails rather than relying on the system prompt alone.
+</FAQItem>
+<FAQItem question="How long should a system prompt be?">
+For most agent applications, 500 to 2,000 tokens is the practical range. Shorter prompts leave too much to the model's discretion. Longer prompts waste tokens on every call and can actually degrade performance by burying important instructions in noise. Focus on the most impactful instructions and test rigorously.
+</FAQItem>
+<FAQItem question="Should I put knowledge in the system prompt or use RAG?">
+Use the system prompt for stable, always-needed information: role definition, behavioral rules, output format, and core policies. Use RAG for dynamic, request-specific knowledge: customer history, relevant documentation, or contextual data. This keeps the system prompt lean while giving the agent access to detailed information when it needs it.
+</FAQItem>
+<FAQItem question="What is the difference between a system prompt and a user prompt?">
+The system prompt sets the agent's role, rules, and constraints before any conversation begins. The user prompt is the actual input or question from the end user. The system prompt shapes how the model interprets and responds to every user prompt. They serve different purposes in the message hierarchy.
+</FAQItem>
+<FAQItem question="How do system prompts work for email agents?">
+Email agent system prompts define the agent's persona, what types of emails it can handle autonomously, escalation rules, tone of voice, and output format. For each incoming email, the system prompt provides the behavioral framework while the email content serves as the user input the agent processes.
+</FAQItem>
+<FAQItem question="Can system prompts prevent prompt injection?">
+System prompts alone cannot prevent prompt injection. A malicious email could include instructions that override the system prompt. Effective protection requires external guardrails: input validation, output filtering, and sandboxed execution. The system prompt should instruct the model to ignore embedded instructions, but this is not a reliable defense on its own.
+</FAQItem>
+<FAQItem question="How often should you update an agent's system prompt?">
+Update the system prompt when agent behavior needs to change: new policies, different tone, additional constraints, or updated product information. Avoid frequent changes without testing, as small prompt modifications can have unexpected effects on model behavior. Version control your system prompts and test changes against representative inputs.
+</FAQItem>
+<FAQItem question="Do different LLM providers handle system prompts differently?">
+Yes. While most providers support a system message role, the exact behavior varies. Some models weight system instructions more heavily than others. Some support multiple system messages while others expect exactly one. Always test your system prompt with your specific model and provider to ensure it behaves as expected.
+</FAQItem>
+<FAQItem question="What is the cost impact of system prompts on AI agents?">
+The system prompt is included as input tokens on every API call, so longer prompts increase per-request costs. For email agents processing thousands of messages daily, a 2,000-token system prompt adds up fast. Optimizing prompt length while maintaining clear instructions directly reduces operating costs at scale.
+</FAQItem>
+<FAQItem question="Should email agents use dynamic system prompts?">
+Yes, when appropriate. A base system prompt can be augmented with dynamic context like the sender's account status, recent interaction history, or relevant policies. This gives the agent tailored instructions per request without maintaining a bloated static prompt that covers every possible scenario.
+</FAQItem>
+</FAQ>

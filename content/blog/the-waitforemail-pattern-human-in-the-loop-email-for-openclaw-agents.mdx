@@ -159,7 +159,7 @@ If you want to understand how agents provision their own accounts without human 
     `createSmartInbox()` creates a persistent inbox with a human-readable address. The LobsterMail SDK stores your API token at `~/.lobstermail/token`, so subsequent runs reuse the same account. If you want the same inbox address each time, store the inbox ID and look it up on startup.
   </FAQItem>
 
-  <FAQItem question="How does LobsterMail protect against prompt injection in the reply email?">
+  <FAQItem question="How does LobsterMail protect against [prompt injection](/glossary/prompt-injection) in the reply email?">
     LobsterMail applies injection risk scoring to incoming emails. The email object returned by `waitForEmail()` includes security metadata you can check before processing the reply content. The [security hardening guide](/blog/openclaw-email-security-hardening-scanning-for-prompt-injection-before-your-agent-reads-it) covers the full scanning pipeline.
   </FAQItem>
 

@@ -1,0 +1,67 @@
+---
+title: "Distillation"
+shortDefinition: "A technique where a smaller 'student' model is trained to replicate the behavior of a larger 'teacher' model, producing a compact model that retains much of the original's capability."
+category: "trending-ai"
+relatedTerms: ["fine-tuning", "quantization", "inference"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is distillation?
+
+Knowledge distillation is a model compression technique where a large, capable model (the "teacher") is used to train a smaller model (the "student"). The student learns not from the original training data but from the teacher's outputs — its predictions, probability distributions, and intermediate representations.
+
+The core insight is that a teacher model's output contains more information than hard labels alone. When a teacher classifies an email and assigns 70% probability to "support request," 20% to "sales inquiry," and 10% to "general feedback," those soft probabilities encode relationships between categories that a student model can learn from. Training on these soft targets transfers nuanced knowledge that training on one-hot labels would miss.
+
+Distillation typically works in one of several ways:
+
+- **Response distillation** — the student is trained on the teacher's final outputs for a large set of inputs
+- **Feature distillation** — the student learns to match the teacher's internal representations at intermediate layers
+- **Logit distillation** — the student is trained on the teacher's full probability distribution over possible outputs
+
+The result is a student model that's significantly smaller and faster than the teacher but retains a substantial portion of the teacher's capabilities. A well-distilled 7B parameter model can match or approach the performance of a 70B model on specific tasks.
+
+## Why it matters for AI agents
+
+Distillation is how you get production-grade agent performance at production-grade costs. Large frontier models excel at complex reasoning, but running them for every email classification or response draft is expensive at scale. Distillation lets you train a small, cheap model that handles your specific tasks nearly as well.
+
+For email agents, the distillation workflow is practical and proven. You start with a powerful teacher model processing your email workload. You collect its classifications, drafted responses, and decisions as training data. Then you distill a smaller model on that data. The resulting student model handles 80-90% of your volume at a fraction of the cost, while the teacher model handles only the cases the student is uncertain about.
+
+This two-tier pattern — a distilled model for routine tasks and a frontier model for complex ones — is standard practice for high-volume email processing. A distilled model classifying incoming emails might cost $0.001 per message. The teacher model providing backup on edge cases might cost $0.05 per message. If the student handles 90% of traffic, your blended cost drops dramatically.
+
+Distillation also reduces latency. Smaller models generate responses faster, which matters when users expect near-instant email triage or when agents need to process hundreds of messages per minute. A distilled model running on a single GPU can achieve throughput that would require expensive multi-GPU setups for the teacher model.
+
+The open-source ecosystem has embraced distillation. Many popular open-source models were distilled from larger proprietary models, and tools like TRL and OpenRLHF make it straightforward to distill your own task-specific student models.
+
+<FAQ>
+<FAQItem question="How is distillation different from fine-tuning?">
+Fine-tuning adapts a model to a new task using labeled examples (input-output pairs). Distillation trains a smaller model to mimic a larger model's behavior, which inherently includes the larger model's reasoning patterns and nuanced predictions. Distillation typically produces a different (smaller) model, while fine-tuning modifies an existing model. You can also combine them — fine-tune a small model using a teacher's outputs as training data.
+</FAQItem>
+<FAQItem question="How much smaller can a distilled model be?">
+It depends on the task. For focused tasks like email classification or entity extraction, a student model can be 5-10x smaller than the teacher with minimal quality loss. For open-ended generation tasks, the gap narrows — you may only achieve 2-3x compression before quality degrades noticeably. The key is that distillation works best when the target task is well-defined and narrow.
+</FAQItem>
+<FAQItem question="Can I distill from proprietary models like GPT-4 or Claude?">
+You can use their outputs as training data for a student model, and many open-source models were created this way. However, most API providers' terms of service restrict or prohibit using outputs to train competing models. Check the specific terms of the model you're using. For internal use cases (training a model for your own email agent), the practical risk is low, but the legal landscape is still evolving.
+</FAQItem>
+<FAQItem question="What is the two-tier model pattern for email agents?">
+Use a distilled student model for routine, high-volume tasks like email classification and simple responses, and route complex or uncertain cases to a larger teacher model. This pattern typically handles 80-90% of email volume at low cost while maintaining quality on edge cases. The blended cost is far lower than using the teacher model for everything.
+</FAQItem>
+<FAQItem question="How much data do you need to distill a model for email tasks?">
+For focused tasks like email classification, 5,000-10,000 teacher-labeled examples are often sufficient. For more complex generation tasks like drafting customer replies, 20,000-50,000 examples produce better results. The data should cover the full range of scenarios the student model will encounter, including edge cases and error conditions.
+</FAQItem>
+<FAQItem question="Does distillation reduce hallucination?">
+Not inherently. A distilled model learns from the teacher's outputs, including any hallucinations. However, distillation on a narrow, well-defined task can reduce hallucination because the student model learns domain-specific patterns rather than relying on broad, potentially unreliable knowledge. Combining distillation with grounded retrieval (RAG) provides the strongest hallucination reduction.
+</FAQItem>
+<FAQItem question="What is the difference between distillation and quantization?">
+Distillation trains a new, smaller model to replicate a larger model's behavior. Quantization compresses an existing model by reducing the precision of its weights (e.g., from 32-bit to 4-bit). Distillation changes the model architecture. Quantization changes the number representation. Both reduce size and cost, and they can be combined for maximum compression.
+</FAQItem>
+<FAQItem question="How do you measure whether distillation was successful?">
+Compare the student model against the teacher on your task-specific benchmark. Measure accuracy, response quality, hallucination rate, and latency. A successful distillation produces a student that matches 90-95% of the teacher's quality at a fraction of the cost and latency. If the quality gap is too large, you may need more training data or a larger student architecture.
+</FAQItem>
+<FAQItem question="Can distillation help email agents respond faster?">
+Yes. Distilled models are smaller and generate tokens faster than their teacher models. For email agents where response latency matters — such as real-time inbox triage or auto-reply systems — a distilled model can reduce response time from seconds to milliseconds while maintaining acceptable quality for routine messages.
+</FAQItem>
+<FAQItem question="What open-source tools support model distillation?">
+Popular tools include Hugging Face TRL (Transformer Reinforcement Learning), OpenRLHF, and distillation features built into frameworks like PyTorch and TensorFlow. These tools provide training pipelines that handle the teacher-student training loop, soft-target loss functions, and evaluation against teacher baselines.
+</FAQItem>
+</FAQ>

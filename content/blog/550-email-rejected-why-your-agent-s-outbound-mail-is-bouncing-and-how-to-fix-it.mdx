@@ -121,7 +121,7 @@ The fastest path to clean outbound delivery: verify your authentication records,
   </FAQItem>
 
   <FAQItem question="Is a 550 error permanent or can the email be retried?">
-    It's permanent for that specific attempt. Your SMTP client should not retry the exact same message. However, once you fix the root cause (authentication, recipient address, sender reputation), future messages to that recipient will go through.
+    It's permanent for that specific attempt. Your SMTP client should not retry the exact same message. However, once you fix the root cause (authentication, recipient address, [sender reputation](/glossary/sender-reputation)), future messages to that recipient will go through.
   </FAQItem>
 
   <FAQItem question="Why would an outbound email agent get a 550 rejection even with valid credentials?">
@@ -160,7 +160,7 @@ The fastest path to clean outbound delivery: verify your authentication records,
     NDR stands for Non-Delivery Report. It's the bounce message your mail server receives when a message can't be delivered. The NDR contains the SMTP error code (like 550), a sub-code, and usually a text explanation of why the message was rejected.
   </FAQItem>
 
-  <FAQItem question="What is the difference between a hard bounce and a soft bounce?">
+  <FAQItem question="What is the difference between a [hard bounce](/glossary/hard-bounce) and a [soft bounce](/glossary/soft-bounce)?">
     A hard bounce (5xx codes like 550) is a permanent rejection. The address doesn't exist or the server refuses your mail outright. A soft bounce (4xx codes) is temporary: the server might accept the message later. Hard bounces should trigger immediate removal from your send list. Soft bounces can be retried.
   </FAQItem>
 

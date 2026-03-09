@@ -1,0 +1,69 @@
+---
+title: "Multi-Tenancy"
+shortDefinition: "An architecture where a single system serves multiple independent customers or agents with isolated data, access, and configuration."
+category: "protocols-ecosystem"
+relatedTerms: ["sandboxed-inbox", "inbox-provisioning"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is Multi-Tenancy?
+
+Multi-tenancy is a software architecture where a single instance of a system serves multiple independent tenants — each with their own data, configuration, and access controls — on shared infrastructure. Tenants are isolated from each other even though they share the same underlying servers, databases, and network.
+
+In email infrastructure, multi-tenancy means:
+
+- **Multiple customers** share the same email platform
+- **Each customer's data** (messages, contacts, settings) is isolated
+- **Configuration** (domains, authentication, webhooks) is independent per tenant
+- **Performance** of one tenant doesn't degrade service for others
+- **Billing and usage** are tracked separately per tenant
+
+Multi-tenancy is the standard architecture for cloud services. Instead of deploying a separate instance for every customer (single-tenancy), you run one system that logically partitions resources. This is more efficient for the provider and typically means lower costs and faster provisioning for customers.
+
+The challenge of multi-tenancy is isolation. Tenants must never see each other's data, even when they share infrastructure. A bug, misconfiguration, or security vulnerability that leaks data across tenant boundaries is a catastrophic failure — the "noisy neighbor" problem is annoying, but cross-tenant data leakage is existential.
+
+## Why it matters for AI agents
+
+Multi-tenancy defines how agent email platforms scale. A platform serving thousands of agents from different customers needs to isolate each customer's agents, domains, and email data while running on shared infrastructure. Single-tenancy (a separate deployment per customer) doesn't scale for agent workloads where provisioning needs to be instant and per-agent costs need to be low.
+
+For agent developers, multi-tenancy is mostly invisible — the platform handles isolation, and the agent interacts with its own inbox through an API that looks like a single-tenant system. But understanding multi-tenancy matters when evaluating email providers. Key questions include: How is data isolated? What happens if another tenant's agent spams and damages shared IP reputation? Are rate limits per-tenant or global?
+
+The IP reputation question is particularly important. On a multi-tenant email platform, multiple customers' agents may share the same sending IP addresses. If one customer's agent starts spamming, the IP's reputation degrades for all tenants sharing that IP. Good multi-tenant platforms mitigate this with per-tenant sending limits, abuse detection, and the option to move to dedicated IPs at higher tiers.
+
+LobsterMail uses multi-tenant architecture with per-agent sandboxing. Each agent gets its own isolated inbox, credentials, and rate limits. The platform scales horizontally to handle thousands of agents across many customers while maintaining strict isolation boundaries between tenants.
+
+For platforms building on top of LobsterMail — say, a company that deploys 50 customer support agents for different clients — multi-tenancy works at two levels: LobsterMail isolates the platform from other LobsterMail customers, and the platform isolates its own clients' agents from each other.
+
+<FAQ>
+<FAQItem question="What is multi-tenancy?">
+Multi-tenancy is an architecture where a single system serves multiple independent customers on shared infrastructure. Each customer (tenant) has isolated data, configuration, and access controls. It's the standard approach for cloud services, offering better efficiency and lower costs than deploying separate instances per customer.
+</FAQItem>
+<FAQItem question="Why does multi-tenancy matter for AI agent email?">
+Multi-tenancy lets email platforms serve thousands of agents from different customers efficiently. Agents get instant provisioning, isolated inboxes, and independent configuration on shared infrastructure. Without multi-tenancy, each agent or customer would need a dedicated email deployment, which doesn't scale.
+</FAQItem>
+<FAQItem question="What are the risks of multi-tenant email infrastructure?">
+The main risks are cross-tenant data leakage (one tenant seeing another's email), shared IP reputation damage (one tenant's spam affecting others), and noisy neighbor performance issues (one tenant's volume slowing others). Good multi-tenant platforms mitigate these with strict isolation, per-tenant limits, and abuse detection.
+</FAQItem>
+<FAQItem question="What is the difference between multi-tenancy and single-tenancy?">
+Single-tenancy deploys a separate instance of the system for each customer. Multi-tenancy runs one shared instance with logical isolation between customers. Single-tenancy offers stronger isolation but costs more and is slower to provision. Multi-tenancy is more efficient and enables instant setup.
+</FAQItem>
+<FAQItem question="How does multi-tenancy handle IP reputation across tenants?">
+On shared sending IPs, one tenant's spam can damage reputation for all tenants on that IP. Good multi-tenant platforms mitigate this with per-tenant sending limits, automated abuse detection, sending reputation monitoring, and the option for dedicated IPs at higher tiers.
+</FAQItem>
+<FAQItem question="Can multi-tenancy work at multiple levels?">
+Yes. A platform built on LobsterMail might serve its own customers as tenants, while LobsterMail itself treats the platform as one tenant among many. This nested multi-tenancy means isolation operates at each level — LobsterMail isolates platforms from each other, and platforms isolate their own customers from each other.
+</FAQItem>
+<FAQItem question="How do you test isolation in a multi-tenant email system?">
+Test by attempting cross-tenant access — try reading another tenant's inbox with the wrong credentials, sending from another tenant's address, or accessing another tenant's webhooks. Every attempt should fail with authorization errors. Automated penetration testing and regular security audits verify that isolation boundaries hold.
+</FAQItem>
+<FAQItem question="What is the noisy neighbor problem in multi-tenancy?">
+The noisy neighbor problem occurs when one tenant's heavy usage degrades performance for other tenants on the same infrastructure. In email systems, one agent sending massive volumes could slow delivery for others. Per-tenant rate limiting and resource quotas prevent any single tenant from monopolizing shared resources.
+</FAQItem>
+<FAQItem question="How does LobsterMail implement multi-tenancy?">
+LobsterMail uses multi-tenant architecture with per-agent sandboxing. Each agent gets an isolated inbox with its own credentials, rate limits, and storage. The platform scales horizontally across tenants while maintaining strict isolation boundaries, so one customer's agents never interact with another's.
+</FAQItem>
+<FAQItem question="Is multi-tenancy secure enough for sensitive email data?">
+Yes, when implemented correctly. Multi-tenant platforms enforce isolation through separate encryption keys, strict access controls, and infrastructure-level separation. For highly regulated industries, some platforms offer dedicated infrastructure options. The key is verifying that isolation is enforced at the infrastructure level, not just the application level.
+</FAQItem>
+</FAQ>

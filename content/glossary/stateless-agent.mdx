@@ -1,0 +1,59 @@
+---
+title: "Stateless Agent"
+shortDefinition: "An AI agent that does not retain memory between interactions, treating each request as independent with no prior context."
+category: "agent-developer"
+relatedTerms: ["context-window", "orchestrator-agent"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is a stateless agent?
+
+A stateless agent is an AI agent that has no memory of previous interactions. Every time it receives a request, it starts fresh. It doesn't know what happened in the last conversation, what tasks it completed yesterday, or what preferences the user expressed last week. Each invocation is a clean slate.
+
+This is how most basic LLM integrations work out of the box. You send a prompt, get a response, and the model forgets everything. The next request has zero awareness of the previous one unless you explicitly pass prior context in the prompt.
+
+Stateless agents are simple to build and scale. There's no session store to manage, no memory database to query, and no risk of stale context polluting new requests. You can run them across multiple instances without worrying about synchronization. They're predictable — the same input always produces the same class of output.
+
+The downside is obvious: they can't learn from experience, track ongoing conversations, or maintain continuity across interactions. Every request must contain all the context the agent needs to do its job.
+
+## Why it matters for AI agents
+
+In email processing, statelessness creates real limitations. An agent triaging an inbox needs to know whether it already replied to a thread, what the conversation history looks like, and whether the sender has been contacted before. A purely stateless agent would have to re-read the entire thread on every invocation, wasting tokens and risking inconsistent behavior.
+
+Most production email agents are not fully stateless. They use external storage — databases, files, or email metadata — to maintain state between runs. The agent itself might be stateless at the code level (no in-memory persistence), but it reads and writes state from external systems on each invocation.
+
+This hybrid approach gives you the scalability benefits of stateless design with the continuity of stateful behavior. The agent checks its external state store, processes the current task with full context, and writes updated state back before finishing. Platforms like LobsterMail provide the email infrastructure so agents can use their inbox as a natural state mechanism — conversation threads, read/unread status, and labels all function as lightweight state.
+
+<FAQ>
+<FAQItem question="What is the difference between stateless and stateful agents?">
+A stateless agent has no memory between requests — each invocation is independent. A stateful agent retains information across interactions, remembering past conversations, decisions, and user preferences. Most production agents are hybrid: stateless at the compute level but reading/writing state from external storage.
+</FAQItem>
+<FAQItem question="Why would you choose a stateless agent design?">
+Stateless agents are simpler to build, easier to scale horizontally, and more predictable. They work well for one-shot tasks like classifying a single email, extracting data from a document, or generating a response from a self-contained prompt. No session management means fewer moving parts.
+</FAQItem>
+<FAQItem question="Can a stateless agent handle email conversations?">
+Not well on its own. Email conversations are inherently stateful — they span multiple messages over time. A stateless agent would need the entire thread passed in on every call. In practice, agents use external state (like an email API that provides thread history) to bridge the gap while keeping the agent code itself stateless.
+</FAQItem>
+<FAQItem question="How do stateless agents maintain context across email threads?">
+Stateless agents rely on external state stores like databases, email APIs, or file systems. When invoked, the agent loads relevant thread history, processes the current message with full context, and writes any updated state back. The agent itself holds nothing in memory between invocations.
+</FAQItem>
+<FAQItem question="Are stateless agents cheaper to run?">
+Generally yes. Stateless agents don't require persistent servers, session stores, or memory databases. They can run as serverless functions that spin up on demand and shut down after each request, so you only pay for actual compute time rather than idle infrastructure.
+</FAQItem>
+<FAQItem question="What are the downsides of stateless agent architecture?">
+Every invocation must reload all necessary context, which adds latency and token costs. The agent cannot learn from prior interactions unless state is explicitly persisted externally. Complex multi-step workflows require careful orchestration to pass state between steps.
+</FAQItem>
+<FAQItem question="How do you scale stateless agents horizontally?">
+Since stateless agents hold no in-memory state, you can run any number of instances behind a load balancer without session affinity. Any instance can handle any request because all context comes from the request itself or external storage. This makes autoscaling straightforward.
+</FAQItem>
+<FAQItem question="When should you use a stateful agent instead?">
+Use stateful agents when the task requires persistent memory across many interactions, such as long-running customer relationships, ongoing negotiations, or learning user preferences over time. If the cost and complexity of managing state infrastructure is justified by the use case, stateful design is the better choice.
+</FAQItem>
+<FAQItem question="Can stateless agents work in multi-agent systems?">
+Yes. In multi-agent architectures, stateless agents can be composed as individual processing steps. Each agent receives its input, processes it, and passes structured output to the next agent. Shared external state (like a database or message queue) coordinates the workflow without requiring any single agent to hold state in memory.
+</FAQItem>
+<FAQItem question="How does email infrastructure help stateless agents manage state?">
+Email platforms like LobsterMail provide thread history, read/unread status, labels, and metadata through their API. A stateless agent can query these to reconstruct context on every invocation, using the email inbox itself as a lightweight state store without building custom persistence infrastructure.
+</FAQItem>
+</FAQ>

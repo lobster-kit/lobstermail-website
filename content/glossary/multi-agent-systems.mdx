@@ -1,0 +1,64 @@
+---
+title: "Multi-Agent Systems"
+shortDefinition: "Architectures where multiple AI agents work together, each handling specialized tasks, to accomplish goals that a single agent cannot."
+category: "agent-developer"
+relatedTerms: ["orchestrator-agent", "a2a-protocol", "agentic-ai"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is a multi-agent system?
+
+A multi-agent system (MAS) is an architecture where multiple AI agents collaborate to accomplish tasks. Each agent has a specific role or specialization, and they coordinate through defined communication channels. Instead of one monolithic agent doing everything, work is distributed across agents that each do one thing well.
+
+Multi-agent systems come in several flavors:
+
+- **Hierarchical:** An orchestrator agent delegates to sub-agents in a tree structure
+- **Peer-to-peer:** Agents communicate directly with each other as equals
+- **Pipeline:** Agents process work in sequence, each handing output to the next
+- **Competitive:** Multiple agents propose solutions, and the best one is selected
+
+The key insight behind MAS is that complex tasks are easier to solve when broken into smaller, specialized pieces. A single agent trying to research a topic, write content, fact-check it, and format it for publication will struggle with context limits and conflicting objectives. Four agents — each handling one step — can do it better.
+
+## Why it matters for AI agents
+
+Email is one of the most natural communication layers for multi-agent systems. Agents need a way to pass messages, share results, and coordinate asynchronously. Email provides exactly that — a universal, asynchronous messaging protocol that every system already supports.
+
+In a multi-agent email workflow, you might have one agent monitoring an inbox for incoming requests, another classifying and routing those requests, a third generating responses, and a fourth handling follow-ups. Each agent has its own email address and communicates with the others by sending messages through the same infrastructure humans use.
+
+This pattern works because email is inherently asynchronous and loosely coupled. Agents don't need to be online simultaneously. They don't need shared memory or a real-time connection. One agent sends a message, and the receiving agent processes it whenever it's ready. That resilience makes email-based multi-agent systems practical for real-world deployments where agents run on different schedules, different platforms, or different infrastructure.
+
+Protocols like A2A (Agent-to-Agent) are formalizing how agents discover and communicate with each other, and email is emerging as a primary transport layer for these interactions.
+
+<FAQ>
+<FAQItem question="What is the difference between a multi-agent system and a single agent?">
+A single agent handles all tasks on its own within one context. A multi-agent system distributes tasks across specialized agents that collaborate. MAS handles complexity better because each agent stays focused, avoids context overload, and can be developed and tested independently.
+</FAQItem>
+<FAQItem question="How do agents communicate in a multi-agent system?">
+Agents can communicate through function calls, message queues, shared databases, APIs, or email. Email is particularly useful for asynchronous coordination because it provides built-in threading, delivery guarantees, and works across any platform. Protocols like A2A are standardizing agent-to-agent communication.
+</FAQItem>
+<FAQItem question="When should I use a multi-agent system instead of a single agent?">
+Use a multi-agent system when your task involves multiple distinct steps that benefit from specialization, when a single agent's context window can't hold all the necessary information, or when you need agents running on different schedules. For simple, self-contained tasks, a single agent is usually simpler and sufficient.
+</FAQItem>
+<FAQItem question="Why is email a good communication layer for multi-agent systems?">
+Email is asynchronous, universal, and loosely coupled. Agents don't need to be online simultaneously or share memory. Each agent gets its own address, messages are automatically queued for delivery, and threading provides built-in conversation tracking. Email also works across different platforms and infrastructure without custom protocols.
+</FAQItem>
+<FAQItem question="What is an orchestrator in a multi-agent system?">
+An orchestrator is a central agent that coordinates the other agents. It receives tasks, breaks them into subtasks, assigns each to the right specialist agent, monitors progress, and assembles results. Not all multi-agent systems need an orchestrator — peer-to-peer and pipeline architectures work without one.
+</FAQItem>
+<FAQItem question="How do you handle failures in a multi-agent system?">
+Common strategies include retry logic, fallback agents, timeout handling, and human escalation. The orchestrator or coordination layer monitors agent health and can reassign failed tasks. Email-based systems benefit from built-in delivery guarantees — messages are queued and retried automatically if an agent is temporarily unavailable.
+</FAQItem>
+<FAQItem question="Can multi-agent systems scale across different servers?">
+Yes. One of the key advantages of multi-agent architectures is that agents can run on different machines, clouds, or even different organizations. Email-based coordination makes this especially natural since agents only need an email address to participate, regardless of where they are deployed.
+</FAQItem>
+<FAQItem question="What is the A2A protocol and how does it relate to multi-agent systems?">
+A2A (Agent-to-Agent) is a protocol that standardizes how agents discover each other, exchange messages, and coordinate tasks. It provides a formal structure for multi-agent communication, including capability advertising and task delegation, making it easier to build interoperable multi-agent systems.
+</FAQItem>
+<FAQItem question="How do multi-agent systems handle shared state?">
+Agents can share state through a central database, message passing, or shared documents. In email-based systems, state is often embedded in message threads — each reply carries the conversation context. For more structured coordination, agents can use shared storage APIs or event streams alongside email communication.
+</FAQItem>
+<FAQItem question="What are the main challenges of building multi-agent systems?">
+The biggest challenges are coordination overhead, debugging distributed workflows, handling partial failures, and managing inter-agent dependencies. Observability is harder because you need to trace actions across multiple agents. Starting with simple architectures (like a pipeline) and adding complexity as needed helps manage these challenges.
+</FAQItem>
+</FAQ>

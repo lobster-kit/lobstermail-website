@@ -62,12 +62,12 @@ Here's where the evaluation changes. Relevance AI is a generalist agent platform
 | Provider lock-in | Gmail or Outlook only | Provider-agnostic |
 | Deliverability controls | None (uses your Gmail reputation) | Per-agent reputation isolation |
 | Custom domains | No | Yes |
-| Prompt injection scanning | No | Built-in detection and scoring |
+| [Prompt injection](/glossary/prompt-injection) scanning | No | Built-in detection and scoring |
 | Inbox ownership | Human's inbox, agent has access | Agent owns the inbox |
-| Failure retry logic | Not documented | Exponential backoff with queue |
+| Failure retry logic | Not documented | [Exponential backoff](/glossary/exponential-backoff) with queue |
 | Send rate visibility | No | Dashboard with throttling controls |
 
-The biggest gap is ownership. In Relevance AI, your agent doesn't have an inbox. It borrows yours. You connect Gmail via OAuth, and the agent reads and sends from your account. That means it can see your entire email history, sends under your identity, and shares your sender reputation. We've covered [why that OAuth model creates real problems](/blog/oauth-gmail-agents-painful) as agents scale.
+The biggest gap is ownership. In Relevance AI, your agent doesn't have an inbox. It borrows yours. You connect Gmail via OAuth, and the agent reads and sends from your account. That means it can see your entire email history, sends under your identity, and shares your [sender reputation](/glossary/sender-reputation). We've covered [why that OAuth model creates real problems](/blog/oauth-gmail-agents-painful) as agents scale.
 
 There's also silence on what happens when email actions fail. If a send doesn't go through or an API call hits Gmail's rate limit, Relevance AI's docs don't describe retry behavior. Each action counts against your quota whether it succeeds or fails. For internal triage workflows, that's fine. For customer-facing email at volume, it's a gap.
 

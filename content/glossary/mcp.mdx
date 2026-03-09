@@ -1,0 +1,63 @@
+---
+title: "MCP (Model Context Protocol)"
+shortDefinition: "An open protocol created by Anthropic that standardizes how AI models connect to external tools, data sources, and services through a universal interface."
+category: "protocols-ecosystem"
+relatedTerms: ["a2a-protocol", "context-engineering", "agentic-ai"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is MCP?
+
+MCP (Model Context Protocol) is an open standard created by Anthropic that defines how AI models and agents connect to external tools and data sources. Think of it as a USB-C port for AI — a universal interface that lets any model talk to any tool without custom integration code.
+
+Before MCP, every tool integration required bespoke code. If you wanted your agent to read from a database, call an API, or send an email, you had to write a specific adapter for each one. MCP standardizes this into a client-server architecture:
+
+- **MCP Server**: Exposes tools, resources, or data through a standard interface
+- **MCP Client**: Built into the AI model's runtime, discovers and calls MCP servers
+- **MCP Host**: The application that runs the client and manages connections
+
+## Why MCP matters for AI agents
+
+MCP eliminates the integration tax. An agent that supports MCP can connect to any MCP-compatible tool without custom code. This means:
+
+- Email sending via an MCP server (like LobsterMail) works out of the box
+- Agents can discover and install new capabilities at runtime
+- Tool definitions are standardized, reducing prompt engineering overhead
+
+## MCP vs A2A
+
+MCP connects models to tools. A2A (Agent-to-Agent protocol) connects agents to each other. They're complementary — an agent might use MCP to access email and A2A to coordinate with other agents.
+
+<FAQ>
+<FAQItem question="What is MCP in AI?">
+MCP (Model Context Protocol) is an open standard by Anthropic that standardizes how AI models connect to external tools and data sources. It provides a universal interface so any AI model can use any compatible tool without custom integration code.
+</FAQItem>
+<FAQItem question="Who created MCP?">
+MCP was created by Anthropic and released as an open protocol. It has been widely adopted across the AI ecosystem, with support from multiple model providers and tool developers.
+</FAQItem>
+<FAQItem question="What is the difference between MCP and A2A?">
+MCP (Model Context Protocol) connects AI models to tools and data sources. A2A (Agent-to-Agent) connects AI agents to each other for coordination. MCP is about tool access; A2A is about agent collaboration. They work together in multi-agent systems.
+</FAQItem>
+<FAQItem question="How does MCP work with email infrastructure?">
+An MCP server for email (like LobsterMail) exposes email actions — send, read inbox, manage contacts — as standardized tools. Any MCP-compatible agent can discover these tools and use them without custom email integration code, making email capabilities plug-and-play.
+</FAQItem>
+<FAQItem question="What is an MCP server?">
+An MCP server is a service that exposes tools, resources, or data through the MCP standard interface. It describes what actions are available, what parameters they accept, and what they return. Any MCP client can connect to the server and use its capabilities without bespoke integration.
+</FAQItem>
+<FAQItem question="Do I need MCP to build an AI agent?">
+No. MCP is optional — you can build agents with direct API integrations. However, MCP simplifies tool management by standardizing how agents discover and use tools. As the ecosystem grows, MCP-compatible tools become available to your agent without additional development work.
+</FAQItem>
+<FAQItem question="Which AI models support MCP?">
+MCP was designed to be model-agnostic. Claude has native MCP support, and the protocol has been adopted by many other AI platforms and frameworks. Any agent framework that implements the MCP client specification can connect to MCP servers regardless of the underlying model.
+</FAQItem>
+<FAQItem question="Can MCP servers handle authentication and rate limiting?">
+Yes. MCP servers manage their own authentication, rate limiting, and access control. When an agent connects to an MCP server, the server can require API keys, enforce per-client rate limits, and restrict which tools are available based on the client's credentials.
+</FAQItem>
+<FAQItem question="How is MCP different from a REST API?">
+REST APIs require you to write specific client code for each service. MCP provides a universal discovery and invocation protocol — an agent can find out what tools a server offers and call them using a standard format. MCP is a meta-protocol that sits above individual APIs.
+</FAQItem>
+<FAQItem question="What is an MCP host?">
+An MCP host is the application that runs the MCP client and manages connections to MCP servers. It handles the lifecycle of server connections, routes tool calls from the AI model to the appropriate server, and returns results. Examples include Claude Desktop and agent runtime environments.
+</FAQItem>
+</FAQ>

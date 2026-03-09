@@ -1,0 +1,39 @@
+---
+title: "RAG (Retrieval-Augmented Generation)"
+shortDefinition: "A technique that improves AI responses by retrieving relevant documents and including them as context before generating an answer."
+category: "trending-ai"
+relatedTerms: ["embeddings", "vector-database", "context-window"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is RAG?
+
+Retrieval-Augmented Generation (RAG) is a technique that combines information retrieval with AI text generation. Instead of relying solely on what a language model learned during training, RAG first searches a knowledge base for relevant documents, then feeds those documents into the model as context alongside the user's question. The model generates its response grounded in the retrieved information.
+
+The RAG pipeline has two main stages. In the retrieval stage, the system takes the user's query, converts it into a numerical representation (an embedding), and searches a vector database for documents with similar embeddings. In the generation stage, the top-matching documents are inserted into the model's prompt as context, and the model produces an answer that draws on both its training knowledge and the retrieved material.
+
+RAG solves a fundamental limitation of language models: they can only know what they were trained on, and their training data has a cutoff date. With RAG, you can give a model access to your company's internal documentation, the latest product specs, or today's email threads without retraining the model. The knowledge base can be updated at any time, and the model's responses will reflect those updates immediately.
+
+## Why It Matters for AI Agents
+
+RAG is essential for building AI agents that need to work with specific, up-to-date information. An agent responding to a customer email needs access to the latest pricing, policies, and order history. Without RAG, the agent would either hallucinate answers or be limited to generic responses.
+
+In agent email workflows, RAG enables personalized and accurate communication. When an agent receives an email asking about a specific product feature, a RAG pipeline can retrieve the relevant documentation, past support tickets, and product changelog entries before the agent drafts its reply. This produces responses that are specific, accurate, and grounded in real data.
+
+For platforms like LobsterMail that serve as email infrastructure for AI agents, RAG integration is a natural extension. An agent can process incoming emails, use RAG to pull relevant context from a knowledge base, and generate informed replies, all within an automated pipeline. The quality difference between a RAG-powered agent and one working from training data alone is immediately obvious to recipients.
+
+RAG also reduces the risk of hallucination. When the model has relevant source material in its context window, it is far less likely to fabricate information. For agents handling business communications where accuracy matters, this reliability is not optional.
+
+<FAQ>
+<FAQItem question="How is RAG different from fine-tuning?">RAG retrieves external information at query time and includes it in the prompt. Fine-tuning permanently modifies the model's weights with new training data. RAG is better for knowledge that changes frequently, while fine-tuning is better for teaching the model new behaviors or styles. Many production systems use both together.</FAQItem>
+<FAQItem question="What kind of knowledge base works best with RAG?">RAG works well with any text-based content: documentation, FAQs, support tickets, email archives, product specs, and policy documents. The content should be chunked into manageable pieces (typically 200-500 tokens) and indexed in a vector database for fast similarity search.</FAQItem>
+<FAQItem question="Can AI agents use RAG to handle email?">Yes. An agent can use RAG to retrieve relevant context (customer history, product docs, past conversations) when processing incoming emails. This allows the agent to generate accurate, personalized replies instead of generic responses, significantly improving the quality of automated email communication.</FAQItem>
+<FAQItem question="What is a vector database and why does RAG need one?">A vector database stores documents as numerical embeddings (vectors) and enables fast similarity search. RAG needs one to quickly find documents that are semantically related to the user's query. Popular options include Pinecone, Weaviate, ChromaDB, and pgvector for PostgreSQL.</FAQItem>
+<FAQItem question="How does RAG reduce hallucination in AI agents?">RAG provides the model with source documents to reference when generating responses. When the model has relevant facts in its context window, it is far less likely to fabricate information. For email agents handling customer inquiries, this means responses are grounded in actual product data and policies rather than guesswork.</FAQItem>
+<FAQItem question="What is chunking in RAG and why does it matter?">Chunking is the process of splitting documents into smaller pieces for indexing. Chunk size affects retrieval quality — too large and irrelevant content gets included, too small and context is lost. For email knowledge bases, chunks of 200-500 tokens with overlap typically work well.</FAQItem>
+<FAQItem question="Can RAG work with email archives as a knowledge source?">Yes. Past email conversations, support tickets, and thread histories make excellent RAG sources. An agent can search previous interactions with a customer before replying, ensuring consistency and avoiding asking for information already provided in earlier messages.</FAQItem>
+<FAQItem question="What is the difference between RAG and long context windows?">Long context windows let you pass more information to the model at once, but they are expensive and have diminishing returns as context grows. RAG selectively retrieves only the most relevant documents, keeping prompts focused and cost-effective. RAG scales to millions of documents; context windows cannot.</FAQItem>
+<FAQItem question="How do you evaluate RAG quality for an email agent?">Measure retrieval precision (are the retrieved documents relevant?), answer accuracy (does the response match the source material?), and hallucination rate (does the agent fabricate information not in the sources?). Test with real email queries from your domain and compare RAG-augmented responses against ground truth answers.</FAQItem>
+<FAQItem question="Does RAG add latency to agent responses?">Yes, the retrieval step adds latency — typically 50-200ms for a vector search. For email agents, this is usually negligible since email response time expectations are measured in minutes, not milliseconds. The accuracy improvement from RAG far outweighs the small latency cost for most email workflows.</FAQItem>
+</FAQ>

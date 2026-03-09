@@ -1,0 +1,72 @@
+---
+title: "IP Warmup"
+shortDefinition: "The practice of gradually increasing email volume from a new IP address to build sender reputation with email providers."
+category: "email-infrastructure"
+relatedTerms: ["sender-reputation", "smtp-relay"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is IP Warmup?
+
+IP warmup is the process of slowly ramping up email sending volume on a new or dormant IP address so that email providers learn to trust it. A brand-new IP address has no sending history, which means email providers treat it with suspicion by default.
+
+A typical warmup schedule looks like this:
+
+- **Week 1:** Send 50-100 emails per day to your most engaged recipients
+- **Week 2:** Double the daily volume, continuing to target engaged contacts
+- **Week 3-4:** Gradually increase to several hundred per day
+- **Week 5-8:** Scale up toward your target daily volume
+
+The key principles are:
+
+1. Start with recipients who are most likely to open and engage with your emails
+2. Increase volume gradually, not in sudden jumps
+3. Monitor bounce rates, spam complaints, and delivery rates throughout
+4. Pause or reduce volume if you see reputation signals declining
+5. Maintain consistent daily sending — gaps in sending can reset progress
+
+Warmup applies to both dedicated IPs and new shared IP pools. If you're on a shared IP through an email service, the provider typically handles warmup across all their customers.
+
+## Why it matters for AI agents
+
+AI agents face a unique warmup challenge. An agent might need to send email from day one — handling verification codes, responding to customer inquiries, or coordinating with other agents. But a new IP with no history can't handle high volume without triggering spam filters.
+
+This creates a cold-start problem. The agent needs to send email to function, but sending too much too soon will damage the IP's reputation before it has a chance to build trust. Agents need warmup logic built into their sending pipeline: a volume limiter that gradually increases the daily cap based on delivery metrics.
+
+For agents using a service like LobsterMail, warmup is managed at the infrastructure level. The service routes new senders through pre-warmed IP pools, so agents can start sending immediately without manually managing a warmup schedule. As the agent's volume grows, it can be moved to a dedicated IP that's already been warmed.
+
+Agents that manage their own SMTP infrastructure need to automate warmup monitoring. Track delivery rates per provider, watch for deferrals (temporary rejections that signal you're sending too fast), and automatically throttle volume if metrics drop. Manual warmup monitoring doesn't work for autonomous systems.
+
+<FAQ>
+<FAQItem question="What is IP warmup for email?">
+IP warmup is the process of gradually increasing the number of emails you send from a new IP address over several weeks. This builds a positive sending history with email providers so they trust your IP and deliver your emails to the inbox rather than spam.
+</FAQItem>
+<FAQItem question="How long does IP warmup take?">
+IP warmup typically takes 4 to 8 weeks, depending on your target sending volume and how email providers respond. Some providers warm up faster than others. The process can take longer if you encounter reputation issues during the ramp-up period.
+</FAQItem>
+<FAQItem question="Do AI agents need to worry about IP warmup?">
+Yes, unless they're using an email service that handles warmup automatically. Agents sending from new or dedicated IPs need warmup logic in their sending pipeline to avoid damaging their sender reputation by sending too much volume too quickly.
+</FAQItem>
+<FAQItem question="What happens if you skip IP warmup?">
+Sending high volume from a new IP without warmup triggers spam filters and rate limiting from email providers. Your emails will land in spam or be rejected outright, and the IP's reputation will be damaged before it has a chance to build trust. Recovery from a bad start can take longer than a proper warmup.
+</FAQItem>
+<FAQItem question="What is the difference between a dedicated IP and a shared IP?">
+A dedicated IP is used only by your sending infrastructure, giving you full control over its reputation. A shared IP is used by multiple senders through a service provider. Shared IPs are typically pre-warmed by the provider, while dedicated IPs require you to manage the warmup process yourself.
+</FAQItem>
+<FAQItem question="How do you monitor IP warmup progress?">
+Track delivery rates, bounce rates, spam complaint rates, and inbox placement rates per email provider during warmup. Watch for deferrals (temporary rejections with 4xx codes) that indicate you are sending too fast. If metrics decline, reduce volume and investigate before continuing the ramp.
+</FAQItem>
+<FAQItem question="What emails should you send during IP warmup?">
+Send to your most engaged recipients first — people who have recently opened or clicked your emails. High engagement signals to email providers that your emails are wanted, which builds positive reputation faster. Avoid sending to old or unverified lists during the warmup period.
+</FAQItem>
+<FAQItem question="Can you speed up IP warmup?">
+You can speed it up slightly by sending only to highly engaged recipients and maintaining strong authentication (SPF, DKIM, DMARC). However, there is no reliable shortcut. Rushing warmup risks triggering spam filters and undoing your progress. Patience during warmup pays off with long-term deliverability.
+</FAQItem>
+<FAQItem question="What is a warmup schedule?">
+A warmup schedule is a plan that specifies how many emails to send each day or week during the ramp-up period. A typical schedule starts at 50-100 emails per day and doubles every few days until reaching the target volume. The schedule should be adjusted based on delivery metrics.
+</FAQItem>
+<FAQItem question="How does IP warmup work with email services like LobsterMail?">
+Email services route new senders through pre-warmed shared IP pools, so agents can start sending immediately without manual warmup. As an agent's volume grows, the service can migrate it to a dedicated IP that has already been warmed through the shared pool's traffic history.
+</FAQItem>
+</FAQ>

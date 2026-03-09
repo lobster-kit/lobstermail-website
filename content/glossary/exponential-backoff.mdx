@@ -1,0 +1,75 @@
+---
+title: "Exponential Backoff"
+shortDefinition: "A retry strategy where the wait time between attempts increases exponentially, reducing load on failing systems."
+category: "email-infrastructure"
+relatedTerms: ["idempotency", "soft-bounce", "webhook"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is Exponential Backoff?
+
+Exponential backoff is a retry strategy where the delay between successive attempts doubles (or increases by a multiplier) after each failure. Instead of retrying immediately or at fixed intervals, the system waits progressively longer, giving the failing service time to recover.
+
+A typical exponential backoff sequence:
+
+- **Attempt 1:** Fail, wait 1 second
+- **Attempt 2:** Fail, wait 2 seconds
+- **Attempt 3:** Fail, wait 4 seconds
+- **Attempt 4:** Fail, wait 8 seconds
+- **Attempt 5:** Fail, wait 16 seconds
+
+Most implementations add jitter — a random variation to the wait time — to prevent multiple clients from retrying at exactly the same moment (a "thundering herd" problem). With jitter, the delays might be 1.2s, 2.7s, 3.8s, 9.1s, etc.
+
+The strategy also includes:
+
+- **Maximum delay cap:** An upper limit on wait time (e.g., 5 minutes) to prevent absurdly long waits
+- **Maximum retries:** A total retry count before giving up entirely
+- **Circuit breaker:** Stop retrying after enough consecutive failures, assume the service is down
+
+Exponential backoff is used in SMTP delivery (retrying soft bounces), API calls, webhook delivery, database connections, and almost any network operation that can fail transiently.
+
+## Why it matters for AI agents
+
+AI agents interact with external systems constantly — sending emails, calling APIs, receiving webhooks, querying databases. Every one of these operations can fail temporarily. How the agent retries determines whether it recovers gracefully or makes the problem worse.
+
+An agent that retries failed email sends immediately and repeatedly will overwhelm the receiving server, trigger rate limiting, and potentially get the sending IP blocked. This turns a temporary problem into a permanent one. Exponential backoff prevents this by giving the receiving system time to recover between attempts.
+
+For email-specific operations, backoff is built into the SMTP protocol. When a receiving server returns a 4xx code (temporary failure), the sending server is expected to retry with increasing delays. Agents that manage their own SMTP connections must implement this correctly — too aggressive and they get blocked, too conservative and time-sensitive emails arrive too late.
+
+Agents also need backoff for webhook delivery. When an agent's webhook endpoint is temporarily unavailable, the email service retries with exponential backoff. If the agent's endpoint stays down too long, the service may disable the webhook entirely. Agents need monitoring to detect when their webhook endpoints are failing and alerting before the service gives up.
+
+The combination of exponential backoff with idempotency gives agents a reliable retry pattern. The backoff prevents overloading failing systems, and idempotency prevents duplicate side effects when retries eventually succeed.
+
+<FAQ>
+<FAQItem question="What is exponential backoff?">
+Exponential backoff is a retry strategy where the time between retry attempts increases exponentially after each failure. Instead of retrying every second, you might wait 1s, then 2s, then 4s, then 8s. This gives failing systems time to recover and prevents your retries from adding to the problem.
+</FAQItem>
+<FAQItem question="Why do AI agents need exponential backoff?">
+AI agents interact with external services that can fail temporarily. Without backoff, rapid retries can overwhelm already-stressed systems, trigger rate limits, or get the agent blocked. Exponential backoff ensures the agent recovers gracefully from transient failures without causing additional damage.
+</FAQItem>
+<FAQItem question="What is jitter in exponential backoff?">
+Jitter adds random variation to the backoff delay. Without jitter, multiple agents retrying the same failed service would all retry at the same moments, creating traffic spikes. Jitter spreads retries across time, reducing the chance of a thundering herd problem and giving the service a better chance to recover.
+</FAQItem>
+<FAQItem question="What is the difference between exponential backoff and linear backoff?">
+Linear backoff increases wait time by a fixed amount (1s, 2s, 3s, 4s), while exponential backoff doubles it (1s, 2s, 4s, 8s). Exponential backoff is preferred because it backs off more aggressively when failures persist, reducing load on struggling systems faster than linear approaches.
+</FAQItem>
+<FAQItem question="What is a circuit breaker and how does it relate to backoff?">
+A circuit breaker stops retrying entirely after a threshold of consecutive failures, assuming the service is down. It complements exponential backoff by preventing wasted retries when recovery is unlikely. After a cooldown period, the circuit breaker allows a test request to check if the service has recovered.
+</FAQItem>
+<FAQItem question="How does exponential backoff work with SMTP email delivery?">
+SMTP servers use exponential backoff when they receive 4xx temporary rejection codes. The sending server waits progressively longer between delivery attempts, typically starting at a few minutes and extending to hours. Most SMTP implementations give up after 48-72 hours of failed retries.
+</FAQItem>
+<FAQItem question="What is a maximum delay cap in exponential backoff?">
+A maximum delay cap sets an upper limit on how long the system waits between retries. Without a cap, delays could grow to hours or days. Common caps range from 30 seconds for API calls to 5-15 minutes for email delivery, depending on the use case and urgency.
+</FAQItem>
+<FAQItem question="How should agents handle exponential backoff for webhook delivery?">
+When an agent's webhook endpoint is unavailable, the sending service retries with exponential backoff. Agents should monitor webhook failure rates and ensure their endpoints recover before the service exhausts its retry limit, which could result in permanently disabled webhooks and missed events.
+</FAQItem>
+<FAQItem question="How many retries should an agent attempt before giving up?">
+Most implementations use 3 to 7 retries depending on the operation's importance. For email sends, 5-7 retries over several hours is common. For API calls, 3-5 retries over a few minutes is typical. Always set a maximum retry count to prevent infinite retry loops.
+</FAQItem>
+<FAQItem question="How does exponential backoff combine with idempotency?">
+Exponential backoff handles the timing of retries, while idempotency ensures retries don't cause duplicate side effects. Together, they create a reliable retry pattern: the agent retries with increasing delays and the server deduplicates any requests that were actually received the first time.
+</FAQItem>
+</FAQ>

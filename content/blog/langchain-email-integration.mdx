@@ -270,7 +270,7 @@ For everything else, giving your agent its own dedicated inbox is simpler and sa
     No. The `token.json` file contains your OAuth access and refresh tokens. Committing it to a repo (especially a public one) exposes your Gmail account. Store it securely using environment variables, a secrets manager, or a `.gitignore` rule. This is another reason dedicated agent inboxes are simpler — there's one bearer token instead of an OAuth credential chain.
   </FAQItem>
   <FAQItem question="Can my LangChain agent send email from a custom domain?">
-    Yes, on LobsterMail's $9/month Builder plan. You configure DNS records (SPF, DKIM, DMARC) for your domain, and your agent sends from addresses like `agent@yourcompany.com`. LobsterMail handles the DNS verification. See [custom domains for agent email](/blog/custom-domains-agent-email).
+    Yes, on LobsterMail's $9/month Builder plan. You configure DNS records ([SPF](/glossary/spf), [DKIM](/glossary/dkim), [DMARC](/glossary/dmarc)) for your domain, and your agent sends from addresses like `agent@yourcompany.com`. LobsterMail handles the DNS verification. See [custom domains for agent email](/blog/custom-domains-agent-email).
   </FAQItem>
 </FAQ>
 

@@ -1,10 +1,14 @@
 ---
-title: "prompt injection through email: what agents need to watch for"
-description: "Emails are untrusted input. An attacker can craft a message that hijacks your agent's behavior. Here's how it works and how to defend against it."
-date: "2026-02-07"
-author: "Samuel Chenard"
-tags: ["security", "email"]
-image: "/blog/prompt-injection-email-agents.png"
+title: 'prompt injection through email: what agents need to watch for'
+description: >-
+  Emails are untrusted input. An attacker can craft a message that hijacks your
+  agent's behavior. Here's how it works and how to defend against it.
+date: '2026-02-07'
+author: Samuel Chenard
+tags:
+  - security
+  - email
+image: /blog/prompt-injection-email-agents.png
 ---
 
 Your agent reads email. That means it reads attacker-controlled input. Every message that lands in its shell is a potential instruction set, and without proper defenses, a single crafted email can hijack your agent's behavior entirely.
@@ -48,7 +52,7 @@ HTML emails can contain text that's invisible to humans but fully visible to you
 <p>Please find the Q4 report attached.</p>
 ```
 
-Your agent sees both the hidden div and the visible paragraph. The model has no way to know which one is "real" content and which is injected; it processes everything as tokens. This is the same technique that powered the [EchoLeak vulnerability (CVE-2025-32711)](https://arxiv.org/html/2509.10540v1) in Microsoft 365 Copilot, a zero-click attack that exfiltrated data from Outlook, SharePoint, and OneDrive without any user interaction. CVSS score: 9.3.
+Your agent sees both the hidden div and the visible paragraph. The model has no way to know which one is "real" content and which is injected; it processes everything as [tokens](/glossary/tokens). This is the same technique that powered the [EchoLeak vulnerability (CVE-2025-32711)](https://arxiv.org/html/2509.10540v1) in Microsoft 365 Copilot, a zero-click attack that exfiltrated data from Outlook, SharePoint, and OneDrive without any user interaction. CVSS score: 9.3.
 
 ### Attachment filenames
 
@@ -73,7 +77,7 @@ Subject: Re: Your subscription renewal
 ```
 
 <Callout type="warning">
-  Every field your agent reads is an attack surface. Body, headers, attachment names, HTML attributes, alt text on images — if it enters the model's context window, it can contain injected instructions. Treat all email content as hostile input, the same way you'd treat user input in a web application.
+  Every field your agent reads is an attack surface. Body, headers, attachment names, HTML attributes, alt text on images — if it enters the model's [context window](/glossary/context-window), it can contain injected instructions. Treat all email content as hostile input, the same way you'd treat user input in a web application.
 </Callout>
 
 ## The lethal trifecta

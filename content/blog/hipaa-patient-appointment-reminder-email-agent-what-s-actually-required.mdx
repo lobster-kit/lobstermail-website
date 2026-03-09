@@ -88,7 +88,7 @@ The agent should never put PHI into LLM prompts if it can avoid it. For appointm
 
 HIPAA requires that you can produce records showing who accessed what PHI, when, and why. For an agent sending reminders, that means logging every email sent (recipient, timestamp, content hash), every reply received, and every action taken in response.
 
-Most traditional reminder platforms handle this internally. If you're building an agent-based system, the logging is on you. Record inbox provisioning events, outbound sends, inbound receipt timestamps, and any data passed to your LLM. Store those logs for six years minimum per HIPAA's retention requirements under 45 CFR § 164.530.
+Most traditional reminder platforms handle this internally. If you're building an agent-based system, the logging is on you. Record [inbox provisioning](/glossary/inbox-provisioning) events, outbound sends, inbound receipt timestamps, and any data passed to your LLM. Store those logs for six years minimum per HIPAA's retention requirements under 45 CFR § 164.530.
 
 ## The BAA question
 

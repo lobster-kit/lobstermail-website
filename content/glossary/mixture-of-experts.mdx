@@ -1,0 +1,68 @@
+---
+title: "Mixture of Experts"
+shortDefinition: "A model architecture that uses a routing mechanism to activate only a subset of specialized sub-networks (experts) for each input, increasing capacity without proportionally increasing compute."
+category: "trending-ai"
+relatedTerms: ["transformer", "inference"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is mixture of experts?
+
+Mixture of Experts (MoE) is a neural network architecture where the model contains multiple specialized sub-networks called "experts," but only activates a few of them for any given input. A learned routing mechanism (the "gate" or "router") examines each input token and decides which experts should process it.
+
+In a standard dense transformer, every parameter participates in every computation. In an MoE transformer, each token passes through only 1-2 of potentially dozens of expert networks within each layer. This means the model can have many more total parameters (and thus more knowledge capacity) while keeping per-token compute cost manageable.
+
+For example, Mixtral 8x7B has 8 expert networks per MoE layer with 7 billion parameters each. The total parameter count is around 47 billion, but since only 2 experts are active per token, the actual compute per token is closer to a 14B parameter model. You get the knowledge of a much larger model with the speed of a smaller one.
+
+Key characteristics of MoE models:
+
+- **Sparse activation** — only a fraction of parameters are used per token
+- **Higher total capacity** — more parameters mean more stored knowledge
+- **Efficient inference** — compute per token stays low despite large parameter counts
+- **Larger memory footprint** — all expert weights must be loaded even though only some are active
+
+## Why it matters for AI agents
+
+MoE architectures represent a meaningful shift in the performance-cost trade-off for AI agents. For email processing agents that handle high volumes, the reduced per-token compute of MoE models translates directly to lower inference costs and faster response times.
+
+An MoE model can process an email classification request with the quality of a large model but the speed and cost of a model several times smaller. This makes it practical to use more capable models for tasks where you'd otherwise default to a smaller, cheaper (and less accurate) option.
+
+The expert specialization in MoE models also has interesting implications for email agents. Different experts may naturally specialize in different types of content. One expert might handle formal business language well, another might specialize in technical documentation, and a third might handle casual conversational email. The router activates the right experts based on the input, giving you implicitly specialized processing without explicit prompt engineering.
+
+For self-hosted deployments, MoE models present a trade-off: they need enough memory to hold all expert weights (larger than an equivalently performing dense model), but they're faster per request because only a subset of parameters is active. If your email agent runs on hardware with sufficient RAM but you need fast throughput, MoE is an attractive option.
+
+Open-source MoE models like Mixtral and DeepSeek have made this architecture accessible to agent developers. They offer strong performance at favorable cost points, especially for high-throughput applications where per-token speed matters.
+
+<FAQ>
+<FAQItem question="What is the difference between MoE and a regular transformer?">
+A regular (dense) transformer uses all its parameters for every token. An MoE transformer has multiple expert sub-networks per layer and uses a router to select which experts process each token. This lets MoE models have more total parameters (and knowledge) while using less compute per token than a dense model of equivalent quality.
+</FAQItem>
+<FAQItem question="Do MoE models have any downsides?">
+Yes. MoE models require more memory because all expert weights must be loaded, even though only some are active. They can also suffer from load balancing issues where some experts are overused and others are underused. Quantized MoE models partially address the memory issue but add complexity. For API-based usage, these are the provider's problem — you just see faster, cheaper inference.
+</FAQItem>
+<FAQItem question="Should I choose an MoE model for my email agent?">
+If you're self-hosting and need high throughput, MoE models offer excellent performance per compute dollar. If you're using API providers, MoE is often running behind the scenes already. The main practical question is whether the model performs well on your specific email tasks — run benchmarks on your actual workload rather than choosing architecture first.
+</FAQItem>
+<FAQItem question="What is the router in a Mixture of Experts model?">
+The router (or gate) is a small neural network that examines each input token and decides which expert sub-networks should process it. It outputs a probability distribution over experts, and the top-k experts (usually 1-2) are selected for that token. The router is trained alongside the experts during model training.
+</FAQItem>
+<FAQItem question="How many experts are typically active per token?">
+Most MoE models activate 1-2 experts per token out of 8-64 total experts per layer. For example, Mixtral activates 2 of 8 experts. This sparse activation is what makes MoE efficient — you get the knowledge capacity of all experts but only pay the compute cost of the active ones.
+</FAQItem>
+<FAQItem question="What are some popular MoE models?">
+Mixtral 8x7B and 8x22B by Mistral, DeepSeek-V2 and V3, and Grok by xAI are well-known MoE models. Many API providers also use MoE architectures internally without publicizing it, as the architecture enables better performance-per-cost ratios at scale.
+</FAQItem>
+<FAQItem question="Can MoE models be quantized?">
+Yes. MoE models can be quantized using the same techniques as dense models (GPTQ, GGUF, AWQ). Quantization is especially useful for MoE because it directly addresses their main drawback — high memory requirements. A 4-bit quantized MoE model can fit in a fraction of the memory while retaining most of its quality.
+</FAQItem>
+<FAQItem question="Why do MoE models use more memory than dense models?">
+All expert weights must be loaded into memory even though only a subset is active for any given token. Different tokens route to different experts, so every expert needs to be ready. A model with 8 experts of 7B parameters each requires memory for all 47B parameters, even though per-token compute only uses about 14B worth.
+</FAQItem>
+<FAQItem question="How does MoE affect inference latency for email processing?">
+MoE typically reduces per-token latency compared to a dense model of equivalent quality because fewer parameters are active per computation. For email agents processing high volumes of messages, this translates to faster classification, extraction, and response generation without sacrificing output quality.
+</FAQItem>
+<FAQItem question="Is Mixture of Experts the same as an ensemble of models?">
+No. An ensemble runs multiple complete models and combines their outputs. MoE is a single model with specialized sub-networks inside it, where a learned router selects which sub-networks process each input. MoE is more efficient because only a fraction of the model runs per token, unlike ensembles where every model runs fully.
+</FAQItem>
+</FAQ>

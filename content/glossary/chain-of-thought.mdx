@@ -1,0 +1,64 @@
+---
+title: "Chain of Thought"
+shortDefinition: "A prompting technique that instructs an LLM to reason through a problem step by step before producing a final answer."
+category: "agent-developer"
+relatedTerms: ["inference", "context-engineering"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is chain of thought?
+
+Chain of thought (CoT) is a prompting strategy where you ask a large language model to show its reasoning step by step before arriving at a final answer. Instead of jumping straight to a conclusion, the model walks through intermediate steps — much like a person solving a math problem on paper.
+
+The technique was popularized by a 2022 Google research paper that showed adding "Let's think step by step" to a prompt dramatically improved accuracy on reasoning tasks. Since then, CoT has become a standard technique in prompt engineering.
+
+There are two main approaches:
+
+- **Zero-shot CoT:** Simply adding an instruction like "Think step by step" to the prompt. The model generates its own reasoning chain without examples.
+- **Few-shot CoT:** Providing examples of step-by-step reasoning in the prompt. The model follows the demonstrated pattern.
+
+CoT works because LLMs generate tokens sequentially. When forced to produce intermediate reasoning tokens, the model effectively "computes" through the problem rather than pattern-matching to a cached answer. Each reasoning step creates context that informs the next step.
+
+## Why it matters for AI agents
+
+For AI agents processing email, chain of thought improves decision quality on ambiguous tasks. Classifying an email as "urgent" vs. "informational" requires weighing multiple signals: the sender, subject line, content tone, previous interactions, and deadlines mentioned in the body. A CoT prompt forces the agent to evaluate each signal explicitly before making a classification.
+
+This matters most when agents take real-world actions. An agent that silently decides to archive an important email is a problem. An agent that reasons through "This is from a known customer, mentions a deadline, and asks for a deliverable — this should be flagged as urgent" makes better decisions and produces auditable logs.
+
+The trade-off is token cost. Chain-of-thought reasoning produces more output tokens per request, which increases inference costs. For high-volume email processing, you need to balance reasoning depth against cost. Simple tasks (spam detection) rarely need CoT. Complex tasks (drafting a response to a nuanced customer complaint) benefit significantly from it.
+
+Many modern models have CoT built into their default behavior. But explicitly prompting for structured reasoning still improves consistency, especially for agents that need to justify their actions.
+
+<FAQ>
+<FAQItem question="Does chain of thought actually make LLMs smarter?">
+It doesn't change the model's underlying capabilities, but it unlocks reasoning that the model can do but wouldn't otherwise surface. By generating intermediate steps, the model uses its own output as additional context for subsequent tokens. This produces more accurate results on tasks that require multi-step logic.
+</FAQItem>
+<FAQItem question="When should I use chain of thought in agent prompts?">
+Use CoT for tasks that involve classification, decision-making, or multi-step reasoning — like triaging emails, evaluating customer sentiment, or deciding whether to escalate an issue. Skip it for simple extraction tasks or straightforward formatting where step-by-step reasoning adds cost without improving quality.
+</FAQItem>
+<FAQItem question="Does chain of thought increase costs?">
+Yes. CoT generates more output tokens because the model produces reasoning steps in addition to the final answer. For agents processing thousands of requests, this can meaningfully increase inference costs. You can mitigate this by using CoT selectively — only on complex tasks — and using shorter reasoning chains for simpler decisions.
+</FAQItem>
+<FAQItem question="What is the difference between zero-shot and few-shot chain of thought?">
+Zero-shot CoT adds a simple instruction like "think step by step" without examples. Few-shot CoT includes worked examples showing the reasoning pattern you want the model to follow. Few-shot CoT is more reliable for specific tasks because the examples constrain the model's reasoning format, but it uses more input tokens.
+</FAQItem>
+<FAQItem question="Can chain of thought be used for email classification?">
+Yes, and it improves accuracy on ambiguous emails. A CoT prompt for email classification forces the agent to evaluate sender context, subject keywords, content tone, and urgency signals before assigning a category. This explicit evaluation reduces misclassification compared to direct one-shot labeling.
+</FAQItem>
+<FAQItem question="How does chain of thought improve agent auditability?">
+CoT produces a written record of the agent's reasoning process. When an agent explains why it classified an email as urgent or why it escalated a support ticket, operators can review the reasoning chain to verify the decision was sound. This transparency is valuable for debugging, compliance, and building trust in automated systems.
+</FAQItem>
+<FAQItem question="What is chain of thought prompting vs reasoning models?">
+CoT prompting asks a standard model to show its reasoning via prompt instructions. Reasoning models like o1 or DeepSeek-R1 are specifically trained to reason internally before answering. Reasoning models produce higher-quality chains but cost more per token. For many email agent tasks, CoT prompting with a standard model provides sufficient reasoning at lower cost.
+</FAQItem>
+<FAQItem question="Can chain of thought slow down an AI agent?">
+Yes. Because CoT generates more output tokens, response latency increases. For time-sensitive tasks like real-time email triage, this added latency may be unacceptable. The solution is to use CoT selectively — apply it to complex decisions where accuracy matters more than speed, and use direct prompting for simple, high-volume tasks.
+</FAQItem>
+<FAQItem question="How do you structure a chain of thought prompt for email agents?">
+Define the reasoning steps explicitly: "1) Identify the sender and their relationship to us. 2) Determine the primary intent of the email. 3) Check for urgency indicators. 4) Decide on the appropriate action." Explicit step definitions produce more consistent reasoning than open-ended "think step by step" instructions.
+</FAQItem>
+<FAQItem question="Does chain of thought work with smaller AI models?">
+CoT benefits scale with model size. Large models show significant accuracy improvements with CoT, while smaller models may produce unreliable or incoherent reasoning chains. For email agents using distilled or smaller models, test whether CoT actually improves results on your specific task before committing to the additional token cost.
+</FAQItem>
+</FAQ>

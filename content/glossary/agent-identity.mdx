@@ -1,0 +1,67 @@
+---
+title: "Agent Identity"
+shortDefinition: "The verifiable identity assigned to an AI agent, enabling it to authenticate, send email, and interact with external services as a distinct entity."
+category: "protocols-ecosystem"
+relatedTerms: ["inbox-provisioning", "sender-reputation"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is Agent Identity?
+
+Agent identity is the set of credentials, addresses, and metadata that make an AI agent a recognizable, verifiable entity in digital systems. Just as humans have email addresses, usernames, and cryptographic keys, agents need their own identity primitives to interact with the world.
+
+An agent's identity typically consists of:
+
+- **Email address:** A unique address the agent sends from and receives at, tied to a verified domain
+- **API keys:** Credentials for authenticating with services the agent uses
+- **Cryptographic keys:** DKIM keys for email signing, HMAC secrets for webhook verification
+- **Metadata:** Agent name, purpose, owner, permissions, and trust level
+- **Audit trail:** A log of actions the agent has taken under its identity
+
+Agent identity is distinct from user identity. A human user might own or operate the agent, but the agent acts independently under its own identity. When an agent sends an email, the recipient sees the agent's address and name, not the human operator's. When an agent calls an API, it authenticates with its own credentials, not its owner's.
+
+## Why it matters for AI agents
+
+Agent identity solves the attribution problem. When multiple agents operate in a system, you need to know which agent did what. Without distinct identities, all agent actions look the same — you can't audit, rate-limit, or revoke access for a specific agent.
+
+For email, identity is especially important. An agent's email address is its public-facing identity. Recipients, spam filters, and email providers all evaluate the agent based on its sending domain and address. A strong agent identity with proper DKIM signing, SPF alignment, and consistent sending behavior builds the sender reputation that keeps emails landing in the inbox.
+
+Multi-agent systems need identity boundaries. If Agent A and Agent B share the same email address, you can't tell their messages apart, enforce different sending limits, or isolate the reputation impact when one agent misbehaves. Each agent needs its own provisioned identity with its own credentials and address.
+
+Agent identity also enables trust relationships. Other systems can whitelist a specific agent identity, grant it access to resources, or establish communication channels with it. Without a stable, verifiable identity, every interaction requires re-establishing trust from scratch.
+
+LobsterMail provisions agent identity as part of inbox creation. Each agent gets a unique email address, DKIM keys, API credentials, and webhook secrets — a complete identity package that lets the agent operate as an independent, verifiable entity in the email ecosystem.
+
+<FAQ>
+<FAQItem question="What is agent identity?">
+Agent identity is the collection of credentials, addresses, and metadata that identify an AI agent as a distinct entity. It includes an email address, API keys, cryptographic keys, and metadata like the agent's name and permissions. Agent identity enables authentication, attribution, and trust in multi-agent systems.
+</FAQItem>
+<FAQItem question="Why do AI agents need their own identities?">
+Agents need their own identities for attribution (knowing which agent did what), security (isolating access and credentials), reputation management (maintaining separate sender reputations), and trust (enabling other systems to verify and authorize specific agents).
+</FAQItem>
+<FAQItem question="How is agent identity different from user identity?">
+Agent identity belongs to the AI agent itself, not its human operator. The agent authenticates with its own credentials, sends email from its own address, and builds its own reputation. This separation lets agents act independently while still being auditable and manageable by their human operators.
+</FAQItem>
+<FAQItem question="How does agent identity affect email deliverability?">
+Each agent identity has its own sender reputation tied to its email address and domain. An agent that sends high-quality, relevant emails builds a positive reputation, while a misbehaving agent only damages its own reputation. Isolating identities prevents one bad agent from tanking deliverability for others on the same platform.
+</FAQItem>
+<FAQItem question="What happens when multiple agents share an identity?">
+Shared identities create attribution problems, security risks, and reputation entanglement. You cannot audit which agent performed an action, you cannot revoke one agent's access without affecting others, and one agent's spam-like behavior damages deliverability for all agents sharing that identity.
+</FAQItem>
+<FAQItem question="How do you provision an agent identity?">
+Agent identity provisioning involves creating a unique email address, generating DKIM signing keys, issuing API credentials, and configuring webhook secrets. Platforms like LobsterMail handle this automatically when you create a new inbox, giving the agent a complete identity package in a single API call.
+</FAQItem>
+<FAQItem question="Can an AI agent have multiple identities?">
+Yes. An agent might use different identities for different roles — one for customer support, another for internal notifications, and a third for inter-agent communication. Each identity maintains its own reputation and credentials, letting the agent operate in different contexts with appropriate trust boundaries.
+</FAQItem>
+<FAQItem question="How does agent identity support compliance and auditing?">
+Agent identity creates an auditable trail of every action an agent takes. Each email sent, API call made, and decision executed is tied to a specific agent identity with timestamps and context. This supports regulatory compliance, incident investigation, and accountability in automated systems.
+</FAQItem>
+<FAQItem question="What role does DKIM play in agent identity?">
+DKIM cryptographically signs outgoing emails with a key tied to the agent's domain, proving the email genuinely came from that agent and was not modified in transit. It is a core component of agent identity for email, providing verifiable proof of origin that recipients and spam filters rely on.
+</FAQItem>
+<FAQItem question="How do you rotate or revoke agent identity credentials?">
+Credential rotation involves generating new API keys and DKIM keys, updating the agent's configuration, and publishing new DNS records. Revocation disables the old credentials immediately. Good identity management systems support zero-downtime rotation by allowing a transition period where both old and new credentials are valid.
+</FAQItem>
+</FAQ>

@@ -35,7 +35,7 @@ An email bounce happens when a message can't be delivered to the recipient's mai
 | Permanence | Address will never accept mail | May accept mail on retry |
 | Common causes | Invalid address, nonexistent domain | Full mailbox, server downtime, message too large |
 | ESP action taken | Immediately suppresses address | Retries delivery, then suppresses after repeated failures |
-| Impact on sender reputation | High, immediate damage | Low per occurrence, cumulative if ignored |
+| Impact on [sender reputation](/glossary/sender-reputation) | High, immediate damage | Low per occurrence, cumulative if ignored |
 
 The key takeaway: hard bounces mean "stop sending here forever." Soft bounces mean "try again later, but pay attention if it keeps happening." Mishandling either one will erode your sender reputation, which affects every email you send from that domain going forward.
 
@@ -46,10 +46,10 @@ A hard bounce means the email cannot be delivered and never will be. The most co
 Common causes:
 
 - The email address doesn't exist. Someone typed `jon@gmial.com` instead of `john@gmail.com`.
-- The domain has no mail server. The DNS has no MX record, so there's nowhere to deliver the message.
+- The domain has no mail server. The DNS has no [MX record](/glossary/mx-record), so there's nowhere to deliver the message.
 - The receiving server has permanently blocked your sending domain or IP.
 
-Here's the part most guides skip: not every `550` is truly permanent. Some strict security filters return a `550` for messages they don't trust, even when the address is valid. Greylisting systems can also produce what looks like a hard bounce on the first attempt, then accept the message on retry. Mailchimp briefly mentions this edge case, but most platforms treat all `550` responses as final.
+Here's the part most guides skip: not every `550` is truly permanent. Some strict security filters return a `550` for messages they don't trust, even when the address is valid. [Greylisting](/glossary/greylisting) systems can also produce what looks like a hard bounce on the first attempt, then accept the message on retry. Mailchimp briefly mentions this edge case, but most platforms treat all `550` responses as final.
 
 If you're building agent-based email workflows, this gray area matters. A blanket "suppress all 550s" rule might remove valid addresses that simply have aggressive spam filters. The better approach is to check the full SMTP response text, not just the code. A `550 user not found` is genuinely permanent. A `550 message rejected by policy` might not be.
 
@@ -107,7 +107,7 @@ If you're using LobsterMail's infrastructure, bounce classification happens auto
 
 ## What's an acceptable bounce rate in 2026?
 
-The benchmarks have tightened. After Google and Yahoo rolled out stricter bulk sender requirements in early 2024, the acceptable hard bounce rate for most mailbox providers is now under 2%. Some deliverability consultants recommend staying under 0.5% for cold outreach.
+The [benchmarks](/glossary/benchmarks) have tightened. After Google and Yahoo rolled out stricter bulk sender requirements in early 2024, the acceptable hard bounce rate for most mailbox providers is now under 2%. Some deliverability consultants recommend staying under 0.5% for cold outreach.
 
 Here's how to think about it:
 

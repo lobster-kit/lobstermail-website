@@ -1,0 +1,65 @@
+---
+title: "Orchestrator Agent"
+shortDefinition: "A central AI agent that coordinates, delegates, and manages tasks across multiple sub-agents in a multi-agent system."
+category: "agent-developer"
+relatedTerms: ["multi-agent-systems", "human-in-the-loop", "agentic-ai"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is an orchestrator agent?
+
+An orchestrator agent is an AI agent that acts as the central coordinator in a multi-agent system. Instead of handling every task itself, the orchestrator breaks work into subtasks and delegates them to specialized sub-agents. It decides which agent handles what, manages the flow of information between agents, and assembles the final result.
+
+Think of it like a project manager. The orchestrator doesn't write code, draft emails, or query databases directly. It knows which agent is best suited for each job, routes tasks accordingly, monitors progress, and handles failures. When a sub-agent completes its work, the orchestrator collects the output and decides the next step.
+
+A typical orchestrator pattern looks like this:
+
+1. **Receive a goal** from the user or an upstream system
+2. **Decompose** the goal into discrete subtasks
+3. **Assign** each subtask to the appropriate specialized agent
+4. **Monitor** execution and handle errors or retries
+5. **Aggregate** results and return the final output
+
+Orchestrators can be simple (a fixed pipeline of agent calls) or dynamic (using an LLM to decide routing at runtime based on context).
+
+## Why it matters for AI agents
+
+For AI agents that interact with the real world — sending emails, managing inboxes, coordinating with external services — orchestration becomes essential at scale. A single monolithic agent that tries to handle inbox triage, draft responses, schedule follow-ups, and update CRMs will hit context window limits and become unreliable.
+
+An orchestrator solves this by splitting responsibilities. One agent reads incoming email. Another classifies intent. A third drafts responses. The orchestrator ties them together into a coherent workflow. Each sub-agent stays focused and operates within manageable context boundaries.
+
+Email is a natural fit for orchestrated systems because messages arrive asynchronously, carry varied intent, and often trigger multi-step workflows. An orchestrator can route a support request to one agent, a sales inquiry to another, and a verification code to a third — all from the same inbox.
+
+<FAQ>
+<FAQItem question="What is the difference between an orchestrator agent and a regular agent?">
+A regular agent handles tasks on its own. An orchestrator agent coordinates multiple agents, delegating subtasks to specialized agents and managing the overall workflow. It focuses on routing and coordination rather than executing individual tasks directly.
+</FAQItem>
+<FAQItem question="Do orchestrator agents need to be LLM-powered?">
+Not always. Simple orchestrators can use rule-based logic or fixed pipelines to route tasks. More advanced orchestrators use an LLM to dynamically decide which agent to call based on the current context, making them more flexible but also more expensive per decision.
+</FAQItem>
+<FAQItem question="How do orchestrator agents communicate with sub-agents?">
+Common patterns include function calls, message queues, and structured protocols like A2A. For email-based agent systems, the orchestrator might route tasks by forwarding messages to agent-specific addresses, where each agent monitors its own inbox for assignments.
+</FAQItem>
+<FAQItem question="How does an orchestrator agent handle errors from sub-agents?">
+Orchestrators typically implement retry logic, fallback routing, and timeout handling. If a sub-agent fails, the orchestrator can retry the task, assign it to an alternative agent, request human intervention, or gracefully degrade by skipping non-critical steps. Good orchestrators log failures for debugging.
+</FAQItem>
+<FAQItem question="Can an orchestrator agent manage email workflows?">
+Yes, and email is a natural fit. An orchestrator can route incoming emails to specialized agents — support queries to a support agent, sales inquiries to a sales agent, verification codes to an automation agent. It manages the flow across agents and ensures each message reaches the right handler.
+</FAQItem>
+<FAQItem question="What is the difference between an orchestrator and a router?">
+A router makes a single routing decision — which agent handles this input. An orchestrator manages multi-step workflows, tracking state across multiple agent calls, handling dependencies between tasks, and assembling final results. Routing is one function an orchestrator performs, but orchestration involves much more.
+</FAQItem>
+<FAQItem question="How many sub-agents can an orchestrator manage?">
+There is no hard limit, but practical orchestrators typically coordinate 3-10 sub-agents. More agents add coordination complexity, latency, and failure points. If you need many specialists, consider a hierarchical approach where sub-orchestrators each manage a small group of related agents.
+</FAQItem>
+<FAQItem question="Should the orchestrator agent have access to all sub-agent data?">
+The orchestrator should have only the access it needs to coordinate. Following least privilege, it should be able to route tasks and read results, but not necessarily access the full data each sub-agent processes. For email systems, the orchestrator might see message metadata but not full message bodies.
+</FAQItem>
+<FAQItem question="What frameworks support building orchestrator agents?">
+LangChain, AutoGen, CrewAI, and the Anthropic tool-use API all support orchestrator patterns. For email-based orchestration, you can build on these frameworks and use an email platform like LobsterMail as the communication layer between the orchestrator and its sub-agents.
+</FAQItem>
+<FAQItem question="How do orchestrator agents scale in production?">
+Orchestrators scale by running sub-agents in parallel when tasks are independent, using asynchronous communication (like email) to avoid blocking, and implementing queue-based task distribution. The orchestrator itself should be stateless or use external state storage so it can be replicated horizontally.
+</FAQItem>
+</FAQ>

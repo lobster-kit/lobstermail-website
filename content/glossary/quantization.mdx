@@ -1,0 +1,65 @@
+---
+title: "Quantization"
+shortDefinition: "A technique that reduces the precision of a model's numerical weights to shrink its size and speed up inference, with minimal loss in quality."
+category: "trending-ai"
+relatedTerms: ["inference", "fine-tuning"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is quantization?
+
+Quantization is the process of reducing the numerical precision of an AI model's weights. A full-precision model stores its billions of parameters as 32-bit or 16-bit floating-point numbers. Quantization converts those to lower-precision formats like 8-bit integers (INT8), 4-bit integers (INT4), or even lower.
+
+The result is a smaller, faster model that requires less memory and less compute per inference call. A model quantized from 16-bit to 4-bit is roughly 4x smaller and can run on hardware that the original model wouldn't fit on.
+
+Common quantization approaches include:
+
+- **Post-training quantization (PTQ)** — quantize an already-trained model. Simple but can lose accuracy on edge cases.
+- **Quantization-aware training (QAT)** — train the model with quantization in mind, so it learns to be accurate at lower precision. Better quality but requires retraining.
+- **GPTQ, GGUF, AWQ** — popular quantization formats in the open-source community, each with different trade-offs in speed, quality, and hardware support.
+
+The trade-off is always precision vs. efficiency. Aggressive quantization (2-bit, 3-bit) shrinks the model dramatically but degrades output quality. Conservative quantization (8-bit) preserves nearly all quality with meaningful size and speed gains.
+
+## Why it matters for AI agents
+
+Quantization determines where and how you can run AI models. For agents that need to process email at scale, the choice between a full-precision cloud model and a quantized local model has real implications for cost, latency, and privacy.
+
+A quantized model running locally processes email without sending data to external APIs. This matters for agents handling sensitive communications — legal correspondence, medical records, or financial data. Quantization makes it practical to run capable models on a single GPU or even a CPU, keeping all data on-premise.
+
+For high-volume email processing, quantization also reduces per-request costs when self-hosting. A quantized model that runs on a $1/hour GPU instance might handle the same workload that costs $10/hour in API calls to a full-precision model. The quality difference for structured tasks like email classification and entity extraction is often negligible at 8-bit quantization.
+
+The open-source ecosystem has made quantization accessible. Tools like llama.cpp, vLLM, and Ollama let developers run quantized models with minimal setup. An agent developer can download a quantized model, run it locally, and have an email processing agent that works entirely offline — useful for edge deployments, air-gapped environments, or simply reducing API costs.
+
+<FAQ>
+<FAQItem question="Does quantization make AI models worse?">
+It depends on the level. 8-bit quantization typically produces output that's nearly indistinguishable from the full-precision model. 4-bit quantization introduces slight quality degradation that's noticeable on complex reasoning tasks but acceptable for classification, extraction, and structured output. Below 4-bit, quality drops become significant for most applications.
+</FAQItem>
+<FAQItem question="Can I quantize any model?">
+Most transformer-based models can be quantized. The open-source community has standardized on formats like GGUF and GPTQ that work with popular inference frameworks. Proprietary models accessed through APIs (like GPT-4 or Claude) are quantized by the provider — you don't control it. Quantization is mainly relevant when self-hosting open-source models.
+</FAQItem>
+<FAQItem question="What hardware do I need to run quantized models?">
+A 4-bit quantized 7B parameter model needs about 4 GB of memory and can run on consumer GPUs or even Apple Silicon Macs. A 4-bit quantized 70B model needs about 40 GB, requiring a high-end GPU or multi-GPU setup. CPU inference is possible but significantly slower. For email agent workloads, a 7B-13B quantized model on a single GPU handles most tasks well.
+</FAQItem>
+<FAQItem question="What is the difference between GPTQ, GGUF, and AWQ?">
+GPTQ is optimized for GPU inference with fast batch processing. GGUF (formerly GGML) is designed for CPU and Apple Silicon inference via llama.cpp. AWQ (Activation-aware Weight Quantization) preserves quality by protecting important weights from aggressive quantization. Choose based on your target hardware and inference framework.
+</FAQItem>
+<FAQItem question="What is post-training quantization vs quantization-aware training?">
+Post-training quantization (PTQ) converts an already-trained model to lower precision — it's fast but can lose accuracy. Quantization-aware training (QAT) simulates quantization during training so the model learns to maintain accuracy at lower precision. QAT produces better results but requires retraining the model.
+</FAQItem>
+<FAQItem question="Can quantized models handle email processing tasks well?">
+Yes. Email tasks like classification, entity extraction, intent detection, and response generation are well-suited to quantized models. These structured tasks typically see minimal quality loss at 4-bit or 8-bit quantization. For privacy-sensitive email processing, a quantized local model avoids sending data to external APIs.
+</FAQItem>
+<FAQItem question="How does quantization relate to LoRA fine-tuning?">
+QLoRA combines both techniques — applying LoRA fine-tuning to a quantized base model. The base model is loaded in 4-bit precision to save memory, while LoRA adapters train in higher precision. This makes it possible to fine-tune large models for email-specific tasks on consumer hardware.
+</FAQItem>
+<FAQItem question="What is the performance difference between quantized and full-precision models?">
+Quantized models are faster per token because smaller weights require less memory bandwidth. A 4-bit model can be 2-3x faster than its 16-bit equivalent on the same hardware. For high-throughput email processing, this speed improvement translates directly to more messages processed per second at lower cost.
+</FAQItem>
+<FAQItem question="Can I run a quantized model on a Mac for email agent development?">
+Yes. Apple Silicon Macs with unified memory are well-suited for running quantized models via llama.cpp or Ollama using GGUF format. A Mac with 16 GB of RAM can run 4-bit quantized 7B-13B models comfortably, making it practical to develop and test email agents locally without a GPU server.
+</FAQItem>
+<FAQItem question="How do I choose the right quantization level for my use case?">
+Start with 4-bit (Q4_K_M in GGUF) as a baseline — it offers a good balance of quality and efficiency for most tasks. If you notice quality issues on your specific workload, try 8-bit. For maximum compression on simple tasks like email classification, 3-bit may work. Always benchmark on your actual email data rather than relying on general benchmarks.
+</FAQItem>
+</FAQ>

@@ -1,0 +1,66 @@
+---
+title: "Embeddings"
+shortDefinition: "Numerical vector representations of text, images, or other data that capture semantic meaning, enabling similarity search and machine learning tasks."
+category: "trending-ai"
+relatedTerms: ["vector-database", "rag", "tokens"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What are embeddings?
+
+Embeddings are dense numerical vectors that represent the meaning of text, images, or other data. When you pass a sentence through an embedding model, you get back a list of numbers (typically 768 to 3,072 floats) that encode the semantic content of that sentence. Similar meanings produce similar vectors. Different meanings produce distant vectors.
+
+For example, the sentences "How do I reset my password?" and "I need to change my login credentials" would produce embeddings that are very close together in vector space, even though they share almost no words. That's the power of embeddings — they capture meaning, not just surface-level word overlap.
+
+Embedding models are different from generative LLMs. They don't produce text. They take text in and output a fixed-size vector. Popular embedding models include OpenAI's text-embedding-3, Cohere's embed-v3, and open-source options like E5 and BGE.
+
+Common uses for embeddings include:
+
+- **Semantic search** — finding documents by meaning rather than keywords
+- **Clustering** — grouping similar items together
+- **Classification** — assigning categories based on content
+- **RAG** — retrieving relevant context to feed into an LLM
+
+## Why it matters for AI agents
+
+Embeddings are the foundation of how AI agents find and retrieve relevant information. When an agent needs to answer a question, it doesn't search through documents with keyword matching. It embeds the question, compares that vector against pre-embedded documents, and retrieves the closest matches. This is how RAG works, and it's how agents maintain knowledge beyond their training data.
+
+For email agents, embeddings enable powerful capabilities. An agent can embed every incoming email and compare it against a library of past support tickets to find the most relevant precedent. It can cluster similar complaints to identify emerging issues. It can match incoming questions against a knowledge base to draft accurate responses.
+
+The practical workflow looks like this: embed your knowledge base once and store the vectors in a vector database. When an email arrives, embed it, search for the most similar stored vectors, pull those documents into the agent's context, and generate a response grounded in real information. This approach dramatically reduces hallucination because the agent is working from retrieved facts rather than generating from memory.
+
+Embedding quality directly impacts agent accuracy. Better embeddings mean better retrieval, which means more relevant context, which means better responses. Choosing the right embedding model for your domain is one of the highest-leverage decisions in building an agent system.
+
+<FAQ>
+<FAQItem question="What is the difference between embeddings and tokens?">
+Tokens are how LLMs break text into processable units — subword pieces that the model reads sequentially. Embeddings are numerical vectors that represent the overall meaning of text. Tokenization is a preprocessing step. Embedding is a transformation that captures semantic content in a fixed-size vector for comparison and retrieval.
+</FAQItem>
+<FAQItem question="How do I choose an embedding model?">
+Consider your domain, required accuracy, vector dimensions (larger means more storage but potentially better quality), and cost. For most agent applications, a general-purpose model like OpenAI's text-embedding-3-small offers a good balance. For specialized domains (legal, medical), fine-tuned or domain-specific embedding models may perform better.
+</FAQItem>
+<FAQItem question="Can I embed emails for search?">
+Yes. Embedding emails is one of the most practical applications. Embed the subject and body of each email, store the vectors, and you can perform semantic search across your entire inbox history. This lets agents find relevant past conversations even when the user describes them in different words than the original message used.
+</FAQItem>
+<FAQItem question="What is a vector database and how does it relate to embeddings?">
+A vector database stores embeddings and enables fast similarity search over them. When you embed your data, you store those vectors in a vector database like Pinecone, Weaviate, or Qdrant. The database uses approximate nearest neighbor algorithms to quickly find the most similar vectors to a query.
+</FAQItem>
+<FAQItem question="How do embeddings power RAG for AI agents?">
+In RAG, an agent embeds an incoming query, searches a vector database for the most similar stored embeddings, retrieves the associated documents, and includes them in the LLM prompt. This grounds the agent's response in real information rather than relying on the model's training data alone.
+</FAQItem>
+<FAQItem question="What are embedding dimensions and why do they matter?">
+Embedding dimensions are the number of floats in the output vector, typically ranging from 384 to 3,072. Higher dimensions can capture more nuance but require more storage and compute for similarity search. Lower dimensions are faster and cheaper but may lose subtle distinctions between similar texts.
+</FAQItem>
+<FAQItem question="Do embeddings work across languages?">
+Many modern embedding models are multilingual and can map similar meanings across languages to nearby vectors. This means a question asked in English can match a document written in Spanish if the embedding model supports both languages. Check your model's documentation for supported language coverage.
+</FAQItem>
+<FAQItem question="How often should I re-embed my data?">
+Re-embed when you switch to a different embedding model or when your source data changes significantly. Embeddings from different models are not compatible with each other. If your knowledge base is updated frequently, set up a pipeline that embeds new or changed documents automatically.
+</FAQItem>
+<FAQItem question="What is cosine similarity in the context of embeddings?">
+Cosine similarity measures the angle between two embedding vectors, producing a score between -1 and 1. A score close to 1 means the texts are semantically similar. It is the most common metric for comparing embeddings because it works well regardless of vector magnitude.
+</FAQItem>
+<FAQItem question="Can embeddings be used to detect duplicate emails?">
+Yes. By embedding incoming emails and comparing them against recent messages, an agent can identify near-duplicate content even when the wording differs. This is useful for deduplicating support tickets, detecting repeated complaints, or flagging spam that uses slight text variations.
+</FAQItem>
+</FAQ>

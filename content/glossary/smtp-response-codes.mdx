@@ -1,0 +1,76 @@
+---
+title: "SMTP Response Codes"
+shortDefinition: "Three-digit status codes returned by mail servers during SMTP transactions to indicate success, temporary failure, or permanent rejection."
+category: "email-infrastructure"
+relatedTerms: ["hard-bounce", "soft-bounce", "smtp-relay"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What are SMTP Response Codes?
+
+SMTP response codes are three-digit numbers returned by mail servers during every step of an email transaction. They tell the sending system whether each step succeeded, failed temporarily, or failed permanently.
+
+The codes follow a clear pattern based on the first digit:
+
+- **2xx (Success):** The command was accepted. `250 OK` means the email was accepted for delivery.
+- **3xx (Intermediate):** The server needs more information. `354 Start mail input` means it's ready to receive the message body.
+- **4xx (Temporary failure):** Something went wrong, but it might work later. `451 Try again later` or `452 Insufficient storage` are soft bounces.
+- **5xx (Permanent failure):** The command has been rejected and won't succeed on retry. `550 User not found` or `553 Mailbox name not allowed` are hard bounces.
+
+Each code also comes with a human-readable explanation, and many modern servers include enhanced status codes (like `5.1.1` for invalid mailbox) that provide more specific diagnostic information.
+
+Key codes every email sender encounters:
+
+- `220` — Server ready
+- `250` — Request completed successfully
+- `421` — Service temporarily unavailable
+- `450` — Mailbox temporarily unavailable
+- `550` — Mailbox does not exist
+- `552` — Message size exceeds limit
+- `554` — Transaction failed (often a spam rejection)
+
+## Why it matters for AI agents
+
+AI agents that send email need to parse and react to SMTP response codes programmatically. The code determines whether the agent should retry, suppress the address, or log an error for investigation.
+
+An agent that doesn't differentiate between 4xx and 5xx responses will either retry permanently (wasting resources on addresses that will never accept mail) or give up too quickly (failing to deliver to addresses that just need a short wait).
+
+Beyond the basic 4xx/5xx distinction, specific codes carry important signals. A `550` means the address is invalid and should be added to the suppression list immediately. A `421` means the server is temporarily overloaded and the agent should back off. A `554` often means the agent's email was flagged as spam and the agent needs to investigate its content or reputation.
+
+For agents using managed email services, the service typically translates SMTP codes into delivery status events (delivered, bounced, deferred). But agents running their own SMTP connections or parsing bounce notification emails need to extract and interpret these codes directly.
+
+Logging SMTP response codes is also valuable for diagnosing deliverability trends. If an agent starts seeing more `421` responses from a particular provider, it might be hitting rate limits. A spike in `550` responses could indicate a list quality problem. Tracking these codes over time gives agents data-driven insights into their sending health.
+
+<FAQ>
+<FAQItem question="What are SMTP response codes?">
+SMTP response codes are three-digit status codes returned by mail servers during email transactions. Codes starting with 2 mean success, 4 mean temporary failure (retry later), and 5 mean permanent failure (don't retry). Each code tells the sending system exactly what happened and what to do next.
+</FAQItem>
+<FAQItem question="How should AI agents handle different SMTP codes?">
+Agents should retry on 4xx codes using exponential backoff, immediately suppress addresses that return 5xx codes (especially 550), and log all codes for deliverability monitoring. Different codes require different responses — treating all failures the same leads to wasted retries or missed deliveries.
+</FAQItem>
+<FAQItem question="What does SMTP code 554 mean?">
+SMTP code 554 means the transaction failed, usually because the email was rejected as spam. This can happen due to poor sender reputation, blacklisted IPs, suspicious content, or failed authentication. If an agent starts receiving 554 responses, it should investigate its authentication setup, content, and sender reputation.
+</FAQItem>
+<FAQItem question="What does SMTP code 250 mean?">
+SMTP code 250 means the requested action was completed successfully. It is the standard success response during an email transaction, confirming that the server accepted the command (such as MAIL FROM, RCPT TO, or DATA). It does not guarantee final delivery to the inbox, only that the receiving server accepted the message.
+</FAQItem>
+<FAQItem question="What is the difference between 4xx and 5xx SMTP codes?">
+4xx codes indicate temporary failures that may resolve on their own, such as a full mailbox or an overloaded server. 5xx codes indicate permanent failures where retrying will not help, such as a nonexistent address or a policy rejection. Agents should retry 4xx errors but stop and suppress on 5xx errors.
+</FAQItem>
+<FAQItem question="What are enhanced SMTP status codes?">
+Enhanced status codes are three-part codes (like 5.1.1 or 4.7.1) that provide more specific diagnostic information than the basic three-digit code. The format is class.subject.detail, where class matches the basic code category. They help agents programmatically distinguish between different failure reasons within the same code range.
+</FAQItem>
+<FAQItem question="What does SMTP code 421 mean?">
+SMTP code 421 means the service is temporarily unavailable, usually because the receiving server is overloaded, undergoing maintenance, or rate-limiting your connections. Agents should wait and retry with exponential backoff. Persistent 421 responses from a specific provider may indicate your IP is being throttled.
+</FAQItem>
+<FAQItem question="What does SMTP code 550 mean?">
+SMTP code 550 means the mailbox is unavailable, most commonly because the email address does not exist. This is a hard bounce. Agents should immediately add the address to a suppression list and never attempt delivery again, as repeated sends to invalid addresses damage sender reputation.
+</FAQItem>
+<FAQItem question="Should AI agents log SMTP response codes?">
+Yes. Logging SMTP codes over time reveals deliverability trends that agents can act on. A spike in 421 responses may signal rate limiting. Increasing 550s could indicate list quality issues. Tracking 554s helps detect reputation problems early. This data is essential for maintaining healthy sending practices.
+</FAQItem>
+<FAQItem question="How do SMTP codes relate to bounce types?">
+4xx codes correspond to soft bounces (temporary failures that may succeed on retry), while 5xx codes correspond to hard bounces (permanent failures). This mapping determines whether agents should retry delivery or permanently suppress the address. Accurate classification prevents both unnecessary retries and premature suppression.
+</FAQItem>
+</FAQ>

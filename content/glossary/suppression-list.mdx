@@ -1,0 +1,66 @@
+---
+title: "Suppression List"
+shortDefinition: "A list of email addresses that should never receive messages, typically populated by hard bounces, unsubscribes, and spam complaints."
+category: "email-infrastructure"
+relatedTerms: ["hard-bounce", "sender-reputation"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is a Suppression List?
+
+A suppression list is a record of email addresses that your system should never send to. When an email address is on the suppression list, all outbound messages to that address are blocked before they even reach the sending pipeline.
+
+Addresses get added to a suppression list for several reasons:
+
+- **Hard bounces:** The address is invalid or doesn't exist
+- **Spam complaints:** The recipient reported your email as spam
+- **Unsubscribes:** The recipient explicitly opted out
+- **Manual additions:** Addresses you know should not receive email (test accounts, known bad actors, compliance holds)
+
+Suppression lists operate as a pre-send filter. Before any email is dispatched, the system checks the recipient against the suppression list. If there's a match, the email is silently dropped without being sent. This prevents damage to sender reputation from repeatedly sending to addresses that will bounce or generate complaints.
+
+Every email service maintains suppression lists at the account or domain level. Some services share suppression data across all customers for known-bad addresses. Others maintain per-account lists that the sender manages.
+
+## Why it matters for AI agents
+
+Suppression list management is one of the most important pieces of email hygiene for AI agents, and one of the easiest to get wrong. An agent that pulls recipient addresses from a database, CRM, or external API might not check those addresses against a suppression list before sending. The result: repeated sends to bounced addresses, which tanks sender reputation.
+
+Agents need to interact with suppression lists in both directions. On the write side, the agent must add addresses whenever it receives a hard bounce notification, a spam complaint webhook, or an unsubscribe event. On the read side, the agent must check every recipient against the list before sending.
+
+For multi-agent systems sharing a domain, suppression lists need to be centralized. If Agent A gets a hard bounce from `user@example.com` but Agent B doesn't know about it, Agent B will send to the same address and take another reputation hit. A shared suppression list across all agents on the same domain prevents this.
+
+LobsterMail maintains automatic suppression lists at the domain level. Hard bounces, spam complaints, and unsubscribes are suppressed automatically — no agent-side implementation required. Agents that try to send to a suppressed address get an immediate rejection with a clear reason, so they can update their own records.
+
+<FAQ>
+<FAQItem question="What is a suppression list?">
+A suppression list is a collection of email addresses that your email system will never send to. It includes addresses that have hard bounced, filed spam complaints, or unsubscribed. Checking against this list before every send prevents reputation damage from sending to bad addresses.
+</FAQItem>
+<FAQItem question="Why do AI agents need suppression lists?">
+AI agents process email addresses programmatically and can quickly send to large numbers of recipients. Without a suppression list check, agents will repeatedly send to invalid addresses and spam complainers, causing rapid sender reputation damage that affects deliverability for all emails from that domain.
+</FAQItem>
+<FAQItem question="Should suppression lists be shared across multiple agents?">
+Yes. If multiple agents send from the same domain, they should share a centralized suppression list. When one agent gets a hard bounce or spam complaint, all agents on that domain need to stop sending to that address immediately to prevent further reputation damage.
+</FAQItem>
+<FAQItem question="What is the difference between a suppression list and an unsubscribe list?">
+An unsubscribe list tracks recipients who opted out of specific email types (marketing, newsletters). A suppression list is broader and blocks all email to an address, regardless of type. Suppression lists include unsubscribes but also hard bounces, spam complaints, and manually blocked addresses.
+</FAQItem>
+<FAQItem question="How quickly should addresses be added to the suppression list?">
+Immediately. When a hard bounce, spam complaint, or unsubscribe event occurs, the address should be suppressed before the next send cycle. Even a few-minute delay can result in additional sends to the address, compounding reputation damage. Real-time webhook processing is the standard approach.
+</FAQItem>
+<FAQItem question="Can you remove an address from a suppression list?">
+Yes, but carefully. Addresses suppressed due to unsubscribes should only be removed if the person explicitly re-subscribes. Hard-bounced addresses can be removed if you have evidence the address is now valid (e.g., the person contacted you). Spam-complaint suppressions should rarely be removed.
+</FAQItem>
+<FAQItem question="What happens if an AI agent sends to a suppressed address?">
+With a properly configured email service, the send is blocked before it reaches the mail server and the agent receives an error indicating the address is suppressed. Without suppression checks, the email goes out and either bounces again or generates another complaint, further damaging sender reputation.
+</FAQItem>
+<FAQItem question="How do suppression lists affect email deliverability?">
+Suppression lists directly protect deliverability by preventing sends to addresses that would generate bounces or complaints. ISPs and mailbox providers track your bounce and complaint rates. Exceeding their thresholds (typically 2% bounce rate or 0.1% complaint rate) can result in throttling or blocking your entire domain.
+</FAQItem>
+<FAQItem question="Are suppression lists required by law?">
+Yes, in most jurisdictions. CAN-SPAM, GDPR, and CASL all require honoring unsubscribe requests, which effectively mandates maintaining a suppression list. Failing to suppress unsubscribed addresses can result in legal penalties, not just deliverability problems.
+</FAQItem>
+<FAQItem question="How does LobsterMail handle suppression lists for agents?">
+LobsterMail maintains automatic domain-level suppression lists. Hard bounces, spam complaints, and unsubscribes are suppressed in real time without any agent-side code. Agents that attempt to send to a suppressed address receive an immediate rejection with the suppression reason, enabling them to update their own records.
+</FAQItem>
+</FAQ>

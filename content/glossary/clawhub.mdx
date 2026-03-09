@@ -1,0 +1,68 @@
+---
+title: "ClawHub"
+shortDefinition: "A marketplace for AI agent skills where agents can discover, install, and use new capabilities without human configuration."
+category: "protocols-ecosystem"
+relatedTerms: ["skill-md", "mcp"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is ClawHub?
+
+ClawHub is a skill marketplace for AI agents. It's where developers publish agent skills and where agents discover and install new capabilities. Think of it as an app store, but for AI agent abilities rather than human-facing applications.
+
+Skills on ClawHub cover a wide range of capabilities:
+
+- **Communication:** Email sending, SMS, Slack messaging
+- **Data access:** Database queries, API integrations, file management
+- **Workflow automation:** Task scheduling, approval flows, notifications
+- **Domain-specific:** Code review, content generation, customer support
+
+Each skill on ClawHub includes a SKILL.md file that describes its capabilities in a format both humans and agents can understand. Agents can browse ClawHub, read skill descriptions, and self-install the ones they need — often without any human involvement.
+
+The marketplace model solves a key scaling problem for agent systems. Instead of every agent developer building integrations from scratch, they publish reusable skills that any agent can adopt. An agent that needs email capability doesn't need its developer to write email integration code — it installs an email skill from ClawHub and starts sending.
+
+ClawHub currently hosts over 5,700 skills across dozens of categories, with the ecosystem growing as more developers publish agent capabilities.
+
+## Why it matters for AI agents
+
+ClawHub is the primary distribution channel for agent capabilities. For agents built on the OpenClaw framework, ClawHub skills are the standard way to extend what an agent can do. The self-install pattern — where an agent discovers, evaluates, and installs a skill autonomously — is fundamental to how modern agent systems scale.
+
+Email is a core agent capability, and ClawHub is where agents find it. LobsterMail's agent email skill on ClawHub lets agents self-install email infrastructure without their developer configuring SMTP servers, DNS records, or API integrations. The agent reads the SKILL.md, provisions an inbox, and starts sending and receiving email.
+
+This zero-configuration install pattern is what makes ClawHub skills different from traditional API integrations. A developer integrating a REST API needs to read documentation, write adapter code, handle authentication, and manage errors. An agent installing a ClawHub skill reads the SKILL.md and starts using it immediately.
+
+For skill developers, ClawHub provides distribution and discovery. Publishing a skill on ClawHub puts it in front of thousands of deployed agent instances. Skills with clear SKILL.md files, good documentation, and reliable implementations get installed by agents autonomously, driving adoption without traditional marketing.
+
+<FAQ>
+<FAQItem question="What is ClawHub?">
+ClawHub is a marketplace for AI agent skills. Developers publish skills that extend agent capabilities, and agents can discover, evaluate, and install these skills autonomously. It hosts over 5,700 skills covering communication, data access, workflow automation, and domain-specific functions.
+</FAQItem>
+<FAQItem question="How do agents install skills from ClawHub?">
+Agents browse ClawHub for skills matching their needs, read the SKILL.md file to understand capabilities and requirements, and self-install the skill. The process is often fully autonomous — the agent identifies a needed capability, finds a matching skill, and starts using it without human intervention.
+</FAQItem>
+<FAQItem question="What makes a good ClawHub skill?">
+A good ClawHub skill has a clear SKILL.md with explicit capability descriptions, well-documented input parameters, realistic usage examples, and reliable implementation. Skills that agents can understand and use without ambiguity get the most autonomous installations.
+</FAQItem>
+<FAQItem question="What is a SKILL.md file?">
+A SKILL.md is a structured markdown file that describes a ClawHub skill's capabilities, inputs, outputs, authentication requirements, and usage examples in a format both humans and AI agents can parse. It serves as the skill's documentation and API contract, enabling agents to self-install and use the skill without developer intervention.
+</FAQItem>
+<FAQItem question="How is ClawHub different from a traditional API marketplace?">
+Traditional API marketplaces are designed for human developers who read documentation and write integration code. ClawHub is designed for AI agents that read SKILL.md files and self-install capabilities autonomously. The key difference is that the consumer is an agent, not a human, so documentation must be machine-interpretable.
+</FAQItem>
+<FAQItem question="Can I publish my own skill on ClawHub?">
+Yes. Any developer can publish a skill by creating a SKILL.md file, implementing the skill's functionality, and submitting it to ClawHub. Published skills are discoverable by all agents in the ecosystem, providing distribution to thousands of deployed agent instances without traditional marketing.
+</FAQItem>
+<FAQItem question="How do agents find email skills on ClawHub?">
+Agents search ClawHub by capability category or keyword. Email skills like LobsterMail's agent email skill appear under communication categories. The agent reads the SKILL.md to confirm the skill provides what it needs (inbox provisioning, sending, receiving), then self-installs and begins using it.
+</FAQItem>
+<FAQItem question="How many skills are on ClawHub?">
+ClawHub hosts over 5,700 skills across dozens of categories including communication, data access, workflow automation, code execution, and domain-specific tools. The ecosystem is growing as more developers publish agent capabilities and more agents drive demand for specialized skills.
+</FAQItem>
+<FAQItem question="What is the relationship between ClawHub and OpenClaw?">
+ClawHub is the skill marketplace for the OpenClaw agent framework. Agents built on OpenClaw use ClawHub as their primary source for discovering and installing new capabilities. OpenClaw provides the agent runtime, and ClawHub provides the ecosystem of pluggable skills that extend what those agents can do.
+</FAQItem>
+<FAQItem question="Do ClawHub skills work with agents not built on OpenClaw?">
+ClawHub skills are primarily designed for the OpenClaw ecosystem, but the SKILL.md format is open and readable by any agent system. Developers building on other frameworks can adapt ClawHub skills by reading the SKILL.md specification and implementing compatible integration logic in their own framework.
+</FAQItem>
+</FAQ>

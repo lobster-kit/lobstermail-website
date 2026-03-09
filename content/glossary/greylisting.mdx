@@ -1,0 +1,67 @@
+---
+title: "Greylisting"
+shortDefinition: "An anti-spam technique where a mail server temporarily rejects emails from unknown senders, expecting legitimate servers to retry."
+category: "email-infrastructure"
+relatedTerms: ["soft-bounce", "smtp-relay"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is Greylisting?
+
+Greylisting is a spam filtering technique used by receiving mail servers. When an email arrives from an unknown sender (a combination of sending IP, sender address, and recipient address that the server hasn't seen before), the server temporarily rejects it with a 4xx SMTP code — a soft bounce.
+
+The logic is simple: legitimate mail servers will retry delivery after a delay, while most spam-sending systems won't bother retrying. They fire off millions of emails and move on.
+
+Here's how greylisting works:
+
+1. An email arrives from a new sender
+2. The receiving server responds with a temporary rejection (e.g., `451 Please try again later`)
+3. The server records the sender's IP, envelope sender, and recipient as a "triplet"
+4. When the sending server retries (usually 5-30 minutes later), the server recognizes the triplet and accepts the email
+5. Future emails from the same triplet are accepted without delay
+
+Once a triplet is whitelisted, subsequent emails from that sender to that recipient pass through immediately. Greylisting only causes a delay on the first email in a new sender-recipient relationship.
+
+## Why it matters for AI agents
+
+Greylisting adds unexpected delays to agent email delivery. An agent that sends an email and expects an immediate delivery confirmation will see a soft bounce instead. If the agent doesn't handle retries properly, it might interpret the greylisting response as a failure and give up.
+
+This is particularly important for agents that send time-sensitive emails. A verification code that takes 30 minutes to arrive because of greylisting defeats its purpose. Agents need to be aware that first-time emails to new recipients may be delayed.
+
+For agents handling inbound email, greylisting on the receiving side can delay incoming messages. If the agent's mail server uses greylisting, legitimate emails from new senders will be delayed by however long the greylist timeout is set (typically 5-15 minutes). For agents that need to respond quickly — customer support bots, signup confirmation handlers — this delay matters.
+
+The best mitigation is using an SMTP relay with established IP reputation. Relay services maintain whitelisted relationships with major email providers, which means their IPs are often pre-approved and bypass greylisting entirely. Agents sending through LobsterMail's infrastructure benefit from these established relationships.
+
+<FAQ>
+<FAQItem question="What is greylisting in email?">
+Greylisting is a spam filtering technique where a mail server temporarily rejects emails from unknown senders. Legitimate mail servers will retry delivery after a delay and the email gets accepted on the second attempt. Most spam systems don't retry, so the spam never gets delivered.
+</FAQItem>
+<FAQItem question="How does greylisting affect AI agents?">
+Greylisting causes delivery delays for first-time emails from an agent to a new recipient. The agent's sending server receives a temporary rejection and must retry after a few minutes. Agents that don't handle retries properly may interpret greylisting as a permanent failure and give up on delivery.
+</FAQItem>
+<FAQItem question="How do you avoid greylisting delays?">
+Use an SMTP relay service with established IP reputation — these services often have pre-whitelisted relationships with major email providers. Once your sending IP has successfully delivered to a recipient server, future emails bypass greylisting entirely.
+</FAQItem>
+<FAQItem question="How long does a greylisting delay typically last?">
+Most greylisting implementations require a wait of 5 to 15 minutes before accepting a retry. Some servers accept the retry after just 1 minute, while others enforce a longer window. The delay only applies to the first email from a new sender-recipient-IP triplet.
+</FAQItem>
+<FAQItem question="What is a greylisting triplet?">
+A greylisting triplet is the combination of the sending IP address, the envelope sender address, and the recipient address. The receiving server tracks these triplets to distinguish first-time senders from known ones. Once a triplet is whitelisted after a successful retry, future emails from that combination pass without delay.
+</FAQItem>
+<FAQItem question="Does greylisting affect transactional emails from agents?">
+Yes, and this is a significant concern. Transactional emails like verification codes, password resets, and order confirmations need to arrive quickly. A 5-15 minute greylisting delay on the first send to a new recipient can make time-sensitive emails useless. Using a pre-warmed relay service mitigates this.
+</FAQItem>
+<FAQItem question="Is greylisting the same as blacklisting?">
+No. Greylisting is a temporary rejection that expects the sender to retry. Blacklisting is a permanent block. A greylisted email will eventually be delivered when the sender retries. A blacklisted sender's emails are permanently rejected until the sender is removed from the blocklist.
+</FAQItem>
+<FAQItem question="How should an AI agent's retry logic handle greylisting?">
+The agent's SMTP client should treat 4xx responses as temporary failures and retry with exponential backoff. A first retry after 5-10 minutes typically clears greylisting. The agent should not interpret a 4xx code as a permanent failure or add the address to a suppression list.
+</FAQItem>
+<FAQItem question="Can greylisting cause emails to be lost?">
+Emails can be lost if the sending server does not retry after a greylisting rejection. Properly configured mail servers always retry 4xx responses, so no email is lost. However, misconfigured agents or scripts that treat all rejections as permanent will silently drop greylisted emails.
+</FAQItem>
+<FAQItem question="Do major email providers like Gmail use greylisting?">
+Major providers like Gmail, Outlook, and Yahoo generally do not use traditional greylisting because of the delivery delays it introduces. Greylisting is more common on smaller corporate mail servers and self-hosted email infrastructure. Large providers use other spam filtering techniques instead.
+</FAQItem>
+</FAQ>

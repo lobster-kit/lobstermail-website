@@ -1,0 +1,64 @@
+---
+title: "SPF (Sender Policy Framework)"
+shortDefinition: "A DNS record that lists which mail servers are authorized to send email on behalf of your domain."
+category: "email-infrastructure"
+relatedTerms: ["dkim", "dmarc", "sender-reputation"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is SPF?
+
+SPF (Sender Policy Framework) is an email authentication protocol that lets domain owners declare which mail servers are allowed to send email using their domain name. It works through a DNS TXT record that receiving servers check when an email arrives.
+
+Here's how SPF validation works:
+
+1. You publish an SPF record in your domain's DNS (e.g., `v=spf1 include:lobstermail.ai ~all`)
+2. When an email arrives claiming to be from your domain, the receiving server looks up your SPF record
+3. The server checks whether the sending IP address matches one of the authorized sources in your record
+4. If the IP matches, the email passes SPF. If not, the result depends on your policy (`~all` for soft fail, `-all` for hard fail)
+
+SPF records can include individual IP addresses, IP ranges, and references to other domains' SPF records via the `include` mechanism. There's a 10-DNS-lookup limit per SPF evaluation, so overly complex records can break validation.
+
+## Why it matters for AI agents
+
+AI agents sending email need SPF configured correctly on their sending domain, or their messages will fail authentication checks at the receiving end. Most major email providers treat SPF failure as a strong spam signal.
+
+For agents using a managed email service like LobsterMail, the SPF record typically uses an `include` directive pointing to the provider's authorized sending infrastructure. This means the agent's emails come from servers that the domain's SPF record explicitly permits.
+
+When agents operate across multiple sending services or switch providers, SPF records need updating. A stale SPF record that no longer includes the current sending infrastructure will cause every outbound email to fail authentication. For autonomous agents running without human oversight, this kind of silent failure can go unnoticed for days.
+
+Agents sending high volumes also need to be aware of SPF's lookup limit. If an agent's domain has a complex SPF record with too many `include` chains, SPF evaluation will return a permanent error, and none of the agent's emails will pass SPF regardless of whether they're sent from authorized servers.
+
+<FAQ>
+<FAQItem question="What is an SPF record?">
+An SPF record is a DNS TXT record that specifies which mail servers are authorized to send email on behalf of a domain. Receiving mail servers check this record to verify that incoming emails are coming from legitimate sources.
+</FAQItem>
+<FAQItem question="Do AI agents need SPF configured?">
+Yes. Any AI agent sending email programmatically needs SPF configured on its sending domain. Without a valid SPF record, emails are likely to be rejected or routed to spam by receiving servers.
+</FAQItem>
+<FAQItem question="What happens if SPF fails?">
+When SPF fails, the receiving server knows the email came from an unauthorized server. Depending on the domain's DMARC policy and the SPF qualifier (`~all` vs `-all`), the email may be rejected, quarantined, or delivered with a warning. Repeated SPF failures damage sender reputation.
+</FAQItem>
+<FAQItem question="What is the difference between SPF, DKIM, and DMARC?">
+SPF verifies which servers are authorized to send for a domain. DKIM adds a cryptographic signature to each email proving it wasn't altered in transit. DMARC ties SPF and DKIM together with a policy telling receivers what to do when both fail. All three work together for complete email authentication.
+</FAQItem>
+<FAQItem question="What is the SPF 10-DNS-lookup limit?">
+SPF evaluation allows a maximum of 10 DNS lookups (include, a, mx, redirect mechanisms). Exceeding this limit causes a permanent error (permerror), and SPF evaluation fails for all emails from that domain. This is a common problem when using multiple email services that each require an include directive.
+</FAQItem>
+<FAQItem question="What does ~all vs -all mean in SPF?">
+`~all` is a soft fail — emails from unauthorized servers are accepted but flagged. `-all` is a hard fail — emails from unauthorized servers should be rejected outright. Most domains use `~all` initially and switch to `-all` once they are confident all legitimate sending sources are listed in the SPF record.
+</FAQItem>
+<FAQItem question="How do I set up SPF for an email API like LobsterMail?">
+Add an include directive to your domain's SPF TXT record pointing to the email provider's SPF domain (e.g., `v=spf1 include:lobstermail.ai ~all`). This authorizes the provider's servers to send on your behalf. The provider supplies the exact include value during domain setup.
+</FAQItem>
+<FAQItem question="Can I have multiple SPF records for one domain?">
+No. Each domain must have exactly one SPF TXT record. Multiple SPF records cause validation failures because receiving servers won't know which one to use. If you need to authorize multiple sending sources, combine them into a single record using multiple include directives.
+</FAQItem>
+<FAQItem question="How do AI agents break SPF without realizing it?">
+Agents can break SPF by sending from a server not listed in the domain's SPF record, by using a new email service without updating DNS, or by forwarding emails in a way that changes the envelope sender. Since agents operate autonomously, these misconfigurations can go undetected until deliverability drops significantly.
+</FAQItem>
+<FAQItem question="How long does it take for SPF changes to propagate?">
+SPF record changes propagate based on the DNS TTL (time to live), which is typically 300 to 3600 seconds. In practice, most changes take effect within 1 hour, though some resolvers may cache the old record longer. Plan DNS changes before switching email providers to avoid an authentication gap.
+</FAQItem>
+</FAQ>

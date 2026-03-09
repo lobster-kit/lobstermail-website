@@ -160,10 +160,10 @@ The agent sends HTML that looks fine in Chrome but breaks in Outlook because it 
   <FAQItem question="What token-efficient email formats work best for LLM context windows?">
     Plain text or minimal HTML with clear section markers. Avoid deeply nested tables or verbose inline CSS in the content the LLM generates. Keep the agent's output lightweight and let the template wrapper handle styling.
   </FAQItem>
-  <FAQItem question="How does agentic AI personalize email without sacrificing design integrity?">
+  <FAQItem question="How does [agentic AI](/glossary/agentic-ai) personalize email without sacrificing design integrity?">
     The agent personalizes text content within fixed template slots. Personalization happens in copy (name, product, context), not in layout or styling. This keeps design consistent while making content relevant.
   </FAQItem>
   <FAQItem question="What authentication and identity principles apply when agents send email on behalf of a brand?">
-    Set up SPF, DKIM, and DMARC on your sending domain. Use a "From" name that matches what recipients expect (product name or team name, not "AI Bot"). With LobsterMail, agents can send from custom domains with authentication handled automatically.
+    Set up [SPF](/glossary/spf), [DKIM](/glossary/dkim), and [DMARC](/glossary/dmarc) on your sending domain. Use a "From" name that matches what recipients expect (product name or team name, not "AI Bot"). With LobsterMail, agents can send from custom domains with authentication handled automatically.
   </FAQItem>
 </FAQ>

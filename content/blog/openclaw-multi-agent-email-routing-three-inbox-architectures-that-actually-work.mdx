@@ -194,7 +194,7 @@ For a worked example of coordinating multiple agents through a shared communicat
     Use the gateway inbox pattern. The gateway holds messages until each agent is ready to poll. This is useful for agents that spin up on demand rather than running continuously.
   </FAQItem>
 
-  <FAQItem question="Does LobsterMail work with OpenClaw's built-in MCP server?">
+  <FAQItem question="Does LobsterMail work with OpenClaw's built-in [MCP](/glossary/mcp) server?">
     Yes. LobsterMail has an [MCP server](/guides/mcp-server) that gives OpenClaw agents email tools without writing any SDK code directly. It's the fastest way to add email to an existing OpenClaw agent.
   </FAQItem>
 
@@ -210,7 +210,7 @@ For a worked example of coordinating multiple agents through a shared communicat
     That's exactly what `LobsterMail.create()` does. If no API token exists, the SDK signs up for a free account automatically and persists the token. No human signup step, no API key to pre-configure.
   </FAQItem>
 
-  <FAQItem question="How does LobsterMail handle prompt injection in emails received by agents?">
+  <FAQItem question="How does LobsterMail handle [prompt injection](/glossary/prompt-injection) in emails received by agents?">
     Every received email includes an injection risk score and flagged content markers. Your agent can check `email.security.injectionRisk` before passing body content into its context. More detail in the [security and injection guide](/docs/security-and-injection).
   </FAQItem>
 

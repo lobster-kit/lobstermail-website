@@ -1,0 +1,68 @@
+---
+title: "LoRA"
+shortDefinition: "Low-Rank Adaptation — a fine-tuning technique that trains a small set of additional parameters instead of modifying the entire model, making customization fast and memory-efficient."
+category: "trending-ai"
+relatedTerms: ["fine-tuning", "quantization"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is LoRA?
+
+LoRA (Low-Rank Adaptation) is a parameter-efficient fine-tuning technique that lets you customize a large language model without modifying its original weights. Instead of retraining all the model's billions of parameters, LoRA freezes the original model and adds small trainable matrices — called adapters — to specific layers.
+
+The core idea is based on a mathematical insight: the weight changes needed to adapt a model to a new task tend to have low rank. In practice, this means you can represent those changes with two small matrices instead of one large one. For a weight matrix with dimensions 4096x4096 (16 million parameters), a rank-16 LoRA adapter needs only 2 x 4096 x 16 = 131,072 parameters — less than 1% of the original.
+
+The benefits are significant:
+
+- **Memory efficiency** — LoRA adapters are typically 1-10 MB, compared to full model weights of 10-100+ GB
+- **Training speed** — fine-tuning takes hours instead of days or weeks
+- **Composability** — you can train multiple LoRA adapters for different tasks and swap them at inference time
+- **Base model preservation** — the original model is untouched, so you can always revert or combine adapters
+
+QLoRA goes further by applying LoRA to a quantized model, enabling fine-tuning of 70B+ parameter models on a single consumer GPU.
+
+## Why it matters for AI agents
+
+LoRA makes it practical to build specialized AI agents without the enormous cost of full fine-tuning. For email agents, this opens up domain-specific customization that general-purpose models can't match.
+
+Consider an email agent for a legal firm. General LLMs handle legal language adequately, but a LoRA adapter trained on the firm's past correspondence, terminology, and communication style produces significantly better drafts. The adapter teaches the model the specific patterns of that domain — standard clauses, preferred phrasing, regulatory references — without altering the model's general capabilities.
+
+The composability of LoRA adapters is particularly useful for multi-tenant email platforms. You can train a separate adapter for each organization's communication style and swap adapters at runtime based on which account the email belongs to. One base model serves every customer, with small, cheap adapters providing per-customer personalization.
+
+For agent developers, LoRA also enables iterative improvement. When an email agent makes mistakes, you collect the corrections, train a small adapter on the feedback data, and deploy the improved agent — all without retraining the base model. This feedback loop lets agents get better at their specific job over time, using real-world data from the emails they process.
+
+The barrier to entry is low. Tools like Hugging Face PEFT, Unsloth, and Axolotl make LoRA fine-tuning accessible with just a GPU and a training dataset. For email-specific tasks, a few hundred high-quality examples are often enough to produce a meaningful improvement.
+
+<FAQ>
+<FAQItem question="How much training data does LoRA need?">
+For domain adaptation (teaching the model a new style or vocabulary), a few hundred to a few thousand examples often suffice. For teaching new tasks or behaviors, you may need 1,000-10,000 examples. Quality matters more than quantity — well-curated examples produce better adapters than large noisy datasets. For email agents, 500 examples of correctly handled emails is a reasonable starting point.
+</FAQItem>
+<FAQItem question="Can I use LoRA with closed-source models like GPT-4 or Claude?">
+No. LoRA requires access to model weights, which closed-source providers don't expose. For API-based models, you use prompt engineering and few-shot examples instead of LoRA. LoRA is primarily used with open-source models like Llama, Mistral, or Qwen that you can download and run locally.
+</FAQItem>
+<FAQItem question="What is the difference between LoRA and full fine-tuning?">
+Full fine-tuning updates all of the model's parameters, requiring massive GPU resources and risking catastrophic forgetting (where the model loses general capabilities). LoRA freezes the original weights and trains only small adapter matrices, using a fraction of the memory and time. The quality difference is usually small for focused tasks, making LoRA the default choice for most fine-tuning use cases.
+</FAQItem>
+<FAQItem question="What is QLoRA?">
+QLoRA combines quantization with LoRA, applying LoRA adapters to a quantized (4-bit) base model. This lets you fine-tune models with 70B+ parameters on a single consumer GPU with 24 GB of VRAM, making large model customization accessible without enterprise hardware.
+</FAQItem>
+<FAQItem question="Can you stack multiple LoRA adapters on one model?">
+Yes. Multiple LoRA adapters can be loaded and swapped at inference time without reloading the base model. This is useful for multi-tenant email platforms where each customer gets a personalized adapter for tone and style, all running on the same base model.
+</FAQItem>
+<FAQItem question="How long does LoRA fine-tuning take?">
+LoRA fine-tuning typically takes 30 minutes to a few hours on a single GPU, depending on dataset size and model parameters. This is dramatically faster than full fine-tuning, which can take days or weeks. For email-specific tasks, a 7B model with 1,000 training examples usually completes in under an hour.
+</FAQItem>
+<FAQItem question="What is the rank parameter in LoRA?">
+The rank (r) controls the size of the adapter matrices. Higher rank means more trainable parameters and more capacity to learn, but also more memory and compute. Typical values are 8-64. For most email agent tasks, rank 16-32 provides a good balance between quality and efficiency.
+</FAQItem>
+<FAQItem question="How can LoRA improve email agents specifically?">
+LoRA can teach an email agent domain-specific vocabulary, preferred response formats, company tone of voice, and task-specific behaviors like extracting order numbers or routing support tickets. A LoRA-adapted model produces more consistent, on-brand email responses than prompt engineering alone.
+</FAQItem>
+<FAQItem question="Does LoRA work with quantized models?">
+Yes, and this combination (QLoRA) is one of the most popular approaches. You quantize the base model to 4-bit to save memory, then train LoRA adapters in higher precision on top. The result is a fine-tuned model that fits on consumer hardware with minimal quality loss.
+</FAQItem>
+<FAQItem question="What tools are commonly used for LoRA fine-tuning?">
+Popular tools include Hugging Face PEFT (the reference implementation), Unsloth (optimized for speed), Axolotl (simplified configuration), and LLaMA-Factory. Most support QLoRA out of the box and integrate with common training datasets and evaluation frameworks.
+</FAQItem>
+</FAQ>

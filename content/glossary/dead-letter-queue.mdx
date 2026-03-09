@@ -1,0 +1,69 @@
+---
+title: "Dead-Letter Queue"
+shortDefinition: "A holding area for messages that couldn't be processed or delivered after exhausting all retry attempts."
+category: "email-infrastructure"
+relatedTerms: ["exponential-backoff", "webhook"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is a Dead-Letter Queue?
+
+A dead-letter queue (DLQ) is a secondary queue where messages are sent when they can't be processed by the primary system after all retry attempts have been exhausted. Instead of being silently dropped, failed messages are preserved in the DLQ for inspection, debugging, and potential reprocessing.
+
+The concept comes from postal mail — a "dead letter office" handles mail that can't be delivered or returned. In software systems, DLQs serve the same purpose for digital messages.
+
+Here's how a DLQ typically works:
+
+1. A message enters the processing pipeline (e.g., an email to send, a webhook to process)
+2. Processing fails — the email bounces, the webhook handler crashes, the API returns an error
+3. The system retries using exponential backoff
+4. After the maximum number of retries is exhausted, the message moves to the dead-letter queue
+5. An operator or automated system reviews the DLQ to diagnose failures and decide whether to retry, fix, or discard each message
+
+DLQs prevent data loss during processing failures. Without a DLQ, messages that fail all retries are simply discarded. With a DLQ, they're preserved with context about why they failed — error codes, timestamps, retry counts — making diagnosis and recovery possible.
+
+## Why it matters for AI agents
+
+AI agents handling email workflows need dead-letter queues to avoid silent data loss. When an agent fails to send an email, process a webhook, or complete a multi-step workflow, that failure needs to go somewhere visible and recoverable.
+
+Consider an agent that processes inbound customer emails. If the agent's handler crashes on a specific email (malformed content, unexpected encoding, missing fields), that email shouldn't just vanish. It should land in a DLQ where the issue can be diagnosed and the email can be reprocessed after the bug is fixed.
+
+For outbound email, a DLQ captures messages that permanently failed delivery. An agent might need to alert the operator, try an alternative delivery method, or flag the failed message for manual follow-up. Without a DLQ, the agent has no record of what failed or why.
+
+DLQs also serve as an early warning system. A growing DLQ signals a systemic problem — a misconfigured webhook endpoint, a recurring parsing error, or a deliverability issue. Agents should monitor DLQ depth and alert when it exceeds a threshold, rather than letting failures accumulate silently.
+
+For multi-agent systems, a shared DLQ with metadata about which agent failed and why helps operators quickly identify which part of the pipeline is broken. Each failed message in the DLQ carries enough context (error message, stack trace, retry history) to debug without reproducing the failure.
+
+<FAQ>
+<FAQItem question="What is a dead-letter queue?">
+A dead-letter queue is a holding area for messages that failed processing after all retry attempts. Instead of discarding failed messages, they're preserved with error context for diagnosis and potential reprocessing. DLQs prevent silent data loss in message-processing systems.
+</FAQItem>
+<FAQItem question="Why do AI agents need dead-letter queues?">
+AI agents process emails, webhooks, and multi-step workflows that can fail for many reasons. Without a DLQ, failed messages are silently lost. A DLQ preserves failed messages with context about why they failed, enabling diagnosis, recovery, and alerting on systemic issues.
+</FAQItem>
+<FAQItem question="How should you monitor a dead-letter queue?">
+Monitor DLQ depth (number of messages) and growth rate. Set alerts when the queue exceeds a threshold, as a growing DLQ signals a systemic problem. Regularly review DLQ contents to identify patterns — recurring errors, specific message types, or particular failure modes that need fixing.
+</FAQItem>
+<FAQItem question="What information should a dead-letter queue message contain?">
+Each DLQ entry should include the original message payload, the error message or exception that caused the failure, a timestamp for each retry attempt, the total number of retries, and the agent identity that was processing the message. This metadata makes diagnosis possible without reproducing the failure.
+</FAQItem>
+<FAQItem question="How is a dead-letter queue different from a retry queue?">
+A retry queue holds messages that are scheduled for another processing attempt. A dead-letter queue holds messages that have exhausted all retry attempts and permanently failed. Messages flow from the primary queue to the retry queue and, after max retries, to the dead-letter queue as a last resort.
+</FAQItem>
+<FAQItem question="Can you automatically reprocess messages from a dead-letter queue?">
+Yes. After fixing the underlying issue (a bug, a misconfigured endpoint, a service outage), you can replay DLQ messages back into the primary processing queue. Some systems support automatic replay with filters, letting you selectively reprocess messages matching specific error patterns.
+</FAQItem>
+<FAQItem question="What causes emails to end up in a dead-letter queue?">
+Common causes include malformed email content that crashes the parser, recipient addresses that permanently bounce, webhook endpoints that are down or returning errors, rate limit exhaustion, authentication failures, and encoding issues. Each cause requires a different fix, which is why the DLQ must preserve enough context to diagnose the root cause.
+</FAQItem>
+<FAQItem question="How does a dead-letter queue relate to email bounce handling?">
+When an email permanently fails delivery (hard bounce), the bounce notification can be routed to a DLQ for review. This lets the agent or operator decide whether to retry with a corrected address, notify the sender, or remove the address from future mailings. Without a DLQ, hard bounces may go unnoticed.
+</FAQItem>
+<FAQItem question="What is the difference between a DLQ and an error log?">
+An error log records that a failure happened. A DLQ preserves the actual failed message so it can be reprocessed. Logs are for observability and debugging. DLQs are for recovery and data preservation. Production agent systems need both — logs for understanding what went wrong, and DLQs for ensuring no messages are permanently lost.
+</FAQItem>
+<FAQItem question="How do you set the right retry count before sending to a DLQ?">
+It depends on the failure type. Transient errors (network timeouts, rate limits) benefit from more retries with exponential backoff — typically 3 to 5 attempts. Permanent errors (invalid addresses, authentication failures) should move to the DLQ after 1-2 attempts since retrying will not fix the issue. Configure different retry policies for different error categories.
+</FAQItem>
+</FAQ>

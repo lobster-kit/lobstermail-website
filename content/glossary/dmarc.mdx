@@ -1,0 +1,64 @@
+---
+title: "DMARC (Domain-based Message Authentication)"
+shortDefinition: "An email policy protocol that tells receiving servers what to do when SPF or DKIM checks fail for messages claiming to be from your domain."
+category: "email-infrastructure"
+relatedTerms: ["spf", "dkim", "dmarc-alignment"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is DMARC?
+
+DMARC (Domain-based Message Authentication, Reporting, and Conformance) is an email authentication policy built on top of SPF and DKIM. While SPF and DKIM verify whether an email is legitimate, DMARC tells the receiving server what to do when those checks fail and provides a reporting mechanism back to the domain owner.
+
+A DMARC record is published as a DNS TXT record on `_dmarc.yourdomain.com` and includes:
+
+1. **Policy (`p=`):** What to do with failing emails — `none` (monitor only), `quarantine` (send to spam), or `reject` (block entirely)
+2. **Alignment mode:** Whether SPF and DKIM domains must exactly match the From header domain or just share the same organizational domain
+3. **Reporting (`rua=`):** Where to send aggregate reports about authentication results
+4. **Percentage (`pct=`):** What percentage of failing emails the policy applies to, useful for gradual rollout
+
+DMARC is the enforcement layer. Without it, SPF and DKIM failures are informational only — receiving servers can ignore them. With a DMARC policy set to `reject`, unauthorized emails are actively blocked.
+
+## Why it matters for AI agents
+
+AI agents that send email without a DMARC policy leave their domain exposed. Anyone can spoof the agent's sending domain, and receiving servers have no instructions for handling fraudulent messages. For agents handling sensitive communications — verification emails, transactional receipts, customer responses — this is a real security gap.
+
+DMARC also matters on the receiving side. Agents that process inbound email can use DMARC results to filter out spoofed messages before acting on them. An agent that blindly trusts incoming email without checking authentication headers is vulnerable to prompt injection and social engineering attacks.
+
+The reporting feature is valuable for agent operators. DMARC aggregate reports show how many emails passed or failed authentication, broken down by sending source. This lets you detect unauthorized use of your domain, misconfigured sending infrastructure, or deliverability problems before they become critical.
+
+For autonomous agents, a progression from `p=none` to `p=quarantine` to `p=reject` over several weeks lets you catch configuration issues before enforcement blocks legitimate agent emails.
+
+<FAQ>
+<FAQItem question="What does DMARC do?">
+DMARC tells receiving email servers what to do when an incoming email fails SPF or DKIM authentication. It can instruct servers to deliver the email anyway (none), send it to spam (quarantine), or block it entirely (reject). It also enables reporting so domain owners can monitor authentication results.
+</FAQItem>
+<FAQItem question="Why do AI agents need DMARC?">
+AI agents need DMARC to protect their sending domain from being spoofed and to ensure their own emails are treated as legitimate. Without DMARC, there's no enforcement policy for failed authentication, and anyone can impersonate the agent's domain.
+</FAQItem>
+<FAQItem question="What DMARC policy should I start with?">
+Start with `p=none` to collect reports without affecting delivery. Monitor the reports for a few weeks to make sure all legitimate sending sources pass authentication. Then move to `p=quarantine` and eventually `p=reject` once you're confident everything is configured correctly.
+</FAQItem>
+<FAQItem question="What is the difference between DMARC, SPF, and DKIM?">
+SPF verifies that an email was sent from an authorized IP address. DKIM verifies that the email content was not altered in transit using a cryptographic signature. DMARC ties them together by defining what happens when either check fails and requiring that the authenticated domain aligns with the From header domain.
+</FAQItem>
+<FAQItem question="How do I set up a DMARC record?">
+Create a DNS TXT record at `_dmarc.yourdomain.com` with a value like `v=DMARC1; p=none; rua=mailto:dmarc-reports@yourdomain.com`. Start with `p=none` to monitor without enforcement, then tighten the policy after reviewing aggregate reports.
+</FAQItem>
+<FAQItem question="What is DMARC alignment?">
+DMARC alignment requires that the domain authenticated by SPF or DKIM matches the domain in the From header. Without alignment, SPF and DKIM can pass on a different domain while the From header is spoofed, which DMARC is specifically designed to prevent.
+</FAQItem>
+<FAQItem question="What are DMARC aggregate reports?">
+DMARC aggregate reports (sent to the address in the `rua=` tag) are XML summaries showing which IPs sent email using your domain, how many messages passed or failed SPF and DKIM, and what policies were applied. They are typically sent daily by receiving mail servers.
+</FAQItem>
+<FAQItem question="Does DMARC affect email deliverability?">
+Yes. A properly configured DMARC policy with `p=reject` improves deliverability by telling receiving servers your domain is authenticated and protected. Without DMARC, some providers may treat your emails with more suspicion, even if SPF and DKIM pass.
+</FAQItem>
+<FAQItem question="Can DMARC block legitimate emails from my AI agent?">
+Yes, if your agent sends through a service that does not align with your DMARC policy. For example, if the envelope sender domain does not match your From domain and you have a strict DMARC policy, legitimate agent emails will fail alignment and get rejected.
+</FAQItem>
+<FAQItem question="How does DMARC protect against phishing?">
+DMARC prevents attackers from sending emails that appear to come from your domain. With `p=reject`, receiving servers block any email that fails authentication, stopping phishing attempts that spoof your domain from reaching recipients' inboxes.
+</FAQItem>
+</FAQ>

@@ -1,0 +1,69 @@
+---
+title: "Sandboxed Inbox"
+shortDefinition: "An isolated email inbox where an agent can only access its own messages and cannot read, modify, or interfere with other agents' inboxes."
+category: "protocols-ecosystem"
+relatedTerms: ["inbox-provisioning", "multi-tenancy", "least-privilege"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is a Sandboxed Inbox?
+
+A sandboxed inbox is an email inbox with strict isolation boundaries. The agent assigned to the inbox can read, send, and manage its own email, but it has zero access to any other inbox in the system. No cross-inbox reads, no shared storage, no ability to send as another agent.
+
+Sandboxing enforces several isolation properties:
+
+- **Read isolation:** An agent can only read messages delivered to its own address
+- **Send isolation:** An agent can only send from its own authenticated address
+- **Storage isolation:** Messages, attachments, and drafts are stored separately per inbox
+- **Credential isolation:** API keys and webhook secrets are unique to each inbox
+- **Rate limit isolation:** Sending limits are applied per inbox, so one agent can't consume another's quota
+
+The sandbox boundary is enforced at the infrastructure level, not the application level. It's not just a software permission check that could be bypassed — the underlying storage, authentication, and network access are physically separated per inbox.
+
+This is different from traditional email hosting where an admin account can access any mailbox. In a sandboxed model, there is no admin override at the inbox level. Each agent's credentials only grant access to its own sandbox.
+
+## Why it matters for AI agents
+
+AI agents operate with varying levels of trust. A customer support agent might be trusted with customer data, but it shouldn't be able to read the sales agent's pricing negotiations. A notification agent should be able to send alerts, but it shouldn't have access to the HR agent's inbox. Sandboxing makes these boundaries automatic.
+
+Without sandboxing, a compromised or malfunctioning agent can cause cascading damage. An agent with a bug that reads the wrong inbox could leak confidential data. An agent that's been manipulated through prompt injection could access other agents' email to extract sensitive information. Sandbox boundaries contain the blast radius of any single agent failure.
+
+For multi-tenant platforms — where a single email infrastructure serves many different customers' agents — sandboxing is non-negotiable. Customer A's agents must never access Customer B's email, even if they share the same underlying infrastructure. Sandboxing provides this guarantee at the architectural level.
+
+LobsterMail provisions every agent inbox as a sandbox by default. There's no configuration required and no way to opt out. Each inbox is isolated in storage, authentication, and access control. An agent's API key only works for its own inbox, and attempts to access other inboxes return authorization errors.
+
+This default-sandbox approach follows the principle of least privilege. Agents start with access to only their own inbox and nothing else. If an agent needs broader access (like an orchestrator that monitors multiple agents), that access is granted explicitly and narrowly.
+
+<FAQ>
+<FAQItem question="What is a sandboxed inbox?">
+A sandboxed inbox is an isolated email inbox where the assigned agent can only access its own messages. It cannot read, send from, or interfere with any other inbox in the system. Isolation is enforced at the infrastructure level with separate storage, credentials, and rate limits per inbox.
+</FAQItem>
+<FAQItem question="Why do AI agents need sandboxed inboxes?">
+Sandboxed inboxes prevent compromised, malfunctioning, or manipulated agents from accessing other agents' email. Without sandboxing, a single agent failure could expose confidential data across the entire system. Sandboxing contains the blast radius of any individual agent issue.
+</FAQItem>
+<FAQItem question="How is a sandboxed inbox different from a regular inbox?">
+A regular inbox might be accessible by admin accounts or other users with elevated permissions. A sandboxed inbox has no admin override — only the assigned agent's credentials can access it. The isolation extends to storage, authentication, rate limits, and network access, not just software-level permissions.
+</FAQItem>
+<FAQItem question="How does sandboxing protect against prompt injection attacks?">
+If a prompt injection tricks an agent into attempting to access another inbox, the sandbox blocks the request at the infrastructure level. The agent's API key only works for its own inbox, so even a fully compromised agent cannot read, forward, or delete email from other sandboxed inboxes.
+</FAQItem>
+<FAQItem question="Can an orchestrator agent access multiple sandboxed inboxes?">
+Only if explicitly granted access. By default, each agent can only access its own sandbox. An orchestrator that needs to monitor multiple agents can be given scoped read access to specific inboxes, but this access is granted narrowly and deliberately rather than being a default.
+</FAQItem>
+<FAQItem question="Are sandboxed inboxes the same as multi-tenancy?">
+They are related but distinct. Multi-tenancy isolates different customers on shared infrastructure. Sandboxed inboxes isolate individual agents within a customer's account. A multi-tenant platform uses sandboxing at the agent level, but sandboxing can also exist within a single-tenant deployment.
+</FAQItem>
+<FAQItem question="Do sandboxed inboxes affect email deliverability?">
+Sandboxed inboxes can improve deliverability by isolating sender reputation. If one agent's inbox generates spam complaints, the damage is contained to that agent's sending reputation rather than affecting all agents on the platform. Per-inbox rate limits also prevent volume spikes that trigger spam filters.
+</FAQItem>
+<FAQItem question="How are sandboxed inboxes provisioned?">
+On platforms like LobsterMail, sandboxed inboxes are provisioned via API. Each inbox is created with its own unique credentials, email address, and isolated storage. Provisioning is instant and automated, allowing agents to set up their own email infrastructure programmatically without human configuration.
+</FAQItem>
+<FAQItem question="Can two agents share a sandboxed inbox?">
+By design, no. Each sandboxed inbox is assigned to one agent with one set of credentials. If two agents need to collaborate on the same email thread, they should use separate inboxes and forward or copy messages between them through explicit, auditable actions.
+</FAQItem>
+<FAQItem question="What data is isolated in a sandboxed inbox?">
+Everything: email messages, attachments, drafts, contact lists, webhook configurations, API keys, sending logs, and rate limit counters. No data leaks between sandboxes. Each inbox is a self-contained unit with its own complete set of resources and configuration.
+</FAQItem>
+</FAQ>

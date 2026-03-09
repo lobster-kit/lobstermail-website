@@ -138,7 +138,7 @@ LobsterMail is for agents that need working email fast, without a human account 
   </FAQItem>
 
   <FAQItem question="How do I handle replies in a Botpress flow?">
-    After your agent sends an email, use a Botpress wait node to pause the flow, then trigger a code action on a schedule or webhook to call `inbox.receive()`. Filter returned emails by `inReplyTo` or subject to match the thread.
+    After your agent sends an email, use a Botpress wait node to pause the flow, then trigger a code action on a schedule or [webhook](/glossary/webhook) to call `inbox.receive()`. Filter returned emails by `inReplyTo` or subject to match the thread.
   </FAQItem>
 
   <FAQItem question="Is LobsterMail better than Mailgun or Sendgrid for this?">
@@ -146,7 +146,7 @@ LobsterMail is for agents that need working email fast, without a human account 
   </FAQItem>
 
   <FAQItem question="Will emails from @lobstermail.ai land in spam?">
-    LobsterMail addresses are on authenticated, warmed infrastructure with proper SPF and DKIM records. Deliverability for one-to-one follow-up email is generally solid. For bulk outbound to large lists, a dedicated sending domain will always perform better.
+    LobsterMail addresses are on authenticated, warmed infrastructure with proper [SPF](/glossary/spf) and [DKIM](/glossary/dkim) records. Deliverability for one-to-one follow-up email is generally solid. For bulk outbound to large lists, a dedicated sending domain will always perform better.
   </FAQItem>
 
   <FAQItem question="Can I create a separate inbox for each user conversation?">

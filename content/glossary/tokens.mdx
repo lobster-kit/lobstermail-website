@@ -1,0 +1,39 @@
+---
+title: "Tokens"
+shortDefinition: "The basic units of text that language models read and generate, roughly equivalent to three-quarters of a word."
+category: "trending-ai"
+relatedTerms: ["inference", "context-window"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is a Token?
+
+A token is the fundamental unit of text that a language model processes. Before a model reads any text, a tokenizer breaks it down into tokens. These are not always full words. Common words like "the" or "hello" are single tokens. Longer or less common words get split into multiple tokens. The word "unbelievable" might become three tokens: "un", "believ", "able". Punctuation, spaces, and special characters are also tokens.
+
+Different models use different tokenization schemes, but most modern English-language models average roughly 1 token per 0.75 words, or about 4 characters per token. This means a 1,000-word document is approximately 1,300 tokens, though the exact count depends on vocabulary complexity and formatting.
+
+Tokens matter for three practical reasons. First, they determine cost. Most AI API providers charge per token for both input (what you send) and output (what the model generates). Second, they define the context window limit. A model with a 128K token context window can process about 96,000 words in a single request. Third, they affect speed. More tokens mean longer processing times because the model must attend to each token when generating output.
+
+## Why It Matters for AI Agents
+
+Token economics directly shape how AI agents are designed and operated. An email agent that processes hundreds of messages per day accumulates significant token usage. Every email body, system prompt, retrieved document, and generated reply consumes tokens that translate to API costs.
+
+Smart agent design minimizes unnecessary token usage without sacrificing quality. This means writing concise system prompts, retrieving only the most relevant context via RAG rather than stuffing everything into the window, summarizing long email threads instead of including them verbatim, and setting reasonable output length limits for replies.
+
+For email infrastructure platforms like LobsterMail, understanding tokens helps agent builders predict costs and optimize throughput. A typical short business email might be 200 tokens. The system prompt for the agent might be 500 tokens. Retrieved context adds another 1,000 tokens. The generated reply might be 300 tokens. That is roughly 2,000 tokens per email processed. At scale, these numbers determine whether an agent workflow is economically viable.
+
+Token limits also influence multi-agent architectures. When agents communicate with each other, they pass messages that consume tokens on both sides. Designing compact, structured message formats between agents keeps inter-agent communication costs low. Structured output formats like JSON are often more token-efficient for machine-to-machine communication than natural language prose.
+
+<FAQ>
+<FAQItem question="How do I count tokens before sending a request?">Most AI providers offer tokenizer tools or libraries. OpenAI provides tiktoken, and Anthropic provides a token counting API. You can also estimate by dividing your word count by 0.75. For precise counts, use the provider's official tokenizer since different models tokenize text differently.</FAQItem>
+<FAQItem question="Why do tokens cost money?">Each token requires computational work during inference. The model must process every input token to understand context, and generating each output token requires a forward pass through the neural network. More tokens mean more GPU compute time, which providers pass on as per-token pricing.</FAQItem>
+<FAQItem question="How can AI agents reduce token costs?">Write concise system prompts, use RAG to retrieve only relevant context instead of including everything, summarize long conversation histories, set output length limits, cache repeated prompts where the API supports it, and use structured formats for inter-agent communication. Small optimizations compound at high volume.</FAQItem>
+<FAQItem question="What is the difference between input tokens and output tokens?">Input tokens are the text you send to the model (system prompt, user message, context). Output tokens are the text the model generates in response. Output tokens are typically 3-5x more expensive than input tokens because each output token requires a sequential forward pass through the model, while input tokens are processed in parallel.</FAQItem>
+<FAQItem question="How many tokens does a typical email use?">A short business email is roughly 100-300 tokens. A long email with formatting and signatures might be 500-1,000 tokens. When you add the system prompt (500-2,000 tokens) and any retrieved context (500-2,000 tokens), processing a single email typically costs 1,500-5,000 total tokens per inference call.</FAQItem>
+<FAQItem question="What is a context window in relation to tokens?">The context window is the maximum number of tokens a model can process in a single request, including both input and output. A 128K context window means the combined total of your prompt, context, and generated response cannot exceed roughly 128,000 tokens. Exceeding this limit causes the request to fail.</FAQItem>
+<FAQItem question="Do different languages use different amounts of tokens?">Yes. English is generally the most token-efficient language because most tokenizers are optimized for English text. Other languages, especially those with non-Latin scripts like Chinese, Japanese, or Arabic, often require more tokens per word or concept, increasing both costs and context window consumption.</FAQItem>
+<FAQItem question="What is prompt caching and how does it save tokens?">Prompt caching lets you reuse the processed representation of a static prompt prefix across multiple requests, so you don't pay full input token costs each time. For agents with a consistent system prompt processing many requests, this can reduce input token costs significantly since the cached prefix is processed only once.</FAQItem>
+<FAQItem question="How do tokens affect AI agent latency?">Output tokens are the primary latency driver because they're generated sequentially, one at a time. Input tokens affect latency less because they're processed in parallel. For email agents where response time matters, keeping output concise (shorter replies, structured JSON) directly reduces the time to complete each request.</FAQItem>
+<FAQItem question="Are tokens the same across different AI models?">No. Each model family uses its own tokenizer, so the same text may produce different token counts across models. A sentence that's 20 tokens in GPT-4 might be 22 tokens in Claude. Always use the specific model's tokenizer for accurate cost estimates rather than assuming cross-model equivalence.</FAQItem>
+</FAQ>

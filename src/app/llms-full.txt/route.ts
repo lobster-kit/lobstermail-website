@@ -1,7 +1,9 @@
 import { getGuides, getGuide } from "@/lib/docs";
+import { getAllTerms } from "@/lib/glossary";
 
 export async function GET() {
   const guides = await getGuides();
+  const terms = getAllTerms();
 
   const guideSections = await Promise.all(
     guides.map(async (meta) => {
@@ -10,6 +12,10 @@ export async function GET() {
       return `## ${guide.title}\n\n${guide.content}`;
     }),
   );
+
+  const glossarySection = terms
+    .map((t) => `### ${t.title}\n\n${t.shortDefinition}\n\n${t.content}`)
+    .join("\n\n---\n\n");
 
   const content = `# LobsterMail — Full Documentation
 
@@ -55,6 +61,12 @@ await lobster.send({
 # Documentation
 
 ${guideSections.join("\n\n---\n\n")}
+
+---
+
+# Glossary
+
+${glossarySection}
 `;
 
   return new Response(content, {

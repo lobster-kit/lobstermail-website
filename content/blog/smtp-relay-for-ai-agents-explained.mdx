@@ -152,13 +152,13 @@ If you want to skip the SMTP configuration entirely and let your agent provision
     The MUA is the agent's email client (the SDK). The MSA is the submission server that accepts the message on port 587. The MTA routes the message to the recipient's mail server. The agent acts as the MUA and interacts with the MSA directly.
   </FAQItem>
   <FAQItem question="How do autonomous AI agents handle SMTP relay errors or bounce messages?">
-    Agents should parse SMTP response codes: 2xx means success, 4xx means retry later, 5xx means permanent failure. Bounce messages should be processed programmatically to remove invalid addresses and adjust sending behavior.
+    Agents should parse [SMTP response codes](/glossary/smtp-response-codes): 2xx means success, 4xx means retry later, 5xx means permanent failure. Bounce messages should be processed programmatically to remove invalid addresses and adjust sending behavior.
   </FAQItem>
   <FAQItem question="What SMTP relay features should you look for when building an agent-first email system?">
-    Headless authentication (no OAuth), API-based inbox provisioning, inbound email support, injection risk scoring, configurable rate limits, and pre-configured domain reputation. These are the features that matter when no human is in the loop.
+    Headless authentication (no OAuth), API-based [inbox provisioning](/glossary/inbox-provisioning), inbound email support, injection risk scoring, configurable rate limits, and pre-configured domain reputation. These are the features that matter when no human is in the loop.
   </FAQItem>
   <FAQItem question="Is it safe to let an AI agent send emails autonomously via SMTP relay?">
-    Yes, with guardrails. Set sending limits per inbox, monitor for bounces and spam complaints, and use a service that enforces rate limits. The risk isn't the relay itself; it's an agent sending without constraints.
+    Yes, with [guardrails](/glossary/guardrails). Set sending limits per inbox, monitor for bounces and spam complaints, and use a service that enforces rate limits. The risk isn't the relay itself; it's an agent sending without constraints.
   </FAQItem>
   <FAQItem question="How does SMTP relay handle high-volume sending from AI automation pipelines?">
     Relay servers queue messages and process them based on available throughput and recipient server capacity. If volume exceeds your plan's limits, messages queue or get rejected. Distributed sending across multiple IPs helps at scale.

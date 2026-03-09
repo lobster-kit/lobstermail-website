@@ -1,0 +1,66 @@
+---
+title: "Sender Reputation"
+shortDefinition: "A score that email providers assign to a sending domain or IP address based on its email-sending behavior and history."
+category: "email-infrastructure"
+relatedTerms: ["dkim", "spf", "ip-warmup"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is Sender Reputation?
+
+Sender reputation is a trust score that email providers (Gmail, Outlook, Yahoo, etc.) calculate for every domain and IP address that sends email. It determines whether your emails reach the inbox, land in spam, or get blocked entirely.
+
+Reputation is influenced by several factors:
+
+- **Bounce rate:** High rates of hard bounces signal you're sending to bad addresses
+- **Spam complaints:** Recipients clicking "Report spam" directly damages your score
+- **Authentication:** Passing SPF, DKIM, and DMARC consistently builds trust
+- **Engagement:** Open rates, reply rates, and whether recipients move emails out of spam
+- **Volume consistency:** Sudden spikes in sending volume trigger suspicion
+- **Spam trap hits:** Sending to known spam trap addresses is heavily penalized
+
+Each email provider maintains its own reputation system. Google Postmaster Tools shows your domain and IP reputation on a four-tier scale. Microsoft SNDS provides similar data for Outlook. There's no single universal reputation score.
+
+## Why it matters for AI agents
+
+AI agents that send email are building a sender reputation whether they realize it or not. An agent that sends thousands of emails with poor list hygiene, missing authentication, or irrelevant content will burn its domain reputation fast. Recovering from a damaged reputation takes weeks or months.
+
+This matters more for agents than for human senders because agents can scale email volume quickly. A misconfigured agent can send thousands of emails to invalid addresses in minutes, generating bounce rates that immediately tank the domain's reputation. Human senders rarely hit this scale of damage this quickly.
+
+Agents also need to monitor reputation programmatically. An autonomous agent can't check Google Postmaster Tools manually. Building reputation monitoring into the agent's workflow — tracking bounce rates, checking delivery rates, and alerting on reputation drops — is essential for agents that send email as a core function.
+
+For new agents, starting with a fresh domain or IP requires careful IP warmup. Sending too much too fast from an unknown sender triggers rate limiting and spam filtering. A gradual ramp-up lets email providers build a positive reputation profile before the agent reaches full sending volume.
+
+<FAQ>
+<FAQItem question="What is sender reputation in email?">
+Sender reputation is a score that email providers assign to your sending domain and IP address based on factors like bounce rates, spam complaints, authentication results, and engagement. A good reputation means your emails reach the inbox. A bad reputation means they go to spam or get blocked.
+</FAQItem>
+<FAQItem question="How do AI agents damage sender reputation?">
+AI agents can damage sender reputation by sending to invalid or outdated email addresses (causing bounces), sending too many emails too quickly from a new domain, failing email authentication checks, or generating content that recipients mark as spam. The scale and speed of agent operations amplifies these risks.
+</FAQItem>
+<FAQItem question="How long does it take to recover sender reputation?">
+Recovering sender reputation typically takes 2 to 8 weeks, depending on the severity of the damage and the email provider. During recovery, you need to reduce sending volume, clean your recipient lists, fix authentication issues, and gradually rebuild trust through consistent, legitimate sending.
+</FAQItem>
+<FAQItem question="What is IP warmup and why do agents need it?">
+IP warmup is the process of gradually increasing sending volume from a new IP address to build a positive reputation with email providers. Agents need it because sending high volumes immediately from an unknown IP triggers spam filters. A typical warmup takes 2-4 weeks, starting with small batches and scaling up daily.
+</FAQItem>
+<FAQItem question="How do SPF, DKIM, and DMARC affect sender reputation?">
+Passing SPF, DKIM, and DMARC authentication consistently signals to email providers that your messages are legitimate. Failing these checks damages reputation and increases the chance of emails landing in spam. Proper authentication is a baseline requirement for maintaining good sender reputation.
+</FAQItem>
+<FAQItem question="Can one bad agent ruin sender reputation for other agents?">
+On shared IP infrastructure, yes. If one agent sends spam from a shared IP, the reputation damage affects all senders on that IP. Multi-tenant email platforms mitigate this with per-agent rate limits, abuse detection, and the option for dedicated IPs that isolate each agent's reputation.
+</FAQItem>
+<FAQItem question="How can agents monitor their sender reputation?">
+Agents can track bounce rates, spam complaint rates, and delivery rates through their email platform's API. Google Postmaster Tools and Microsoft SNDS provide domain and IP reputation data. Building automated reputation monitoring into the agent's workflow enables proactive alerting before reputation degrades significantly.
+</FAQItem>
+<FAQItem question="What bounce rate is considered dangerous for sender reputation?">
+A hard bounce rate above 2% is a warning sign, and above 5% will actively damage your reputation with most email providers. Agents should validate email addresses before sending and immediately remove addresses that hard bounce. Soft bounces (temporary failures) are less damaging but should still be monitored.
+</FAQItem>
+<FAQItem question="Does sending volume affect sender reputation?">
+Yes. Sudden spikes in sending volume from a domain or IP trigger suspicion from email providers. Consistent, predictable volume builds trust. Agents should ramp up gradually and maintain steady sending patterns rather than bursting thousands of emails at once.
+</FAQItem>
+<FAQItem question="What is a spam trap and how does it affect reputation?">
+A spam trap is an email address operated by email providers or anti-spam organizations to catch senders with poor list hygiene. Sending to a spam trap is heavily penalized because it proves the sender is mailing addresses that never opted in or haven't been active in years. Agents must regularly clean their recipient lists to avoid spam traps.
+</FAQItem>
+</FAQ>

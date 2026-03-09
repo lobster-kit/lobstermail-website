@@ -39,8 +39,8 @@ For a human developer debugging a script, either works fine. For an autonomous a
 | Protocol | TCP socket, text commands | HTTP/REST, JSON payloads |
 | Setup complexity | Server address, port, TLS config | One API key or SDK call |
 | Speed per message | 200-500ms (handshake overhead) | 50-150ms (single HTTP request) |
-| Deliverability tools | None built in | SPF, DKIM, bounce tracking included |
-| Authentication | Username + password (long-lived) | Scoped API keys or tokens |
+| Deliverability tools | None built in | [SPF](/glossary/spf), [DKIM](/glossary/dkim), bounce tracking included |
+| Authentication | Username + password (long-lived) | Scoped API keys or [tokens](/glossary/tokens) |
 | Delivery feedback | Bounce emails (async, unreliable) | Webhooks, status callbacks, real-time |
 | Error handling | SMTP status codes (cryptic) | HTTP status + JSON error body |
 | AI agent suitability | Poor (no programmatic feedback loop) | Strong (event-driven, inspectable) |
@@ -49,7 +49,7 @@ That table covers the technical split. But the real question is: what does each 
 
 ## SMTP was built for a world where humans read bounce emails
 
-SMTP dates back to 1982. RFC 821. It assumes a human will eventually read the mailbox, notice a bounce notification, and take action. The protocol itself has no concept of "tell me when this message lands in someone's inbox" or "retry with exponential backoff if the server is busy."
+SMTP dates back to 1982. RFC 821. It assumes a human will eventually read the mailbox, notice a bounce notification, and take action. The protocol itself has no concept of "tell me when this message lands in someone's inbox" or "retry with [exponential backoff](/glossary/exponential-backoff) if the server is busy."
 
 When your AI agent sends via SMTP and something fails, here's what it gets back: a three-digit status code like `451 4.7.1 Greylisting in effect`. Maybe. Some servers just close the connection. Some accept the message and quietly drop it. The agent has no reliable way to know whether the email arrived, bounced, or got caught in a spam filter.
 
@@ -100,7 +100,7 @@ Here's a concrete scenario. Your agent needs to send a cold outreach email, wait
 
 With SMTP: the agent opens a connection, sends the message, gets back a `250 OK` (which only means the server accepted it, not that it was delivered), then polls the inbox via IMAP for replies. If the email bounced, the agent finds out minutes or hours later when a bounce message appears in the inbox, if it appears at all.
 
-With an email API: the agent POSTs the message, gets a message ID, receives a webhook when it's delivered (or bounced), and gets another webhook when a reply arrives. Every step is event-driven. The agent reacts to things that happened instead of checking whether they might have happened.
+With an email API: the agent POSTs the message, gets a message ID, receives a [webhook](/glossary/webhook) when it's delivered (or bounced), and gets another webhook when a reply arrives. Every step is event-driven. The agent reacts to things that happened instead of checking whether they might have happened.
 
 The second approach is how most production agent systems work today. Not because SMTP can't technically do it, but because the feedback loop is tighter and the failure modes are visible.
 

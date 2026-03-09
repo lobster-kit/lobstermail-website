@@ -120,7 +120,7 @@ People ask whether n8n, LangChain, or SmolAgents are interchangeable for email a
 
 | Layer | Tool | What it does | What it doesn't do |
 |---|---|---|---|
-| Workflow orchestration | n8n, Make, Zapier | Visual automation, triggers, routing | LLM prompt engineering, inbox provisioning |
+| Workflow orchestration | n8n, Make, Zapier | Visual automation, triggers, routing | LLM prompt engineering, [inbox provisioning](/glossary/inbox-provisioning) |
 | Agent framework | LangChain, CrewAI, AutoGen | LLM chains, tool calling, multi-step reasoning | Email deliverability, inbox management |
 | Email infrastructure | LobsterMail, SendGrid, Resend | Sending, receiving, deliverability | Prompt construction, output parsing |
 
@@ -167,7 +167,7 @@ Two mitigations work well. First, add a temperature of 0.7-0.9 for the body whil
     Retry once with a stricter prompt and lower temperature. If the second attempt fails, fall back to a static template with dynamic fields filled from your data source. Log both failures for debugging. Never send a broken email.
   </FAQItem>
   <FAQItem question="How do AI email agents handle multi-step sequences like follow-ups and reply detection?">
-    The agent monitors its inbox for replies using polling or webhooks, feeds the reply content back into the LLM with conversation history as context, and generates a contextual follow-up. LobsterMail's `inbox.receive()` and webhook delivery handle the inbound side.
+    The agent monitors its inbox for replies using polling or webhooks, feeds the reply content back into the LLM with conversation history as context, and generates a contextual follow-up. LobsterMail's `inbox.receive()` and [webhook](/glossary/webhook) delivery handle the inbound side.
   </FAQItem>
   <FAQItem question="What are the deliverability risks of sending high volumes of LLM-generated emails?">
     Spam filters flag repetitive phrasing patterns common in LLM output. Mitigate by varying temperature, sending from isolated per-agent inboxes, warming up new addresses gradually, and monitoring bounce rates per inbox.
@@ -176,7 +176,7 @@ Two mitigations work well. First, add a temperature of 0.7-0.9 for the body whil
     Pull data from your CRM, calendar, or database before calling the LLM, then insert it as explicit variables in the prompt template. Keep the data injection outside the LLM call so you can validate inputs independently from outputs.
   </FAQItem>
   <FAQItem question="Is there an email API built specifically for AI agents rather than human senders?">
-    Yes. [LobsterMail](/) is built for autonomous agents. The agent provisions its own inbox, sends and receives without human credentials, and gets built-in prompt injection scanning on inbound email. No OAuth, no shared mailbox.
+    Yes. [LobsterMail](/) is built for autonomous agents. The agent provisions its own inbox, sends and receives without human credentials, and gets built-in [prompt injection](/glossary/prompt-injection) scanning on inbound email. No OAuth, no shared mailbox.
   </FAQItem>
   <FAQItem question="How do I compare the cost and latency of GPT-4o vs. Gemini Flash for high-volume email generation?">
     GPT-4o runs roughly $2.50 per million input tokens with 500-800ms latency. Gemini Flash is under $0.10 per million input tokens with 200-400ms latency. For templated email where output quality is comparable, Flash saves significantly at volume.

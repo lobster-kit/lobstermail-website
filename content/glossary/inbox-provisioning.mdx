@@ -1,0 +1,67 @@
+---
+title: "Inbox Provisioning"
+shortDefinition: "The automated process of creating and configuring a dedicated email inbox for an AI agent, including address assignment, DNS setup, and access credentials."
+category: "protocols-ecosystem"
+relatedTerms: ["multi-tenancy", "sandboxed-inbox"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is Inbox Provisioning?
+
+Inbox provisioning is the process of creating a fully functional email inbox for an AI agent — assigning an email address, configuring DNS records, setting up authentication, and providing API access. In traditional email, this is a manual process involving IT teams, admin consoles, and DNS changes. For agents, it needs to be automated and instant.
+
+A provisioned inbox typically includes:
+
+- **Email address:** A unique address the agent can send from and receive at
+- **DNS configuration:** SPF, DKIM, and MX records configured for the sending/receiving domain
+- **API credentials:** Keys or tokens the agent uses to read and send email programmatically
+- **Webhook endpoints:** URLs where delivery events and inbound messages are forwarded
+- **Storage:** Space for incoming messages, attachments, and sent mail history
+
+The goal of inbox provisioning is to take an agent from "no email capability" to "fully functional email" in a single API call or skill install. The agent shouldn't need to understand DNS, SMTP, or email authentication to get a working inbox.
+
+## Why it matters for AI agents
+
+Inbox provisioning is the foundation of agent email. An agent that needs to send a verification email, receive customer inquiries, or communicate with other agents needs its own inbox first. If provisioning is manual, slow, or requires human intervention, it blocks agent autonomy.
+
+For platforms that manage many agents — customer support fleets, sales automation systems, multi-agent workflows — provisioning needs to scale. Creating 100 agent inboxes manually is impractical. Automated provisioning via API lets platforms spin up inboxes on demand as new agents come online.
+
+LobsterMail handles inbox provisioning through a single API call. An agent (or its orchestrator) calls the provisioning endpoint, and within seconds the agent has a fully configured inbox with authentication, DNS, and API access ready to go. The agent starts sending and receiving email immediately.
+
+The provisioning model also matters for agent lifecycle management. When an agent is decommissioned, its inbox should be deprovisioned — address released, messages archived or deleted, DNS records cleaned up. Automated provisioning needs to work in both directions: spinning up inboxes when agents start and tearing them down when agents stop.
+
+For skill-based provisioning through ClawHub, the process is even simpler. An agent installs the email skill, and provisioning happens automatically as part of the installation. The agent doesn't even need to know that inbox provisioning exists as a separate step.
+
+<FAQ>
+<FAQItem question="What is inbox provisioning?">
+Inbox provisioning is the automated process of creating a fully functional email inbox for an AI agent. It includes assigning an email address, configuring DNS authentication records, generating API credentials, and setting up webhook endpoints — everything the agent needs to start sending and receiving email.
+</FAQItem>
+<FAQItem question="Why can't agents just use a shared inbox?">
+Shared inboxes create security and isolation problems. One agent can read another agent's messages, send from another agent's address, or interfere with another agent's conversations. Each agent needs its own provisioned inbox for identity, security, and audit purposes.
+</FAQItem>
+<FAQItem question="How fast should inbox provisioning be?">
+Inbox provisioning for agents should be near-instant — seconds, not minutes or hours. Agents often need email capability as part of their startup sequence. If provisioning is slow, it delays the agent's ability to function and creates a bottleneck in multi-agent deployments.
+</FAQItem>
+<FAQItem question="What DNS records are needed for a provisioned inbox?">
+A fully provisioned inbox requires MX records for receiving email, SPF records to authorize sending IPs, DKIM records for cryptographic message signing, and optionally DMARC records for authentication policy enforcement. Automated provisioning services handle these DNS configurations as part of the setup.
+</FAQItem>
+<FAQItem question="Can inbox provisioning be done via API?">
+Yes. Services like LobsterMail expose a provisioning API where a single call creates a complete inbox with address, DNS records, API credentials, and webhook configuration. This lets agents or orchestrators provision inboxes programmatically without manual setup or admin console access.
+</FAQItem>
+<FAQItem question="What happens when an agent is decommissioned?">
+When an agent is shut down, its inbox should be deprovisioned: the address is released, pending messages are handled or archived, webhook endpoints are removed, and DNS records are cleaned up. Automated deprovisioning prevents orphaned inboxes from accumulating and consuming resources.
+</FAQItem>
+<FAQItem question="How does inbox provisioning work with multi-agent systems?">
+In multi-agent systems, an orchestrator agent can provision inboxes for worker agents on demand. As new agents spin up, they get their own isolated inboxes. As agents complete their tasks and shut down, their inboxes are deprovisioned. This supports elastic agent deployments that scale up and down.
+</FAQItem>
+<FAQItem question="What is skill-based inbox provisioning?">
+Skill-based provisioning bundles inbox creation into a skill install. When an agent installs an email skill from a marketplace like ClawHub, the provisioning happens automatically as part of the installation. The agent gets email capabilities without needing to know anything about DNS, SMTP, or authentication setup.
+</FAQItem>
+<FAQItem question="How does provisioning handle custom domains vs shared domains?">
+Shared domain provisioning assigns an address on the service's domain (agent@mail.lobstermail.ai) and works instantly. Custom domain provisioning requires DNS record changes on the customer's domain, which may take time to propagate. Most agents start on a shared domain and migrate to a custom domain later.
+</FAQItem>
+<FAQItem question="What security considerations apply to inbox provisioning?">
+Provisioned inboxes need isolated storage so agents cannot access each other's messages, scoped API credentials with minimal permissions, rate limits to prevent abuse, and audit logging to track who created and accessed each inbox. Security isolation is the foundation of multi-tenant agent email infrastructure.
+</FAQItem>
+</FAQ>

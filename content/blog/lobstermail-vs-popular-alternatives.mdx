@@ -24,10 +24,10 @@ I've spent enough time comparing these that I can save you the afternoon. Here's
 |---|---|---|---|---|---|
 | Persistent inbox | Yes | Yes | No | No | Yes |
 | Agent self-signup | Yes | No | No | No | No |
-| Inbound receiving | Yes (free) | Yes | Webhook only | No | Yes |
+| Inbound receiving | Yes (free) | Yes | [Webhook](/glossary/webhook) only | No | Yes |
 | Outbound sending | Yes ($9/mo) | Yes | Yes (free tier) | Yes (free tier) | Yes (free tier) |
 | Inbox querying API | Yes | Yes (Gmail API) | No | No | Yes |
-| Prompt injection scanning | Yes | No | No | No | No |
+| [Prompt injection](/glossary/prompt-injection) scanning | Yes | No | No | No | No |
 | Custom domains | Yes ($9/mo) | N/A | Yes | Yes | Yes ($20/mo) |
 | Free tier | Receive-only | Free w/ quotas | 100/day send | 100/day send | 3 inboxes, 3K/mo |
 | Paid starting price | $9/mo | $12/user/mo | $15/mo | $20/mo | $20/mo |
@@ -37,7 +37,7 @@ I've spent enough time comparing these that I can save you the afternoon. Here's
 
 Your agent can read and send through Gmail's API. It's free, or $12/user/month with Google Workspace. You already have an account. What could go wrong?
 
-OAuth tokens expire and need human intervention to refresh. Rate limits cap free accounts at 500 sends per day. The API burns quota units per call — `messages.send` costs 100 units, and you're capped at 15,000 per user per minute. Sounds generous until your agent polls every few seconds.
+OAuth [tokens](/glossary/tokens) expire and need human intervention to refresh. Rate limits cap free accounts at 500 sends per day. The API burns quota units per call — `messages.send` costs 100 units, and you're capped at 15,000 per user per minute. Sounds generous until your agent polls every few seconds.
 
 The real problem is structural. Your agent lives inside your personal inbox. A Meta alignment researcher [gave an OpenClaw agent inbox access for triage](https://techcrunch.com/2026/02/23/a-meta-ai-security-researcher-said-an-openclaw-agent-ran-amok-on-her-inbox/), and it started bulk-deleting hundreds of emails, ignoring stop commands. That happened.
 
@@ -73,7 +73,7 @@ Your agent calls `LobsterMail.create()` and gets a working inbox. No human accou
 
 The free tier is receive-only with a 100 email monthly cap. Verify via an X post or credit card to unlock 10 sends per day. The Builder plan at $9/month gives you unlimited inboxes, 1,000 sends per day, 10,000 emails per month, and custom domains. Scale at $99/month bumps sending to 10,000/day with dedicated IPs.
 
-The SDK includes `safeBodyForLLM()`, which strips potential [prompt injection](/blog/prompt-injection-email-agents) attempts before email content reaches your agent's context window. Six categories of injection scanning run on every incoming message. No other provider on this list does that.
+The SDK includes `safeBodyForLLM()`, which strips potential [prompt injection](/blog/prompt-injection-email-agents) attempts before email content reaches your agent's [context window](/glossary/context-window). Six categories of injection scanning run on every incoming message. No other provider on this list does that.
 
 ## The cost math
 
@@ -118,7 +118,7 @@ Different tools, different jobs. But if you're building autonomous agents that n
     No. AgentMail requires a human to create an account at their console, generate an API key, and configure it in the agent's environment before the agent can use email. The agent can create inboxes programmatically after that, but initial setup is manual.
   </FAQItem>
   <FAQItem question="What does LobsterMail's prompt injection scanning do?">
-    Every incoming email is scanned across six categories: boundary manipulation, system prompt override, data exfiltration, role hijacking, tool invocation, and encoding obfuscation. The SDK's `safeBodyForLLM()` method wraps content in boundary markers and strips injected payloads before the message reaches your agent's context window.
+    Every incoming email is scanned across six categories: boundary manipulation, [system prompt](/glossary/system-prompt) override, data exfiltration, role hijacking, tool invocation, and encoding obfuscation. The SDK's `safeBodyForLLM()` method wraps content in boundary markers and strips injected payloads before the message reaches your agent's context window.
   </FAQItem>
   <FAQItem question="Can I switch from AgentMail to LobsterMail?">
     Yes. Both use standard email protocols, so any email address on either platform can communicate with any other address. You can migrate agents incrementally — spin up new inboxes on LobsterMail while existing ones still work on AgentMail.

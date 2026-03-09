@@ -1,0 +1,62 @@
+---
+title: "Human-in-the-Loop (HITL)"
+shortDefinition: "A design pattern where an AI agent pauses its workflow to get human approval, review, or input before proceeding with a critical action."
+category: "agent-developer"
+relatedTerms: ["agentic-ai", "orchestrator-agent"]
+relatedBlogSlugs: ["the-waitforemail-pattern-human-in-the-loop-email-for-openclaw-agents", "crewai-flows-email-checkpoint-adding-human-approval-gates-with-lobstermail"]
+date: "2026-03-08"
+---
+
+## What is human-in-the-loop?
+
+Human-in-the-loop (HITL) is a pattern where an AI agent's automated workflow includes checkpoints that require human approval before continuing. Instead of running fully autonomously, the agent pauses at critical decision points and waits for a person to review and approve the next step.
+
+Common HITL patterns include:
+
+- **Approval gates**: Agent drafts an email, waits for human approval before sending
+- **Review checkpoints**: Agent generates a report, human verifies before sharing
+- **Escalation triggers**: Agent encounters an edge case it can't handle, routes to a human
+- **Feedback loops**: Human corrects agent output, agent learns from the correction
+
+## Why HITL matters for AI agents
+
+Fully autonomous agents are risky. An agent that sends emails without oversight can damage your brand, violate compliance rules, or make mistakes that are hard to undo. HITL gives you the productivity benefits of automation with a safety net.
+
+Email is one of the most natural HITL channels. An agent can draft a response and email it to a human reviewer. The human replies with approval (or edits), and the agent continues. This works because email is asynchronous — the agent doesn't block a UI thread while waiting.
+
+## HITL via email
+
+The `waitForEmail` pattern is a common implementation: an agent sends a draft to a reviewer's inbox, then polls for a reply. When the reply arrives, the agent parses it and proceeds. This turns any email inbox into a lightweight approval queue.
+
+<FAQ>
+<FAQItem question="What does human-in-the-loop mean in AI?">
+Human-in-the-loop (HITL) is a design pattern where an AI agent pauses at critical points in its workflow to get human approval, review, or input before proceeding. It balances automation efficiency with human oversight.
+</FAQItem>
+<FAQItem question="Why is human-in-the-loop important for AI agents?">
+Fully autonomous agents can make costly mistakes — sending wrong emails, making bad decisions, or violating compliance rules. HITL adds checkpoints where humans verify critical actions before the agent continues, reducing risk while preserving automation benefits.
+</FAQItem>
+<FAQItem question="How do AI agents implement human-in-the-loop via email?">
+Agents can use the waitForEmail pattern: draft a message, send it to a human reviewer, then wait for a reply. The human reviews and responds with approval or corrections. The agent parses the reply and continues its workflow. Email works well for HITL because it's asynchronous.
+</FAQItem>
+<FAQItem question="What is the waitForEmail pattern?">
+The waitForEmail pattern is an implementation of HITL where an agent sends a draft or decision to a human reviewer via email, then polls for a reply. When the reply arrives, the agent parses the response (approved, rejected, or edited) and continues its workflow accordingly. It turns any email inbox into a lightweight approval queue.
+</FAQItem>
+<FAQItem question="When should you use human-in-the-loop vs full automation?">
+Use HITL for high-stakes actions like sending external emails, making financial decisions, or handling escalated complaints. Use full automation for routine, low-risk tasks like email classification, auto-replies to common questions, or internal notifications. The goal is to automate the easy 80% and get human input on the risky 20%.
+</FAQItem>
+<FAQItem question="How does HITL affect agent latency?">
+HITL introduces significant latency because the agent pauses until a human responds. Email-based HITL can take minutes to hours depending on reviewer availability. To minimize impact, only gate critical actions behind HITL and let non-critical operations proceed in parallel while waiting for approval.
+</FAQItem>
+<FAQItem question="Can HITL be used for agent training and improvement?">
+Yes. Human corrections during HITL create a feedback loop. Each correction is a labeled example of what the agent should have done. Over time, these corrections can be used to fine-tune the model or update prompts, gradually reducing the need for human intervention on similar tasks.
+</FAQItem>
+<FAQItem question="What is the difference between HITL and human-on-the-loop?">
+Human-in-the-loop requires human approval before the agent acts. Human-on-the-loop lets the agent act autonomously but keeps a human monitoring the output who can intervene if something goes wrong. On-the-loop is less disruptive but provides less protection against mistakes.
+</FAQItem>
+<FAQItem question="How do you handle HITL timeouts?">
+Set a maximum wait time for human responses. If the reviewer does not respond within the timeout, the agent can escalate to another reviewer, apply a default action, or pause the workflow and notify an administrator. Never let an agent wait indefinitely for human input.
+</FAQItem>
+<FAQItem question="Is HITL required for compliance in regulated industries?">
+Many regulated industries (finance, healthcare, legal) require human oversight for automated communications. HITL provides an auditable approval trail showing that a human reviewed and approved each action. This is often a regulatory requirement, not just a best practice.
+</FAQItem>
+</FAQ>

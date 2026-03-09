@@ -163,7 +163,7 @@ I'd start with whatever gets your flow working today. If you're hitting OAuth wa
     Composio authenticates a human's existing email account, so your agent borrows your Gmail. LobsterMail lets the agent create its own dedicated inbox without OAuth or a human account. Different ownership models for different use cases.
   </FAQItem>
   <FAQItem question="How do I handle email bounce events or delivery failures inside a Langflow flow?">
-    SendGrid provides webhook events for bounces and delivery status. With custom SMTP components, you'll need to parse SMTP response codes yourself. LobsterMail includes delivery status in the API response without separate webhook configuration.
+    SendGrid provides webhook events for bounces and delivery status. With custom SMTP components, you'll need to parse [SMTP response codes](/glossary/smtp-response-codes) yourself. LobsterMail includes delivery status in the API response without separate webhook configuration.
   </FAQItem>
   <FAQItem question="Can I trigger a Langflow flow whenever a new email arrives in my inbox?">
     Not natively. You'd need an external trigger: SendGrid Inbound Parse forwarding to a webhook, a cron job polling Gmail via Composio, or an agent-first service that supports real-time delivery notifications. Langflow flows are typically invoked, not event-driven.
@@ -175,6 +175,6 @@ I'd start with whatever gets your flow working today. If you're hitting OAuth wa
     Yes. Langflow's template gallery includes an [Email Calendar Integration](https://www.langflow.org/templates/use-langflow-to-manage-communication-and-information-tasks) template that connects Gmail, Google Calendar, and Outlook through Composio components.
   </FAQItem>
   <FAQItem question="What security best practices should I follow when building email flows in Langflow?">
-    Never hardcode credentials in custom components; use environment variables. Limit OAuth scopes to only what your flow needs. If your flow processes untrusted email content, consider prompt injection risks and use an agent-first service with built-in injection scoring.
+    Never hardcode credentials in custom components; use environment variables. Limit OAuth scopes to only what your flow needs. If your flow processes untrusted email content, consider [prompt injection](/glossary/prompt-injection) risks and use an agent-first service with built-in injection scoring.
   </FAQItem>
 </FAQ>

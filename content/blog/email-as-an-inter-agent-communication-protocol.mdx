@@ -58,7 +58,7 @@ Email works where HTTP-based protocols don't, and the reasons are structural, no
 
 **Cross-boundary communication without mutual setup.** When your agent needs to contact a vendor, a client's system, or a government portal, you can't ask them to install an ACP server. But they already have email. Every business on the planet has email. Your agent sends a message, their system (or their human) receives it. No integration required on their end.
 
-**Built-in identity and authentication.** SPF, DKIM, and DMARC aren't new protocols. They've been hardened over two decades of spam warfare. When your agent sends email through properly configured infrastructure, the receiving server can cryptographically verify who sent it. That's more authentication than most A2A implementations ship with today.
+**Built-in identity and authentication.** [SPF](/glossary/spf), [DKIM](/glossary/dkim), and [DMARC](/glossary/dmarc) aren't new protocols. They've been hardened over two decades of spam warfare. When your agent sends email through properly configured infrastructure, the receiving server can cryptographically verify who sent it. That's more authentication than most A2A implementations ship with today.
 
 **Async by default.** HTTP-based protocols can do async, but it's bolted on. You need callback URLs, polling, or websockets. Email is natively async. Your agent sends a message and moves on. The response arrives when it arrives. For workflows where agents coordinate over minutes or hours (not milliseconds), this is exactly right.
 

@@ -1,0 +1,41 @@
+---
+title: "Context Window"
+shortDefinition: "The maximum amount of text a language model can process in a single request, measured in tokens."
+category: "trending-ai"
+relatedTerms: ["tokens", "context-engineering", "inference"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is a Context Window?
+
+A context window is the total amount of text that a language model can consider at one time during a single inference call. It includes everything: the system prompt, conversation history, any retrieved documents, the user's current message, and the model's response. The size is measured in tokens, which are roughly three-quarters of a word in English.
+
+Early large language models had context windows of around 2,000 to 4,000 tokens. Modern models have expanded dramatically, with some supporting 128,000 tokens or more. This expansion means models can now process entire codebases, long documents, or extensive conversation histories in a single request.
+
+The context window functions like the model's working memory. Anything inside the window can influence the response. Anything outside the window does not exist to the model. There is no persistence between requests unless the application explicitly carries forward relevant information. This constraint shapes how every AI application is architected.
+
+Context windows also have practical cost implications. Most API providers charge per token for both input and output. Larger context windows mean higher per-request costs. This creates a design tension between giving the model more information for better responses and keeping costs manageable, especially for high-volume applications.
+
+## Why It Matters for AI Agents
+
+Context window management is one of the most important engineering challenges in building AI agents. An email-processing agent needs to fit several things into its context window simultaneously: its system instructions, the incoming email, relevant conversation history, retrieved knowledge base content, and enough room for a response.
+
+For agents that handle long email threads, context window limits can become a bottleneck. A thread with 30 back-and-forth messages might exceed the window, forcing the agent to summarize or truncate earlier messages. How this truncation is handled directly affects the quality of the agent's responses. Poor context management leads to agents that "forget" important details mentioned earlier in a conversation.
+
+Email infrastructure platforms like LobsterMail help agents manage this by providing structured access to message threads, headers, and metadata. An agent can selectively load only the most relevant parts of a conversation rather than stuffing the entire thread into context.
+
+Context engineering, the practice of carefully selecting and structuring what goes into the context window, is becoming a core skill for agent developers. The goal is to maximize the signal-to-noise ratio within the available window so the model has exactly the information it needs and nothing more.
+
+<FAQ>
+<FAQItem question="What happens when content exceeds the context window?">The model cannot process content beyond its context window limit. Applications must handle this by truncating, summarizing, or selectively including content. Some systems use RAG to retrieve only the most relevant portions of large document sets, keeping the total within the window limit.</FAQItem>
+<FAQItem question="Does a larger context window always produce better results?">Not necessarily. While larger windows allow more information, models can struggle with attention over very long contexts, sometimes missing details buried in the middle. Carefully curated, relevant context in a smaller window often outperforms a larger window stuffed with marginally relevant content.</FAQItem>
+<FAQItem question="How do AI agents manage context windows across multiple emails?">Agents typically use strategies like summarizing older messages, only including the most recent messages in full, retrieving relevant past messages via RAG, and storing key facts in structured state that persists between requests. The best approach depends on the agent's use case and the model's window size.</FAQItem>
+<FAQItem question="How many tokens are in a typical email?">A short email is usually 50-200 tokens. A detailed business email runs 200-500 tokens. A full email thread with 10+ messages can easily reach 2,000-5,000 tokens. When you add system instructions, knowledge base context, and tool definitions, even a simple email agent task can consume 5,000-10,000 tokens of context.</FAQItem>
+<FAQItem question="What is the difference between context window and context length?">These terms are often used interchangeably. Context window refers to the model's maximum capacity. Context length refers to how much of that window is actually used in a given request. Using less than the full window is cheaper and often produces better results because there is less noise for the model to sort through.</FAQItem>
+<FAQItem question="How has context window size changed over time?">GPT-2 had a 1,024-token window. GPT-3 expanded to 4,096. GPT-4 offered 8K and 32K options. Claude and Gemini pushed to 100K-200K tokens, and some models now support over 1 million tokens. This growth enables agents to process entire email histories and large documents in a single request.</FAQItem>
+<FAQItem question="Does context window size affect cost?">Yes. Most LLM APIs charge per input and output token. A larger context window means more input tokens per request, which directly increases cost. For email agents processing thousands of messages daily, optimizing context usage — including only what is needed — can significantly reduce API expenses.</FAQItem>
+<FAQItem question="What is the relationship between context window and model memory?">The context window is the model's only memory within a single request. The model has no persistent memory between requests unless the application explicitly carries forward information. For email agents, this means every relevant piece of context must be loaded into the window for each new email processed.</FAQItem>
+<FAQItem question="How do you choose the right context window size for an email agent?">Estimate the typical token count of your inputs: system prompt, email content, retrieved context, and expected response. Add a buffer for longer-than-average emails. Most email agents work well with 8K-32K token windows. Only pay for 128K+ windows if your agent regularly processes very long threads or large attached documents.</FAQItem>
+<FAQItem question="Can an email agent work with a small context window?">Yes, if the agent is designed for it. Techniques like summarizing prior messages, extracting key facts into structured state, and using RAG to retrieve only relevant context let agents handle complex email workflows within smaller windows. A well-engineered agent with an 8K window often outperforms a poorly designed agent with 128K.</FAQItem>
+</FAQ>

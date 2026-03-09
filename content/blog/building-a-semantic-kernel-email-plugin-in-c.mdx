@@ -181,7 +181,7 @@ When you need more volume, the Builder plan at $9/month raises limits to 5,000 e
   </FAQItem>
 
   <FAQItem question="How should I handle email polling without overloading the API?">
-    Add a delay between `ReceiveEmails` calls. Two to five seconds works for most verification flows. For real-time delivery without polling, LobsterMail supports webhooks that push notifications to your endpoint. See the [docs](/docs/getting-started) for webhook setup.
+    Add a delay between `ReceiveEmails` calls. Two to five seconds works for most verification flows. For real-time delivery without polling, LobsterMail supports webhooks that push notifications to your endpoint. See the [docs](/docs/getting-started) for [webhook](/glossary/webhook) setup.
   </FAQItem>
 
   <FAQItem question="Can I use a custom domain instead of @lobstermail.ai?">
@@ -197,7 +197,7 @@ When you need more volume, the Builder plan at $9/month raises limits to 5,000 e
   </FAQItem>
 
   <FAQItem question="How does LobsterMail handle prompt injection in email content?">
-    Every inbound email is scored for injection risk across multiple categories (boundary manipulation, system prompt override, data exfiltration, role hijacking, tool invocation, encoding tricks). The risk metadata comes back with the email so you can filter before your agent processes the body. See the [security guide](/docs/getting-started) for implementation details.
+    Every inbound email is scored for injection risk across multiple categories (boundary manipulation, [system prompt](/glossary/system-prompt) override, data exfiltration, role hijacking, tool invocation, encoding tricks). The risk metadata comes back with the email so you can filter before your agent processes the body. See the [security guide](/docs/getting-started) for implementation details.
   </FAQItem>
 
   <FAQItem question="What happens if the inbox name I request is already taken?">

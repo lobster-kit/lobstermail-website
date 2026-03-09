@@ -42,7 +42,7 @@ A typical SPF record looks like this:
 v=spf1 ip4:192.0.2.1 include:mail.provider.com -all
 The `-all` at the end means "reject anything not on this list." You can also use `~all` (soft fail, mark as suspicious) or `?all` (neutral, don't care), but `-all` is the only one that actually protects you.
 
-SPF has a real limitation, though. It checks the envelope sender (the Return-Path header), not the From address that humans see in their inbox. A phisher can spoof the visible From address while passing SPF checks with a completely different envelope domain. This is exactly the gap DKIM and DMARC fill.
+SPF has a real limitation, though. It checks the [envelope sender](/glossary/envelope-sender) (the Return-Path header), not the From address that humans see in their inbox. A phisher can spoof the visible From address while passing SPF checks with a completely different envelope domain. This is exactly the gap DKIM and DMARC fill.
 
 There's another problem: email forwarding breaks SPF. When someone forwards your email through their server, the receiving server sees the forwarder's IP, not yours. That IP isn't in your SPF record, so the check fails. This is a known pain point for mailing lists and automated forwarding pipelines.
 

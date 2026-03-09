@@ -66,7 +66,7 @@ For a deeper look at API surface, reliability, and onboarding friction, the [ful
 
 ## Who should stay on AgentMail
 
-If you're already running AgentMail in production and it's working, the switching math probably doesn't favor you. Migrations carry real costs: updated client code, re-tested integrations, new tokens in production. Saving $11/month doesn't justify that for a stable system.
+If you're already running AgentMail in production and it's working, the switching math probably doesn't favor you. Migrations carry real costs: updated client code, re-tested integrations, new [tokens](/glossary/tokens) in production. Saving $11/month doesn't justify that for a stable system.
 
 AgentMail is a well-built product. If their API fits your use case and you're satisfied with the developer experience, there's no reason to move. This isn't "AgentMail is bad", it's "their pricing has one specific gap, and here's what fills it."
 
@@ -74,7 +74,7 @@ AgentMail is a well-built product. If their API fits your use case and you're sa
 
 If you're starting a new project that needs 4-10 agent inboxes, the starting point is clear. Begin on LobsterMail free, test the provisioning flow, and [molt up to Builder](/blog/lobstermail-pricing-explained) when you hit volume limits. You'll spend $9/month instead of $20 for the same inbox range.
 
-If you're building something where the agent must provision its own inbox without prior human setup, fully autonomous pipelines, self-contained workflows, agents that stand up their own infrastructure, LobsterMail's model fits that architecture from the start. One call handles account creation and inbox provisioning together. That's not a workflow AgentMail supports.
+If you're building something where the agent must provision its own inbox without prior human setup, fully autonomous pipelines, self-contained workflows, agents that stand up their own infrastructure, LobsterMail's model fits that architecture from the start. One call handles account creation and [inbox provisioning](/glossary/inbox-provisioning) together. That's not a workflow AgentMail supports.
 
 For larger deployments of 10, 20, or 50 inboxes, read [how fleet management works at scale](/blog/running-50-agent-inboxes) before committing to either provider.
 
@@ -123,7 +123,7 @@ For larger deployments of 10, 20, or 50 inboxes, read [how fleet management work
     Yes. By default your agent gets a `@lobstermail.ai` address, but custom domains are supported. Your agent's inbox address can use your own domain once it's configured.
   </FAQItem>
 
-  <FAQItem question="Does LobsterMail handle prompt injection attacks in incoming emails?">
+  <FAQItem question="Does LobsterMail handle [prompt injection](/glossary/prompt-injection) attacks in incoming emails?">
     Yes. Emails returned by the SDK include built-in security metadata and injection risk scoring. If an attacker embeds instructions in an email body trying to hijack your agent, LobsterMail flags the risk before your agent processes the content.
   </FAQItem>
 </FAQ>

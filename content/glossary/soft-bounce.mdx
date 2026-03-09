@@ -1,0 +1,67 @@
+---
+title: "Soft Bounce"
+shortDefinition: "A temporary email delivery failure where the message may succeed if retried, typically caused by a full mailbox or server issue."
+category: "email-infrastructure"
+relatedTerms: ["hard-bounce", "greylisting", "exponential-backoff"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is a Soft Bounce?
+
+A soft bounce is a temporary email delivery failure. The receiving server has rejected the email for now, but the problem might resolve on its own. Retrying delivery later — sometimes minutes, sometimes hours — may succeed.
+
+Common causes of soft bounces:
+
+- **Full mailbox:** The recipient's inbox has reached its storage limit
+- **Server temporarily unavailable:** The receiving mail server is down or overloaded
+- **Message too large:** The email exceeds the recipient server's size limit
+- **Rate limiting:** The receiving server is throttling inbound connections from your IP
+- **Greylisting:** The server is intentionally deferring first-time senders to filter spam
+
+Soft bounces return SMTP codes in the 4xx range, such as `451 Try again later` or `452 Insufficient storage`. These codes tell the sending server to retry delivery after a delay.
+
+Most mail servers and SMTP relays handle soft bounce retries automatically, using exponential backoff to space out attempts. A typical retry schedule might try again after 5 minutes, then 15 minutes, then 1 hour, then 4 hours, for up to 72 hours before giving up and converting the soft bounce into a permanent failure.
+
+## Why it matters for AI agents
+
+Soft bounces are a normal part of email delivery, but AI agents need to handle them intelligently. An agent that treats every soft bounce as a failure will miss legitimate delivery opportunities. An agent that retries too aggressively will get rate-limited or blocked by receiving servers.
+
+The right approach depends on the agent's use case. An agent sending time-sensitive emails (verification codes, transaction confirmations) might retry quickly with short intervals. An agent sending non-urgent notifications can use longer backoff periods and tolerate delayed delivery.
+
+Agents also need to track soft bounce patterns. An address that soft bounces repeatedly across multiple sends is likely no longer valid — the mailbox is permanently full or the server is permanently degraded. After a threshold of consecutive soft bounces (typically 3-5 across separate sends), the address should be moved to a suppression list as if it were a hard bounce.
+
+For agents using managed email infrastructure like LobsterMail, soft bounce retry logic is handled automatically. The agent sends an email, and the infrastructure manages retries, backoff timing, and eventual failure reporting. The agent receives a webhook or status update when delivery succeeds or permanently fails.
+
+<FAQ>
+<FAQItem question="What is a soft bounce in email?">
+A soft bounce is a temporary email delivery failure caused by a transient issue like a full mailbox, an overloaded server, or rate limiting. Unlike a hard bounce, a soft bounce can succeed if the email is retried later, typically after the underlying problem resolves.
+</FAQItem>
+<FAQItem question="How many times should you retry a soft bounce?">
+Most email systems retry soft bounces for 24 to 72 hours using exponential backoff — starting with short intervals (5-15 minutes) and increasing to longer gaps (1-4 hours). If delivery hasn't succeeded after this window, the soft bounce is treated as a permanent failure.
+</FAQItem>
+<FAQItem question="When does a soft bounce become a hard bounce?">
+A soft bounce becomes a permanent failure when retry attempts are exhausted (typically after 48-72 hours). Additionally, if an address consistently soft bounces across multiple separate sends (3-5 times), it should be treated as invalid and added to a suppression list.
+</FAQItem>
+<FAQItem question="What is the difference between a soft bounce and a hard bounce?">
+A soft bounce is temporary and may succeed on retry (full mailbox, server overload). A hard bounce is permanent and will never succeed (invalid address, nonexistent domain). Soft bounces return 4xx SMTP codes while hard bounces return 5xx codes. The distinction determines whether to retry or suppress.
+</FAQItem>
+<FAQItem question="What causes greylisting soft bounces?">
+Greylisting is when a receiving server intentionally rejects the first delivery attempt from an unknown sender, expecting legitimate servers to retry. The server returns a 4xx code (soft bounce) on the first attempt and accepts the message on the second. Most SMTP relays handle greylisting retries automatically.
+</FAQItem>
+<FAQItem question="How do soft bounces affect sender reputation?">
+Occasional soft bounces are normal and have minimal impact on reputation. However, consistently high soft bounce rates signal to receiving servers that you may be sending to unmonitored or abandoned mailboxes. If soft bounces persist for the same addresses, they should be suppressed to protect your domain's sending reputation.
+</FAQItem>
+<FAQItem question="What SMTP codes indicate a soft bounce?">
+Common soft bounce SMTP codes include 421 (service temporarily unavailable), 450 (mailbox temporarily unavailable), 451 (local processing error), and 452 (insufficient storage). Any 4xx response is treated as a soft bounce, meaning the sending system should retry after a delay.
+</FAQItem>
+<FAQItem question="How should AI agents handle soft bounces differently from hard bounces?">
+AI agents should retry soft bounces with exponential backoff and track the failure count per address. For hard bounces, agents should immediately add the address to a suppression list with no retry. Agents that conflate the two will either waste resources retrying permanent failures or miss deliverable messages by giving up too early.
+</FAQItem>
+<FAQItem question="What is an acceptable soft bounce rate?">
+A healthy soft bounce rate is typically under 2% of total sends. Rates above 5% suggest issues with list quality, sending volume, or recipient server problems. AI agents should monitor soft bounce rates per destination domain to identify patterns and adjust sending behavior accordingly.
+</FAQItem>
+<FAQItem question="Do managed email services handle soft bounce retries automatically?">
+Yes. Services like LobsterMail, SendGrid, and Mailgun manage soft bounce retry logic automatically, including exponential backoff and eventual failure reporting. The agent receives a final delivery status (delivered or permanently failed) without needing to implement retry logic itself.
+</FAQItem>
+</FAQ>

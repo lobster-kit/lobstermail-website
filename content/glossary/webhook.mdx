@@ -1,0 +1,75 @@
+---
+title: "Webhook"
+shortDefinition: "An HTTP callback that sends real-time event data to your application when something happens, like an email being delivered or bouncing."
+category: "email-infrastructure"
+relatedTerms: ["hmac-signature", "exponential-backoff", "idempotency"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is a Webhook?
+
+A webhook is an HTTP request that a service sends to your application when a specific event occurs. Instead of your application repeatedly polling an API to check if something happened, the service pushes event data to a URL you specify.
+
+In email infrastructure, webhooks notify you about events like:
+
+- **Delivered:** The email was successfully delivered to the recipient's server
+- **Bounced:** The email permanently failed delivery (hard bounce)
+- **Deferred:** The email was temporarily rejected and will be retried (soft bounce)
+- **Opened:** The recipient opened the email (via tracking pixel)
+- **Clicked:** The recipient clicked a link in the email
+- **Spam complaint:** The recipient marked the email as spam
+- **Unsubscribed:** The recipient opted out
+
+When an event occurs, the email service sends an HTTP POST request to your configured webhook URL with a JSON payload containing event details — recipient address, event type, timestamp, SMTP response code, and other metadata.
+
+Webhooks are real-time (or near-real-time). The event fires within seconds of the underlying action. This is much faster than polling an API at intervals, and it reduces the number of API calls your application needs to make.
+
+## Why it matters for AI agents
+
+Webhooks are the primary mechanism for AI agents to react to email events. An agent that sends email needs to know what happened after the send — was it delivered, did it bounce, did the recipient respond? Webhooks deliver this information as it happens, enabling agents to take immediate action.
+
+For example, an agent that sends a verification email needs to know if it bounced so it can prompt the user to re-enter their email address. Without a webhook, the agent would have to poll a delivery status API, introducing delay and unnecessary API calls.
+
+Agents processing webhooks need three things:
+
+1. **HMAC verification** — Confirm the webhook came from the legitimate service, not an attacker sending fake events
+2. **Idempotent processing** — Handle duplicate deliveries of the same event without double-processing
+3. **Quick response** — Return a 200 status code promptly; do heavy processing asynchronously
+
+An agent's webhook endpoint must be reliable. If the endpoint returns errors or times out, the email service will retry (with exponential backoff) and eventually stop sending webhooks to that URL. An unreachable webhook endpoint means the agent loses visibility into email events.
+
+For multi-agent architectures, a single webhook endpoint can route events to different agents based on the recipient address, event type, or custom metadata. This centralized approach simplifies configuration while keeping each agent focused on its own events.
+
+<FAQ>
+<FAQItem question="What is a webhook in email?">
+A webhook is an HTTP callback that an email service sends to your application when an event occurs — like an email being delivered, bouncing, or getting a spam complaint. Instead of polling for updates, your application receives real-time notifications with event details as they happen.
+</FAQItem>
+<FAQItem question="How do AI agents use webhooks for email?">
+AI agents use webhooks to react to email events in real time. When an email bounces, the agent adds the address to its suppression list. When a reply arrives, the agent processes it. When a spam complaint comes in, the agent adjusts its sending behavior. Webhooks enable this closed-loop feedback.
+</FAQItem>
+<FAQItem question="What happens if a webhook endpoint goes down?">
+If your webhook endpoint returns errors or times out, the email service will retry delivery using exponential backoff. After a number of failed attempts (typically over several hours), the service may disable the webhook entirely. You'll lose visibility into email events until the endpoint is restored and the webhook is re-enabled.
+</FAQItem>
+<FAQItem question="What is the difference between webhooks and polling?">
+Polling means your application repeatedly calls an API at intervals to check for new events. Webhooks push events to your application as they happen. Webhooks are more efficient (no wasted API calls), faster (near-real-time), and scale better. Polling is simpler to implement but wastes resources when events are infrequent.
+</FAQItem>
+<FAQItem question="How should you secure webhook endpoints?">
+Verify the webhook signature using HMAC. The sending service signs each payload with a shared secret, and your endpoint verifies the signature before processing. This prevents attackers from sending fake events to your endpoint. Also use HTTPS, validate the payload schema, and restrict access by IP if the provider publishes their IP ranges.
+</FAQItem>
+<FAQItem question="What is webhook idempotency and why does it matter?">
+Idempotency means processing the same webhook event multiple times produces the same result as processing it once. Email services may retry webhook delivery if they don't receive a timely response, causing duplicate events. Your handler must detect and skip duplicates using event IDs to avoid double-processing actions like sending duplicate replies.
+</FAQItem>
+<FAQItem question="How fast should a webhook endpoint respond?">
+Return a 200 status code within 5-10 seconds. If processing takes longer, accept the webhook immediately, queue the work for asynchronous processing, and return 200 right away. Slow responses trigger retries from the sending service, which can create duplicate events and eventually cause webhook disablement.
+</FAQItem>
+<FAQItem question="What email events can trigger webhooks?">
+Common email webhook events include: delivered, bounced (hard and soft), deferred, opened, clicked, spam complaint, unsubscribed, and dropped. Some services also provide events for list changes, suppression updates, and domain verification status. The available events vary by email service provider.
+</FAQItem>
+<FAQItem question="Can webhooks trigger AI agent actions automatically?">
+Yes. Webhooks are the primary mechanism for event-driven agent architectures. A bounce webhook can trigger suppression list updates. A reply webhook can invoke the agent to process and respond to the new message. A spam complaint webhook can trigger the agent to review and adjust its sending patterns, all without manual intervention.
+</FAQItem>
+<FAQItem question="How do you test webhooks during development?">
+Use tools like ngrok or Cloudflare Tunnel to expose your local development server to the internet so webhook services can reach it. Most email providers also offer webhook testing features that let you send sample events to your endpoint. Log all incoming payloads during development to verify your handler processes each event type correctly.
+</FAQItem>
+</FAQ>

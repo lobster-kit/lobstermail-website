@@ -1,0 +1,62 @@
+---
+title: "Inference"
+shortDefinition: "The process of running input data through a trained AI model to get a prediction or output. Every API call to an LLM is an inference request."
+category: "trending-ai"
+relatedTerms: ["tokens", "context-window", "fine-tuning"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is inference?
+
+Inference is the act of using a trained AI model to generate output. When you send a message to ChatGPT, Claude, or any LLM API, the model runs inference on your input and returns a response. Training teaches the model what to know. Inference is the model using what it learned.
+
+In the context of LLMs, each inference request involves:
+
+1. **Tokenizing** the input text into tokens the model understands
+2. **Processing** those tokens through the model's neural network layers
+3. **Generating** output tokens one at a time (autoregressive generation)
+4. **Returning** the complete response
+
+## Why inference costs matter
+
+Every API call to an LLM is billed based on inference — specifically, the number of input and output tokens processed. This is why context engineering matters: a bloated context means more input tokens per inference call, which means higher costs.
+
+For AI agents that process email at scale, inference costs compound quickly. An agent handling 1,000 emails per day makes at least 1,000 inference calls. If each call includes unnecessary context, costs multiply.
+
+## Inference vs training
+
+Training happens once (or periodically) and is extremely expensive. Inference happens on every request and is comparatively cheap per call — but adds up at volume. Most developers interact only with the inference side of AI models through APIs.
+
+<FAQ>
+<FAQItem question="What does inference mean in AI?">
+Inference is the process of running input through a trained AI model to produce output. Every time you send a prompt to an LLM and get a response, that's inference. It's the model applying what it learned during training to new data.
+</FAQItem>
+<FAQItem question="Why is inference important for AI costs?">
+LLM APIs charge per token processed during inference. The more tokens in your input (context) and output, the higher the cost. For AI agents processing thousands of requests, optimizing inference efficiency directly impacts operating costs.
+</FAQItem>
+<FAQItem question="What is the difference between training and inference?">
+Training is the process of teaching a model by feeding it data — it happens once and is very expensive. Inference is using the trained model to generate responses — it happens on every API call and costs much less per request, but adds up at scale.
+</FAQItem>
+<FAQItem question="What is inference latency and why does it matter?">
+Inference latency is the time between sending a request and receiving a response. For email agents, high latency can delay responses to customers and slow down automated workflows. Latency depends on model size, input length, output length, and server load.
+</FAQItem>
+<FAQItem question="How do you reduce inference costs for AI agents?">
+Reduce input token count by trimming unnecessary context. Use smaller models for simple tasks like classification. Cache responses for repeated queries. Batch similar requests when possible. Choose the right model size for each task rather than using the largest model for everything.
+</FAQItem>
+<FAQItem question="What is the difference between input tokens and output tokens in inference?">
+Input tokens are the tokens in your prompt (system instructions, context, user message). Output tokens are what the model generates in its response. Most APIs price output tokens higher than input tokens because generation is more computationally intensive than processing input.
+</FAQItem>
+<FAQItem question="What is batch inference?">
+Batch inference processes multiple requests together rather than one at a time. It can be more cost-effective and efficient for tasks that don't need real-time responses, like classifying a batch of emails overnight. Some API providers offer discounted pricing for batch inference jobs.
+</FAQItem>
+<FAQItem question="How does context window size affect inference?">
+Larger context windows allow more input data per inference call but increase cost and latency proportionally. An agent that includes 100K tokens of context in every call pays significantly more than one that includes only the relevant 5K tokens. Context engineering is the practice of optimizing what goes into each call.
+</FAQItem>
+<FAQItem question="Can inference be run locally instead of through an API?">
+Yes. Open-source models can be run locally on GPUs, eliminating per-call API costs and reducing latency. Local inference gives you full control over the model and data privacy. The trade-off is the upfront cost of hardware and the operational overhead of managing model deployments.
+</FAQItem>
+<FAQItem question="What is streaming inference?">
+Streaming inference returns output tokens as they are generated rather than waiting for the complete response. This reduces perceived latency because the user or agent starts receiving data immediately. For email agents, streaming is useful when drafting long responses that benefit from progressive rendering.
+</FAQItem>
+</FAQ>

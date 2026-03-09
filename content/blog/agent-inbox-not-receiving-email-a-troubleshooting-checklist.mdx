@@ -159,7 +159,7 @@ If you're building an agent that needs to manage a busy inbox reliably, [the pub
   </FAQItem>
 
   <FAQItem question="What's the difference between long-polling and exponential-backoff polling?">
-    Long-polling holds the server connection open and returns within milliseconds of delivery. Exponential backoff polls on a schedule, which creates a window where an email can arrive undetected before timeout. Long-polling is the default and almost always the right choice. See [the full comparison](/blog/webhooks-vs-polling-email).
+    Long-polling holds the server connection open and returns within milliseconds of delivery. [Exponential backoff](/glossary/exponential-backoff) polls on a schedule, which creates a window where an email can arrive undetected before timeout. Long-polling is the default and almost always the right choice. See [the full comparison](/blog/webhooks-vs-polling-email).
   </FAQItem>
 
   <FAQItem question="My agent inbox worked yesterday and stopped today. What changed?">
@@ -171,7 +171,7 @@ If you're building an agent that needs to manage a busy inbox reliably, [the pub
   </FAQItem>
 
   <FAQItem question="Does OpenClaw work with LobsterMail?">
-    Yes. There's a ClawHub skill that lets your OpenClaw agent self-provision an inbox without any human setup. See [how to use LobsterMail without pub/sub in OpenClaw](/blog/openclaw-email-without-pubsub) for the pattern.
+    Yes. There's a [ClawHub](/glossary/clawhub) skill that lets your OpenClaw agent self-provision an inbox without any human setup. See [how to use LobsterMail without pub/sub in OpenClaw](/blog/openclaw-email-without-pubsub) for the pattern.
   </FAQItem>
 
   <FAQItem question="Can I receive email from any sender, or do I need to configure allowlists?">

@@ -212,7 +212,7 @@ PydanticAI handles the typed outputs. LobsterMail handles the inbox. Your agent 
     Not yet. The current SDK is JavaScript/TypeScript (`@lobsterkit/lobstermail`), which handles auto-signup and token persistence natively. For Python agents, you call the REST API directly using `httpx` or `requests`, as shown in this tutorial. A Python SDK is on the roadmap.
   </FAQItem>
 
-  <FAQItem question="Can I use PydanticAI with the LobsterMail MCP server instead of direct API calls?">
+  <FAQItem question="Can I use PydanticAI with the LobsterMail [MCP](/glossary/mcp) server instead of direct API calls?">
     Yes. LobsterMail ships an MCP server that exposes email tools without any code. PydanticAI supports MCP tool servers natively, so if you'd rather skip writing the httpx functions yourself, that's a clean alternative. See the [MCP server guide](/docs/getting-started) for setup.
   </FAQItem>
 
@@ -221,7 +221,7 @@ PydanticAI handles the typed outputs. LobsterMail handles the inbox. Your agent 
   </FAQItem>
 
   <FAQItem question="Can my agent use a custom domain instead of @lobstermail.ai?">
-    Yes. LobsterMail supports custom domains so your agent's inbox can be `agent@yourcompany.com` rather than `@lobstermail.ai`. LobsterMail handles SPF, DKIM, and DMARC configuration for you. See the [custom domains guide](/docs/getting-started) for the setup steps.
+    Yes. LobsterMail supports custom domains so your agent's inbox can be `agent@yourcompany.com` rather than `@lobstermail.ai`. LobsterMail handles [SPF](/glossary/spf), [DKIM](/glossary/dkim), and [DMARC](/glossary/dmarc) configuration for you. See the [custom domains guide](/docs/getting-started) for the setup steps.
   </FAQItem>
 
   <FAQItem question="How does the injection risk score work?">

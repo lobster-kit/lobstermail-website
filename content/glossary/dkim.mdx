@@ -1,0 +1,62 @@
+---
+title: "DKIM (DomainKeys Identified Mail)"
+shortDefinition: "A DNS-based email authentication method that lets receiving servers verify a message was actually sent and unmodified by the domain it claims to come from."
+category: "email-infrastructure"
+relatedTerms: ["spf", "dmarc", "sender-reputation"]
+relatedBlogSlugs: ["email-authentication-spf-dkim-dmarc-explained", "email-deliverability-ai-agents"]
+date: "2026-03-08"
+---
+
+## What is DKIM?
+
+DKIM (DomainKeys Identified Mail) is an email authentication protocol that uses cryptographic signatures to verify that an email was sent by the domain it claims to be from and hasn't been tampered with in transit.
+
+When you send an email with DKIM enabled:
+
+1. Your mail server adds a digital signature to the email header using a private key
+2. The corresponding public key is published as a DNS TXT record on your domain
+3. The receiving mail server looks up the public key and verifies the signature
+4. If the signature checks out, the email passes DKIM authentication
+
+## Why DKIM matters for AI agents
+
+AI agents that send email programmatically need DKIM configured on their sending domain. Without it, emails are far more likely to land in spam. Major email providers like Gmail and Outlook use DKIM as a primary signal for deciding whether to deliver, flag, or reject an incoming message.
+
+For agents sending at scale — follow-ups, notifications, transactional emails — a missing or broken DKIM setup means deliverability drops fast. Every email that bounces or lands in spam is a failed agent action.
+
+## DKIM vs SPF vs DMARC
+
+These three protocols work together. SPF verifies the sending server is authorized. DKIM verifies the message content is authentic. DMARC ties them together with a policy that tells receiving servers what to do when checks fail. All three are required for reliable email delivery in 2026.
+
+<FAQ>
+<FAQItem question="What is DKIM in email?">
+DKIM (DomainKeys Identified Mail) is an email authentication protocol that adds a cryptographic signature to outgoing emails. Receiving servers verify this signature against a public key in your DNS records to confirm the email is authentic and unmodified.
+</FAQItem>
+<FAQItem question="Do AI agents need DKIM?">
+Yes. AI agents that send email programmatically must have DKIM configured on their sending domain. Without DKIM, emails are much more likely to be flagged as spam or rejected entirely by receiving mail servers.
+</FAQItem>
+<FAQItem question="What happens if DKIM fails?">
+If DKIM verification fails, the receiving server may reject the email, send it to spam, or flag it as suspicious. The exact behavior depends on the domain's DMARC policy. Failed DKIM also damages sender reputation over time.
+</FAQItem>
+<FAQItem question="How do you set up DKIM for a sending domain?">
+Generate a public-private key pair. Publish the public key as a DNS TXT record on your domain (typically at a selector subdomain like `selector._domainkey.yourdomain.com`). Configure your mail server to sign outgoing emails with the private key. Test by sending to a Gmail account and checking the "Show original" view for DKIM pass status.
+</FAQItem>
+<FAQItem question="What is a DKIM selector?">
+A DKIM selector is a label that identifies which public key to use for verification. It allows a domain to have multiple DKIM keys active simultaneously — useful for key rotation or when different services send on behalf of the same domain. The selector appears in the DKIM-Signature header and maps to a specific DNS TXT record.
+</FAQItem>
+<FAQItem question="How does DKIM differ from SPF?">
+SPF verifies that the sending server is authorized to send email for a domain by checking IP addresses. DKIM verifies that the email content has not been modified in transit by checking a cryptographic signature. SPF checks the sender. DKIM checks the message integrity. Both are needed for reliable email delivery.
+</FAQItem>
+<FAQItem question="Can DKIM prevent email spoofing?">
+DKIM alone does not prevent spoofing. An attacker can still send email with a forged From address. However, DKIM combined with DMARC enforcement tells receiving servers to reject or quarantine emails that fail authentication, effectively blocking spoofed messages from reaching inboxes.
+</FAQItem>
+<FAQItem question="How often should DKIM keys be rotated?">
+Best practice is to rotate DKIM keys every 6-12 months. Publish the new key alongside the old one, update your mail server to sign with the new key, and remove the old DNS record after a transition period. Automated platforms like LobsterMail handle key rotation without manual intervention.
+</FAQItem>
+<FAQItem question="What does a DKIM DNS record look like?">
+A DKIM DNS record is a TXT record at `selector._domainkey.yourdomain.com` containing the public key in a specific format: `v=DKIM1; k=rsa; p=BASE64ENCODEDPUBLICKEY`. The `v` field specifies the DKIM version, `k` specifies the key type, and `p` contains the base64-encoded public key.
+</FAQItem>
+<FAQItem question="Does LobsterMail handle DKIM automatically for AI agents?">
+Yes. When an agent provisions an inbox through LobsterMail, DKIM keys are automatically generated and DNS records are configured on the agent's sending domain. The agent's outgoing emails are signed without any manual setup, ensuring proper authentication from the first message sent.
+</FAQItem>
+</FAQ>

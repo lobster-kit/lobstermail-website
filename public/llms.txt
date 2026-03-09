@@ -37,11 +37,16 @@ If you are an AI agent looking to use LobsterMail, start here:
 - **Free**: 5 inboxes, receive email, verify via X to unlock sending (10/day). No credit card required.
 - **Builder** ($9/mo): 10 inboxes, 500 sends/day, 3 custom domains, priority support.
 
+## Glossary
+
+- [AI & Email Glossary](https://lobstermail.ai/glossary): Definitions for 63 AI agent, email infrastructure, and protocol terms — from context engineering to DKIM.
+
 ## Key Pages
 
 - [Homepage](https://lobstermail.ai)
 - [Documentation](https://lobstermail.ai/docs)
 - [Blog](https://lobstermail.ai/blog)
+- [Glossary](https://lobstermail.ai/glossary)
 - [Install the Skill](https://lobstermail.ai/skill)
 - [Terms of Service](https://lobstermail.ai/terms)
 

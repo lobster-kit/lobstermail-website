@@ -1,10 +1,15 @@
 ---
-title: "how to build an agent that triages your support inbox"
-description: "Build an AI agent that classifies urgency, routes to the right person, and drafts replies for the easy stuff. Practical tutorial with code."
-date: "2026-02-16"
-author: "Samuel Chenard"
-tags: ["use-cases", "email", "automation"]
-image: "/blog/agent-triage-support-inbox.png"
+title: how to build an agent that triages your support inbox
+description: >-
+  Build an AI agent that classifies urgency, routes to the right person, and
+  drafts replies for the easy stuff. Practical tutorial with code.
+date: '2026-02-16'
+author: Samuel Chenard
+tags:
+  - use-cases
+  - email
+  - automation
+image: /blog/agent-triage-support-inbox.png
 ---
 
 You built a support agent. It reads incoming emails and can draft basic replies. That was the easy part.
@@ -175,7 +180,7 @@ Three situations will trip up a naive triage agent.
 
 **Multi-issue emails.** A customer writes one email about a billing error and a broken feature. Your classifier picks one category and ignores the other. Fix this by adding a `secondaryCategory` field to your classification prompt and routing to both queues when it's present.
 
-**Reply chains.** A customer replies to an auto-response with additional information. Your webhook receives this as a new email. Without thread awareness, the agent classifies it fresh and might route it to a different person. Track threads by `In-Reply-To` and `References` headers and route follow-ups to whoever handled the original.
+**Reply chains.** A customer replies to an auto-response with additional information. Your [webhook](/glossary/webhook) receives this as a new email. Without thread awareness, the agent classifies it fresh and might route it to a different person. Track threads by `In-Reply-To` and `References` headers and route follow-ups to whoever handled the original.
 
 ```javascript
 async function triageEmail(email) {
@@ -195,7 +200,7 @@ async function triageEmail(email) {
 
 ## Wiring it up
 
-Connect the triage function to your webhook handler. If you're using LobsterMail webhooks, verify the HMAC signature before processing:
+Connect the triage function to your webhook handler. If you're using LobsterMail webhooks, verify the [HMAC signature](/glossary/hmac-signature) before processing:
 
 ```javascript
 app.post("/webhook/support", express.json(), async (req, res) => {
@@ -262,11 +267,11 @@ For more on how agents coordinate across multiple inboxes, see [multi-agent emai
   <FAQItem question="Can the agent prioritize enterprise customers automatically?">
     Yes. Include a `customerTier` field in your classification prompt and cross-reference the sender's domain against your CRM data. If the sender matches an enterprise account, bump the urgency level up one notch in your routing logic.
   </FAQItem>
-  <FAQItem question="How do I prevent prompt injection from malicious support emails?">
+  <FAQItem question="How do I prevent [prompt injection](/glossary/prompt-injection) from malicious support emails?">
     Use `email.safeBodyForLLM()` from the LobsterMail SDK. It wraps email content in boundary markers and strips any injected delimiters, preventing malicious emails from manipulating your classification prompt. LobsterMail also scans for six categories of prompt injection and flags risky emails with `email.isInjectionRisk`.
   </FAQItem>
   <FAQItem question="What happens if the triage agent goes down?">
-    LobsterMail retries webhook delivery with exponential backoff, up to five attempts. If all retries fail, emails stay in the inbox and you can poll for missed messages when the agent recovers. The catch block in the webhook handler also routes unprocessable emails to a human as a fail-safe.
+    LobsterMail retries webhook delivery with [exponential backoff](/glossary/exponential-backoff), up to five attempts. If all retries fail, emails stay in the inbox and you can poll for missed messages when the agent recovers. The catch block in the webhook handler also routes unprocessable emails to a human as a fail-safe.
   </FAQItem>
   <FAQItem question="Can I use this with an existing helpdesk like Zendesk?">
     Yes. Replace the `routeToHuman` function with a Zendesk API call that creates a ticket with the classification metadata as custom fields. The triage logic stays the same — only the destination changes.

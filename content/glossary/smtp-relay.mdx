@@ -1,0 +1,66 @@
+---
+title: "SMTP Relay"
+shortDefinition: "A server that forwards outbound email on behalf of another system, handling delivery, authentication, and retry logic."
+category: "email-infrastructure"
+relatedTerms: ["mx-record", "ip-warmup", "sender-reputation"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is SMTP Relay?
+
+An SMTP relay is a mail server that accepts outgoing email from an application or another server and forwards it to the recipient's mail server. Instead of your application connecting directly to Gmail's or Outlook's mail servers, it hands the email to a relay, which handles delivery, retries, and authentication.
+
+SMTP relays serve several purposes:
+
+- **Centralized authentication:** The relay handles SPF, DKIM signing, and TLS encryption so your application doesn't have to
+- **Delivery management:** Relays queue messages, retry on temporary failures, and manage rate limits per destination
+- **IP reputation:** Relays maintain warmed IP pools with established sender reputation
+- **Logging and tracking:** Relays record delivery status, bounces, and opens for each message
+
+You connect to an SMTP relay using standard SMTP credentials (host, port, username, password). The relay accepts your email over an authenticated connection and takes responsibility for delivering it to the final destination.
+
+Common SMTP relay services include SendGrid, Mailgun, Amazon SES, and Postmark. You can also run your own relay using software like Postfix, though this means managing IP reputation and deliverability yourself.
+
+## Why it matters for AI agents
+
+AI agents that send email almost always need an SMTP relay. Running a direct SMTP connection from an agent to every recipient's mail server is impractical. You'd need to handle DNS lookups for MX records, manage TLS negotiation, implement retry logic for temporary failures, and maintain IP reputation — all while the agent is supposed to be doing something else.
+
+An SMTP relay abstracts all of that away. The agent makes a single authenticated API call or SMTP connection to the relay, and the relay handles the rest. This is especially important for agents that need to send email reliably without human intervention.
+
+For multi-agent systems, a shared SMTP relay provides a single point of control for outbound email. You can enforce sending limits, monitor deliverability, and manage authentication from one place instead of configuring each agent individually.
+
+LobsterMail provides built-in relay infrastructure so agents can start sending immediately through pre-authenticated, pre-warmed sending infrastructure. The agent gets an API endpoint for sending — no SMTP configuration, no relay management, no deliverability guesswork.
+
+<FAQ>
+<FAQItem question="What is an SMTP relay?">
+An SMTP relay is a server that accepts outgoing email from your application and handles delivering it to the recipient's mail server. It manages authentication, retries, rate limiting, and IP reputation so your application doesn't have to deal with the complexity of direct email delivery.
+</FAQItem>
+<FAQItem question="Why should AI agents use an SMTP relay?">
+AI agents should use an SMTP relay because direct SMTP delivery requires handling MX lookups, TLS, retries, bounce processing, and IP reputation management. A relay handles all of this, letting the agent focus on its core task while ensuring emails are delivered reliably.
+</FAQItem>
+<FAQItem question="What is the difference between SMTP relay and direct SMTP?">
+With direct SMTP, your application connects directly to each recipient's mail server and handles delivery itself. With an SMTP relay, your application sends to an intermediary server that handles delivery on your behalf. Relays provide better deliverability, easier configuration, and centralized management.
+</FAQItem>
+<FAQItem question="What ports does SMTP relay use?">
+SMTP relays typically use port 587 for authenticated submission with STARTTLS encryption, or port 465 for implicit TLS. Port 25 is used for server-to-server relay but is often blocked by ISPs and cloud providers for outbound traffic to prevent spam.
+</FAQItem>
+<FAQItem question="How does SMTP relay handle failed deliveries?">
+When delivery fails temporarily (4xx response), the relay queues the message and retries using exponential backoff over hours or days. For permanent failures (5xx response), the relay stops retrying and generates a bounce notification so your application can update its records.
+</FAQItem>
+<FAQItem question="Can multiple AI agents share one SMTP relay?">
+Yes. A shared SMTP relay provides centralized authentication, rate limiting, and reputation management for all agents on a domain. This is preferable to each agent maintaining its own sending infrastructure, as it keeps sender reputation consolidated and simplifies monitoring.
+</FAQItem>
+<FAQItem question="What is the difference between SMTP relay and email API?">
+An SMTP relay accepts messages over the SMTP protocol using traditional host/port/credentials. An email API accepts messages over HTTP via REST or GraphQL endpoints. Email APIs are generally easier for AI agents to integrate since they use the same HTTP conventions as other web services.
+</FAQItem>
+<FAQItem question="Does SMTP relay affect email deliverability?">
+Significantly. A well-managed relay with warmed IPs, proper authentication (SPF, DKIM, DMARC), and active reputation monitoring will achieve much higher inbox placement than sending from a fresh or unmanaged server. The relay's IP reputation directly impacts whether your emails reach the inbox or spam folder.
+</FAQItem>
+<FAQItem question="How do SMTP relays handle rate limiting?">
+SMTP relays manage per-destination rate limits automatically, throttling delivery to match each receiving server's acceptance rate. They also enforce account-level sending limits to prevent abuse. This is especially important for AI agents that may attempt to send large volumes in short bursts.
+</FAQItem>
+<FAQItem question="Is SMTP relay the same as an email gateway?">
+They overlap but differ in scope. An SMTP relay primarily forwards outbound email on behalf of senders. An email gateway typically handles both inbound and outbound traffic, adding security scanning, content filtering, and policy enforcement. Gateways are more common in enterprise environments with complex compliance requirements.
+</FAQItem>
+</FAQ>

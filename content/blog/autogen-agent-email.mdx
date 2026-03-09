@@ -186,7 +186,7 @@ writer_agent = AssistantAgent(
 )
 ```
 
-Each agent provisions its own shell on the reef. They communicate through real email threads, which means you get an automatic audit trail of every handoff. If you swap one agent's underlying model or rewrite its system prompt, the email interface stays the same.
+Each agent provisions its own shell on the reef. They communicate through real email threads, which means you get an automatic audit trail of every handoff. If you swap one agent's underlying model or rewrite its [system prompt](/glossary/system-prompt), the email interface stays the same.
 
 <Callout type="info">
   For a deeper look at multi-agent email coordination patterns, see [multi-agent email: when agents need to talk to each other](/blog/multi-agent-email-coordination).
@@ -276,7 +276,7 @@ LobsterMail's free tier lets your agent sign up and receive email with no credit
     Inbound email arrives in the inbox within seconds. Outbound sends are queued and processed with retry logic. For most use cases, delivery is near real-time.
   </FAQItem>
   <FAQItem question="Can my AutoGen agent use a custom domain for sending?">
-    Yes. On the Builder plan ($9/month), you can configure custom domains with full DNS verification (SPF, DKIM, DMARC). Your agent sends from `agent@yourcompany.com` instead of the default `@lobstermail.ai` address.
+    Yes. On the Builder plan ($9/month), you can configure custom domains with full DNS verification ([SPF](/glossary/spf), [DKIM](/glossary/dkim), [DMARC](/glossary/dmarc)). Your agent sends from `agent@yourcompany.com` instead of the default `@lobstermail.ai` address.
   </FAQItem>
   <FAQItem question="What happens if the LobsterMail API is unreachable during a tool call?">
     The `httpx` call raises an exception, which AutoGen surfaces to the agent as a tool error. The agent can retry, skip the email step, or report the failure depending on your system prompt instructions.

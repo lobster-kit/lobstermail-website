@@ -1,0 +1,66 @@
+---
+title: "ReAct Pattern"
+shortDefinition: "An agent architecture where the model alternates between reasoning about a situation and taking actions, using observations from each action to inform the next step."
+category: "agent-developer"
+relatedTerms: ["chain-of-thought", "tool-use", "agentic-ai"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is the ReAct pattern?
+
+ReAct (Reasoning + Acting) is an agent design pattern where the AI model alternates between thinking and doing. At each step, the agent reasons about its current situation, decides on an action, observes the result, and then reasons again about what to do next. This loop continues until the task is complete.
+
+The pattern follows a repeating cycle:
+
+1. **Thought:** The agent reasons about the current state and what it needs to do next
+2. **Action:** The agent calls a tool or takes an action based on its reasoning
+3. **Observation:** The agent receives the result of that action
+4. **Repeat** until the goal is achieved
+
+ReAct combines chain-of-thought reasoning with tool use. The reasoning component helps the agent plan and interpret results. The action component lets it interact with external systems. Together, they create agents that can solve problems requiring real-world information and multi-step execution.
+
+This pattern was introduced in a 2022 research paper and has since become the default architecture for most agentic AI frameworks. Tools like LangChain, AutoGen, and the Anthropic tool-use API all implement some variation of the ReAct loop.
+
+## Why it matters for AI agents
+
+Email workflows are a textbook use case for ReAct. An agent processing an incoming email might follow this sequence: read the email (observation), determine it's a meeting request (thought), check the calendar API for availability (action), see a conflict exists (observation), reason about how to respond (thought), draft a reply suggesting alternative times (action).
+
+Each step builds on the previous one. The agent couldn't draft the reply without first checking the calendar, and it couldn't check the calendar without first understanding the email's intent. ReAct makes this natural by letting the agent interleave reasoning with actions.
+
+For agent-first email infrastructure, the ReAct pattern means agents can handle complex workflows that span multiple systems. An agent can receive an email, look up the sender in a CRM, check order status in a database, and compose a personalized response — all within a single ReAct loop. The agent decides what information it needs and fetches it on demand rather than requiring all context upfront.
+
+The alternative — pre-loading every possible piece of context before the agent starts — wastes tokens and hits context window limits fast. ReAct agents stay lean by pulling in information only when they need it.
+
+<FAQ>
+<FAQItem question="What is the difference between ReAct and chain of thought?">
+Chain of thought is reasoning only — the model thinks step by step but doesn't take actions. ReAct combines reasoning with action-taking. The model thinks, then acts (calls a tool, queries an API), observes the result, and thinks again. ReAct is how agents interact with external systems while maintaining structured reasoning.
+</FAQItem>
+<FAQItem question="Do all AI agents use the ReAct pattern?">
+Most agentic frameworks use some variation of it, but not all agents need it. Simple agents that perform a single action (classify this email, extract this data) don't need the ReAct loop. It's most valuable for agents that handle multi-step tasks requiring external information, like processing customer inquiries that need CRM lookups and calendar checks.
+</FAQItem>
+<FAQItem question="How does the ReAct pattern handle errors?">
+When an action fails or returns unexpected results, the reasoning step lets the agent adapt. It can decide to retry with different parameters, try an alternative approach, or gracefully fall back. This built-in error handling is one of ReAct's strengths over rigid pipeline architectures where a failure at any step breaks the entire flow.
+</FAQItem>
+<FAQItem question="How does an email agent use the ReAct pattern?">
+An email agent reads an incoming message (observation), identifies the intent (thought), looks up relevant data like order status or customer history (action), reviews the results (observation), then composes and sends a response (action). Each step informs the next, allowing the agent to handle complex queries that span multiple systems.
+</FAQItem>
+<FAQItem question="What is the difference between ReAct and a fixed pipeline?">
+A fixed pipeline processes steps in a predetermined order regardless of input. ReAct lets the agent dynamically decide what to do next based on what it has learned so far. This flexibility is valuable when different emails require different processing paths — a refund request needs different actions than a product question.
+</FAQItem>
+<FAQItem question="How many reasoning-action loops does a ReAct agent typically use?">
+Most tasks complete in 3-8 loops. Simple email responses might need 2-3 (read, look up context, reply). Complex workflows might need 6-8 (read, classify, look up customer, check order, check policy, draft reply, validate, send). Setting a maximum loop count prevents runaway execution and controls costs.
+</FAQItem>
+<FAQItem question="What tools can a ReAct agent use during the action step?">
+Any tool exposed to the agent: API calls, database queries, web searches, email sending and reading, calendar access, CRM lookups, file operations, and more. The tools available determine what the agent can accomplish. Email platforms like LobsterMail can serve as both a tool (send/read email) and an input source (incoming messages trigger the loop).
+</FAQItem>
+<FAQItem question="Does the ReAct pattern work with any LLM?">
+ReAct works best with models that support tool use or function calling, such as Claude, GPT-4, and capable open-source models. The model needs to reliably output structured action calls and interpret observations. Smaller or older models may struggle with consistent ReAct execution.
+</FAQItem>
+<FAQItem question="How do you optimize ReAct agent performance?">
+Minimize unnecessary reasoning steps by providing clear tool descriptions, use caching for repeated lookups, set maximum loop limits, and parallelize independent actions when possible. For email agents, preloading commonly needed context (like customer profiles) reduces the number of action steps required per message.
+</FAQItem>
+<FAQItem question="What frameworks implement the ReAct pattern?">
+LangChain, AutoGen, CrewAI, Semantic Kernel, and the Anthropic tool-use API all implement ReAct or similar reasoning-action loops. Most modern agent frameworks use this pattern as their default execution model, making it straightforward to build ReAct-style email processing agents.
+</FAQItem>
+</FAQ>

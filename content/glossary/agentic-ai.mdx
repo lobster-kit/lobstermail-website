@@ -1,0 +1,39 @@
+---
+title: "Agentic AI"
+shortDefinition: "AI systems that can autonomously plan, make decisions, and take actions to accomplish goals with minimal human intervention."
+category: "trending-ai"
+relatedTerms: ["orchestrator-agent", "human-in-the-loop", "multi-agent-systems"]
+relatedBlogSlugs: []
+date: "2026-03-08"
+---
+
+## What is Agentic AI?
+
+Agentic AI refers to artificial intelligence systems that go beyond responding to single prompts and instead operate as autonomous agents capable of planning, reasoning, using tools, and executing multi-step tasks. Unlike a basic chatbot that answers one question at a time, an agentic AI system can break down a complex goal into subtasks, decide which tools or APIs to call, handle errors along the way, and keep working until the objective is met.
+
+The defining characteristic of agentic AI is agency: the system makes decisions about what to do next rather than following a rigid script. It might decide to search a database, call an API, draft an email, wait for a response, and then take a different action based on what it receives. This loop of observation, reasoning, and action is what separates agentic systems from traditional AI inference.
+
+Agentic AI exists on a spectrum of autonomy. On one end, an agent might handle routine tasks fully autonomously while escalating edge cases to a human. On the other end, a highly autonomous agent might manage entire business processes end-to-end, only reporting outcomes after the fact. Where an agent sits on this spectrum depends on the stakes involved and the maturity of the system.
+
+## Why It Matters for AI Agents
+
+Agentic AI is the foundation of the entire AI agent ecosystem. Every agent that monitors inboxes, responds to customer inquiries, processes orders, or coordinates with other agents is an expression of agentic AI principles.
+
+Email is one of the most natural channels for agentic AI because email is inherently asynchronous and structured. An agent can receive an email, parse its contents, take action (query a database, update a record, trigger a workflow), and reply with the result. Platforms like LobsterMail provide the email infrastructure that makes this possible, giving agents their own addresses, inboxes, and sending capabilities.
+
+Multi-agent systems take agentic AI further by having multiple specialized agents collaborate on complex tasks. One agent might handle customer intake via email, another processes the request, and a third sends the confirmation. Each agent operates autonomously within its domain while coordinating through shared protocols and messaging.
+
+The key challenge with agentic AI is trust and oversight. As agents gain more autonomy, the need for guardrails, logging, and human-in-the-loop checkpoints becomes critical. Building reliable agentic systems means designing for transparency so that when an agent makes a decision, you can understand why.
+
+<FAQ>
+<FAQItem question="What is the difference between agentic AI and a chatbot?">A chatbot responds to individual prompts in isolation. Agentic AI maintains context across multiple steps, uses tools and APIs, makes autonomous decisions about what to do next, and works toward completing complex goals without needing a human to direct each step.</FAQItem>
+<FAQItem question="Why is email important for agentic AI?">Email provides a universal, asynchronous communication channel that agents can use to interact with humans, other agents, and external services. It offers built-in structure (to, from, subject, body), delivery confirmation, and threading, making it ideal for agent workflows that span hours or days.</FAQItem>
+<FAQItem question="How do you keep agentic AI systems safe?">Through a combination of guardrails (rules the agent cannot violate), human-in-the-loop checkpoints for high-stakes decisions, comprehensive logging for auditability, and sandboxed execution environments that limit what the agent can access. Start with more oversight and gradually increase autonomy as trust is established.</FAQItem>
+<FAQItem question="What are examples of agentic AI in production?">Common production use cases include email triage agents that classify and route incoming messages, customer support agents that resolve tickets end-to-end, sales agents that qualify leads and schedule meetings, and DevOps agents that monitor systems and respond to incidents autonomously.</FAQItem>
+<FAQItem question="What is the difference between agentic AI and automation?">Traditional automation follows predetermined rules and scripts. Agentic AI uses reasoning to handle novel situations, adapt to unexpected inputs, and make judgment calls. An automated email filter applies fixed rules. An agentic email system understands intent, considers context, and decides the best course of action dynamically.</FAQItem>
+<FAQItem question="How do agentic AI systems handle errors?">Well-designed agentic systems include retry logic, fallback strategies, and escalation paths. When an agent encounters an error it cannot resolve, it should log the failure, attempt alternative approaches, and escalate to a human or another agent if needed. Dead-letter queues capture unresolvable failures for later review.</FAQItem>
+<FAQItem question="What infrastructure do agentic AI systems need?">Agentic systems require an LLM for reasoning, tool integrations for taking actions (email, APIs, databases), state management for tracking progress across steps, and observability for monitoring agent behavior. Email infrastructure like LobsterMail provides the communication layer that lets agents interact with the outside world.</FAQItem>
+<FAQItem question="Can agentic AI work without human oversight?">Technically yes, but most production deployments maintain some level of human oversight. The degree of autonomy depends on the stakes involved. Low-risk tasks like email classification can run fully autonomous, while high-stakes actions like sending financial communications typically require human approval before execution.</FAQItem>
+<FAQItem question="How do multiple agentic AI systems work together?">Through multi-agent architectures where specialized agents handle different parts of a workflow. An orchestrator agent may coordinate the overall process while worker agents handle specific tasks. They communicate via protocols like A2A or through shared messaging channels like email, passing context and results between agents.</FAQItem>
+<FAQItem question="What is the cost of running agentic AI systems?">Costs come from LLM inference (per-token charges for reasoning), tool usage (API calls, email sends), and infrastructure (compute, storage). Agentic systems that make multiple LLM calls per task cost more than single-inference applications. Strategies like distillation, caching, and tiered model routing help control costs at scale.</FAQItem>
+</FAQ>

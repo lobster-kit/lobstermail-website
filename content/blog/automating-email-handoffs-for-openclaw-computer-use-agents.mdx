@@ -182,7 +182,7 @@ If you want to go from zero to a working inbox in under a minute, the [LobsterMa
     Yes. The SDK loads the persisted token on each `LobsterMail.create()` call and doesn't require a persistent connection on the LobsterMail side. It works the same whether it's running in a foreground terminal or a background daemon.
   </FAQItem>
 
-  <FAQItem question="Does LobsterMail protect against prompt injection in emails?">
+  <FAQItem question="Does LobsterMail protect against [prompt injection](/glossary/prompt-injection) in emails?">
     Yes. Every email returned by the SDK includes security metadata and an injection risk score. If you're passing email body content to your agent, you can inspect the risk score before acting on it. The [security and injection guide](/docs/getting-started) covers the full protection model.
   </FAQItem>
 
