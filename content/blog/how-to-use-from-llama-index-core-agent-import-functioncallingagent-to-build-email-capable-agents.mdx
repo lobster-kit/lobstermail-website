@@ -1,0 +1,286 @@
+---
+title: >-
+  how to use from llama_index.core.agent import functioncallingagent to build
+  email-capable agents
+description: >-
+  A practical guide to LlamaIndex's FunctionCallingAgent: how to import it, wire
+  up tools, and give your agent real email capabilities with working code
+  examples.
+date: '2026-03-09'
+author: Samuel Chenard
+tags:
+  - guides
+  - automation
+  - openclaw
+  - email
+  - infrastructure
+image: >-
+  /blog/how-to-use-from-llama-index-core-agent-import-functioncallingagent-to-build-email-capable-agents.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — "from
+  llama_index.core.agent import functioncallingagent"
+publish_at: '2026-03-09T12:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-09T18:32:22.037Z'
+---
+You've seen the import line everywhere. Every LlamaIndex tutorial, every agentic RAG walkthrough, every Medium post about building AI agents eventually lands on this:
+
+```python
+from llama_index.core.agent import FunctionCallingAgent
+But most of those tutorials stop at toy examples. "Here's a calculator tool. Here's a weather lookup." Nobody shows you what happens when you wire up tools that actually do things in the real world, like sending email, parsing inbound messages, or signing up for services on your agent's behalf.
+
+This guide covers how `FunctionCallingAgent` works, how it differs from the alternatives in LlamaIndex, and how to connect it to tools that let your agent handle email autonomously.
+
+## What is FunctionCallingAgent in LlamaIndex?
+
+`FunctionCallingAgent` is a LlamaIndex agent class that relies on your LLM's native function-calling support (OpenAI, Anthropic, Bedrock, and others) to decide which tools to invoke and with what arguments. Instead of parsing text output to figure out what the agent "meant" to do, it uses the structured function-calling API that modern LLMs expose directly.
+
+This matters because structured function calling is more reliable than text parsing. When your agent needs to send an email, you don't want it hallucinating a JSON blob and hoping your regex catches it. You want the LLM to return a typed tool call that your code can execute directly.
+
+The older approach, `ReActAgent`, works by prompting the LLM to output "Thought / Action / Observation" text blocks, then parsing those blocks to determine tool calls. It works with any LLM (including local models that don't support function calling), but it's slower and more error-prone. `FunctionCallingAgent` skips the text-parsing step entirely when your LLM supports it.
+
+## How to use FunctionCallingAgent in LlamaIndex
+
+1. Install the core package: `pip install llama-index`
+2. Import the agent: `from llama_index.core.agent import FunctionCallingAgent`
+3. Define your tools using `FunctionTool.from_defaults()`
+4. Initialize with `FunctionCallingAgent.from_tools(tools, llm=llm)`
+5. Run your agent with `agent.chat("your prompt here")`
+
+Here's a minimal working example:
+
+```python
+from llama_index.core.agent import FunctionCallingAgent
+from llama_index.core.tools import FunctionTool
+from llama_index.llms.openai import OpenAI
+
+def get_inbox_count() -> int:
+    """Returns the number of unread emails in the agent's inbox."""
+    return 3
+
+def send_email(to: str, subject: str, body: str) -> str:
+    """Sends an email to the specified address."""
+    return f"Email sent to {to}"
+
+tools = [
+    FunctionTool.from_defaults(fn=get_inbox_count),
+    FunctionTool.from_defaults(fn=send_email),
+]
+
+llm = OpenAI(model="gpt-4o")
+agent = FunctionCallingAgent.from_tools(tools, llm=llm, verbose=True)
+
+response = agent.chat("Check my inbox and reply to any unread messages")
+print(response)
+The `verbose=True` flag prints each tool call and its result as the agent runs. Useful for debugging, noisy in production. Turn it off once you trust the workflow.
+
+## FunctionCallingAgent vs FunctionCallingAgentWorker
+
+This trips people up. LlamaIndex has both `FunctionCallingAgent` and `FunctionCallingAgentWorker`, and the distinction matters if you're building multi-agent systems.
+
+`FunctionCallingAgent` is the all-in-one version. It handles both the reasoning loop and the execution. For single-agent setups, this is what you want.
+
+`FunctionCallingAgentWorker` is the lower-level component. It handles the reasoning (deciding which tools to call) but delegates execution to an `AgentRunner`. This separation is useful when you need multiple agents coordinating, custom step-level control, or stateful workflows that persist across sessions.
+
+```python
+from llama_index.core.agent import FunctionCallingAgentWorker, AgentRunner
+
+worker = FunctionCallingAgentWorker.from_tools(tools, llm=llm)
+agent = AgentRunner(worker)
+
+response = agent.chat("Check inbox and summarize")
+```
+
+If you're not building a multi-agent system, stick with `FunctionCallingAgent`. It's less code and the same underlying logic.
+
+## Giving your agent real email tools
+
+The calculator-and-weather examples are fine for learning the API. But the reason you're building an agent is to automate real work. Email is one of the most common integration points: verification codes, customer replies, notifications, transactional messages.
+
+Here's where it gets interesting. Instead of stubbing out email functions, you can connect your `FunctionCallingAgent` to actual email infrastructure. LobsterMail's SDK lets your agent provision its own inbox and send or receive real email, no human signup or OAuth flow required.
+
+```python
+from llama_index.core.agent import FunctionCallingAgent
+from llama_index.core.tools import FunctionTool
+from llama_index.llms.openai import OpenAI
+import subprocess
+import json
+
+def create_inbox(name: str) -> str:
+    """Creates a new email inbox for the agent and returns the address."""
+    # Your agent provisions its own inbox
+    result = subprocess.run(
+        ["npx", "@lobsterkit/lobstermail", "create-inbox", "--name", name],
+        capture_output=True, text=True
+    )
+    return result.stdout.strip()
+
+def check_email(inbox_id: str) -> str:
+    """Checks for new emails in the specified inbox."""
+    result = subprocess.run(
+        ["npx", "@lobsterkit/lobstermail", "receive", "--inbox", inbox_id],
+        capture_output=True, text=True
+    )
+    return result.stdout.strip()
+
+def send_email(from_inbox: str, to: str, subject: str, body: str) -> str:
+    """Sends an email from the agent's inbox."""
+    result = subprocess.run(
+        ["npx", "@lobsterkit/lobstermail", "send",
+         "--from", from_inbox, "--to", to,
+         "--subject", subject, "--body", body],
+        capture_output=True, text=True
+    )
+    return result.stdout.strip()
+
+tools = [
+    FunctionTool.from_defaults(fn=create_inbox),
+    FunctionTool.from_defaults(fn=check_email),
+    FunctionTool.from_defaults(fn=send_email),
+]
+
+llm = OpenAI(model="gpt-4o")
+agent = FunctionCallingAgent.from_tools(
+    tools, llm=llm, verbose=True,
+    system_prompt="You are an assistant that can send and receive email. "
+                  "Create an inbox if you don't have one yet."
+)
+
+response = agent.chat("Sign up for that newsletter at news@example.com")
+```
+
+The agent decides on its own to create an inbox first, then compose and send the subscription email. No human in the loop for the email provisioning step.
+
+## Using FunctionCallingAgent with different LLMs
+
+`FunctionCallingAgent` works with any LLM that supports native function calling. That includes OpenAI (GPT-4o, GPT-4, GPT-3.5-turbo), Anthropic Claude models through `llama_index.llms.anthropic`, and AWS Bedrock models through `llama_index.llms.bedrock_converse`.
+
+For local LLMs via Ollama, there's a catch. Most local models don't support structured function calling. If you're using Ollama with Llama 3 or Mistral, you'll likely get errors when trying to use `FunctionCallingAgent`. The fix is to fall back to `ReActAgent`, which works through text parsing instead:
+
+```python
+from llama_index.core.agent import ReActAgent
+from llama_index.llms.ollama import Ollama
+
+llm = Ollama(model="llama3")
+agent = ReActAgent.from_tools(tools, llm=llm, verbose=True)
+```
+
+Same tools, same interface, different reasoning strategy. Your email tools work identically either way.
+
+## What breaks in production (and how to handle it)
+
+Most tutorials skip this part. Here's what actually goes wrong when you deploy a `FunctionCallingAgent` beyond a Jupyter notebook.
+
+**Tool calls fail silently.** If your email sending function throws an exception, the agent sees the error as a string response and tries to "reason" about it. Sometimes it retries. Sometimes it hallucinates a success message. Wrap your tool functions in try/except blocks and return explicit, parseable error messages.
+
+```python
+def send_email(to: str, subject: str, body: str) -> str:
+    try:
+        # actual send logic
+        return json.dumps({"status": "sent", "to": to})
+    except Exception as e:
+        return json.dumps({"status": "error", "message": str(e)})
+```
+
+**Parallel tool calls cause race conditions.** Some LLMs (GPT-4o in particular) will try to call multiple tools simultaneously. If your agent creates an inbox and immediately tries to send from it, the inbox might not exist yet. You can disable parallel calls by setting `allow_parallel_tool_calls=False` in your agent configuration, though not all LLM backends respect this flag consistently (there's an [open issue](https://github.com/run-llama/llama_index/issues/17606) about Bedrock's behavior here).
+
+**Token costs add up.** Each tool call round-trip includes the full tool schema in the prompt. With five or six tools, you're burning tokens on schema descriptions every single turn. Keep your tool set minimal. If your agent only needs to read email for a particular task, don't load the send and inbox-creation tools.
+
+## The system_prompt parameter
+
+The `system_prompt` in `FunctionCallingAgent.from_tools()` shapes how your agent decides to use its tools. A vague prompt like "You are a helpful assistant" produces vague behavior. Be specific about the agent's role and constraints:
+
+```python
+agent = FunctionCallingAgent.from_tools(
+    tools, llm=llm,
+    system_prompt=(
+        "You are an email processing agent. When asked to handle email, "
+        "always check for existing inboxes before creating new ones. "
+        "Never send email without explicit user approval of the content."
+    )
+)
+```
+
+This is where you encode safety boundaries. If your agent has a `send_email` tool, the system prompt is your first line of defense against unintended outbound messages.
+
+## Adding memory to your agent
+
+By default, `FunctionCallingAgent` is stateless across sessions. It remembers the current conversation but forgets everything when the process ends. For long-running agents that need to remember which inboxes they've created or which emails they've already processed, you can integrate memory providers like Mem0:
+
+```python
+from llama_index.core.agent import FunctionCallingAgent
+from mem0 import MemoryClient
+
+memory = MemoryClient(api_key="your-mem0-key")
+
+agent = FunctionCallingAgent.from_tools(
+    tools, llm=llm,
+    memory=memory,
+    verbose=True
+)
+```
+
+This lets the agent recall context like "I already created an inbox at my-agent@lobstermail.ai" across separate invocations.
+
+## Where to go from here
+
+If you're building an agent that needs to interact with the real world through email (verification flows, customer communication, monitoring inboxes for triggers), the combination of LlamaIndex's `FunctionCallingAgent` and actual email infrastructure gets you there without duct-taping together IMAP connections and SMTP relays.
+
+Start with the [LobsterMail getting started guide](/docs/getting-started) if you want your agent provisioning real inboxes. The free tier gives you 1,000 emails per month, which is enough to build and test a full workflow before you need to think about scaling.
+
+<FAQ>
+  <FAQItem question="What does 'from llama_index.core.agent import FunctionCallingAgent' actually import?">
+    It imports the `FunctionCallingAgent` class, which is LlamaIndex's agent implementation that uses native LLM function-calling APIs to invoke tools. It handles the full loop: interpreting user input, selecting tools, executing them, and returning results.
+  </FAQItem>
+
+  <FAQItem question="What is the difference between FunctionCallingAgent and FunctionCallingAgentWorker?">
+    `FunctionCallingAgent` is the all-in-one agent that handles both reasoning and execution. `FunctionCallingAgentWorker` only handles reasoning and requires an `AgentRunner` to execute. Use the worker when you need multi-agent coordination or custom step-level control.
+  </FAQItem>
+
+  <FAQItem question="Do I always need AgentRunner when using FunctionCallingAgentWorker?">
+    Yes. `FunctionCallingAgentWorker` produces agent steps but doesn't execute them on its own. You need to wrap it in an `AgentRunner` to get a working agent. If that feels like extra boilerplate, just use `FunctionCallingAgent` instead.
+  </FAQItem>
+
+  <FAQItem question="Which LLMs are compatible with FunctionCallingAgent in LlamaIndex?">
+    Any LLM with native function-calling support works: OpenAI GPT-4o/GPT-4/GPT-3.5-turbo, Anthropic Claude, and AWS Bedrock Converse models. Local models via Ollama generally don't support function calling, so use `ReActAgent` for those.
+  </FAQItem>
+
+  <FAQItem question="How do I switch from FunctionCallingAgent to ReActAgent for local LLMs?">
+    Replace `from llama_index.core.agent import FunctionCallingAgent` with `from llama_index.core.agent import ReActAgent`, then use `ReActAgent.from_tools()` with the same tools and LLM. The interface is identical; only the reasoning strategy changes.
+  </FAQItem>
+
+  <FAQItem question="Can FunctionCallingAgent handle parallel tool calls?">
+    Some LLMs (like GPT-4o) will attempt parallel calls by default. You can set `allow_parallel_tool_calls=False` in your agent config, but not all backends respect this flag consistently. Test your specific LLM and tool combination.
+  </FAQItem>
+
+  <FAQItem question="How do I integrate memory into a FunctionCallingAgent?">
+    Pass a memory provider (like Mem0's `MemoryClient`) to the `memory` parameter in `FunctionCallingAgent.from_tools()`. This lets the agent recall context from previous sessions, like which inboxes it has already created.
+  </FAQItem>
+
+  <FAQItem question="Why am I getting errors when using LangChainLLM with FunctionCallingAgentWorker?">
+    LangChain-wrapped LLMs often don't expose function-calling metadata correctly to LlamaIndex. Make sure you set `metadata={"is_function_calling_model": True}` when creating the LangChain LLM, and verify the underlying model actually supports function calling.
+  </FAQItem>
+
+  <FAQItem question="What is the system_prompt parameter in FunctionCallingAgent.from_tools() used for?">
+    It sets the agent's behavior boundaries and role. Use it to specify what the agent should and shouldn't do with its tools, like "never send email without user approval" or "always check for existing inboxes before creating new ones."
+  </FAQItem>
+
+  <FAQItem question="How do I use QueryEngineTool with FunctionCallingAgent for RAG pipelines?">
+    Create a `QueryEngineTool` from your index's query engine and pass it into the tools list. The agent will use it like any other tool: `QueryEngineTool.from_defaults(query_engine=index.as_query_engine(), name="search_docs", description="Search the knowledge base")`.
+  </FAQItem>
+
+  <FAQItem question="What is the verbose flag and when should I enable it?">
+    Setting `verbose=True` prints each tool call, its arguments, and the returned result to stdout as the agent runs. Enable it during development and debugging. Disable it in production to keep logs clean.
+  </FAQItem>
+
+  <FAQItem question="Can my FunctionCallingAgent send and receive real email?">
+    Yes. Wire up email tools that connect to real infrastructure. [LobsterMail's SDK](/docs/getting-started) lets your agent provision inboxes and handle email without needing human-configured SMTP or OAuth. The free tier includes 1,000 emails per month.
+  </FAQItem>
+
+  <FAQItem question="How do I test a FunctionCallingAgent's tool usage?">
+    Set `verbose=True` and run your agent with known prompts. Check that it selects the right tools, passes correct arguments, and handles errors gracefully. For automated testing, mock your tool functions and assert on the call patterns.
+  </FAQItem>
+</FAQ>
