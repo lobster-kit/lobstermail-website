@@ -18,11 +18,13 @@ export const metadata: Metadata = {
     description:
       "Give your AI agent its own email address in seconds. Free tier, no human signup, instant inbox creation.",
     url: "https://lobstermail.ai",
+    siteName: "LobsterMail",
     type: "website",
-    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "LobsterMail — Free Email for AI Agents" }],
   },
   twitter: {
     card: "summary_large_image",
+    site: "@samuelchenard",
     title: "LobsterMail — Free Email for AI Agents",
     description:
       "Give your AI agent its own email address in seconds. Free tier, no human signup, instant inbox creation.",
