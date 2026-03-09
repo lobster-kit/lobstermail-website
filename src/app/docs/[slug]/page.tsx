@@ -38,6 +38,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: "summary_large_image",
+      site: "@samuelchenard",
       title: `${guide.title} — LobsterMail Docs`,
       description: guide.description,
       images: ["/og-image.png"],

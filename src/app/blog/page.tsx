@@ -29,11 +29,13 @@ export async function generateMetadata({
       description:
         "Learn about AI agent email — tutorials, use cases, and updates from the LobsterMail team.",
       url,
+      siteName: "LobsterMail",
       type: "website",
-      images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+      images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "AI Agent Email Blog — LobsterMail" }],
     },
     twitter: {
       card: "summary_large_image",
+      site: "@samuelchenard",
       title: "AI Agent Email Blog — LobsterMail",
       description:
         "Learn about AI agent email — tutorials, use cases, and updates from the LobsterMail team.",

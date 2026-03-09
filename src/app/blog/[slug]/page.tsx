@@ -17,6 +17,7 @@ import {
 import { getAuthor } from "@/lib/authors";
 import { AuthorByline } from "@/components/blog/AuthorByline";
 import { blogComponents } from "@/components/blog/mdx-components";
+import { BlogCTA } from "@/components/blog/BlogCTA";
 import { TableOfContents } from "@/components/docs/TableOfContents";
 
 export async function generateStaticParams() {
@@ -32,6 +33,9 @@ export async function generateMetadata({
   const post = getPostBySlug(slug);
   if (!post) return {};
 
+  const ogImage = post.image ?? "/og-image.png";
+  const ogImageAlt = post.imageAlt ?? post.title;
+
   return {
     title: post.title,
     description: post.description,
@@ -41,18 +45,20 @@ export async function generateMetadata({
     openGraph: {
       title: post.title,
       description: post.description,
+      url: `https://lobstermail.ai/blog/${slug}`,
+      siteName: "LobsterMail",
       type: "article",
       publishedTime: post.date,
       ...(post.updatedDate && { modifiedTime: post.updatedDate }),
-      ...(post.image && {
-        images: [{ url: post.image, width: 1200, height: 630 }],
-      }),
+      ...(post.author && { authors: [post.author] }),
+      images: [{ url: ogImage, width: 1200, height: 630, alt: ogImageAlt }],
     },
     twitter: {
       card: "summary_large_image",
+      site: "@samuelchenard",
       title: post.title,
       description: post.description,
-      ...(post.image && { images: [post.image] }),
+      images: [{ url: ogImage, alt: ogImageAlt }],
     },
   };
 }
@@ -247,6 +253,8 @@ export default async function BlogPostPage({
                       options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
                     />
                   </div>
+
+                  <BlogCTA />
                 </div>
               </div>
               {/* Prev/Next Navigation */}
