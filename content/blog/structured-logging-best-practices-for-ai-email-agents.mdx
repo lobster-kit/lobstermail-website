@@ -1,0 +1,203 @@
+---
+title: structured logging best practices for AI email agents
+description: >-
+  A practical guide to structured logging for AI email agents: JSON schemas,
+  correlation IDs, PII masking, retention policies, and compliance.
+date: '2026-03-09'
+author: Ian Bussières
+tags:
+  - infrastructure
+  - security
+  - guides
+  - email
+  - automation
+image: /blog/structured-logging-best-practices-for-ai-email-agents.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — structured
+  logging ai email agent best practices
+publish_at: '2026-03-09T14:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-09T16:51:28.697Z'
+---
+Your agent just processed 200 emails. One of them triggered a weird reply. You have no idea which one, what the agent decided, or why.
+
+This is the reality for most teams running AI email agents in production. The agent works until it doesn't, and when it breaks, you're staring at a wall of unstructured text trying to reconstruct what happened three hours ago. Structured logging fixes this. Not by adding more output, but by making every log entry machine-readable, searchable, and traceable from the moment an email arrives to the moment the agent acts on it.
+
+Here's how to do it right.
+
+## Structured logging best practices for AI email agents
+
+1. Use JSON format with a canonical schema including `timestamp`, `agent_id`, `action`, `thread_id`, and `result`.
+2. Mask or hash all PII fields (email addresses, names) before log emission.
+3. Assign a `correlation_id` to every email thread so multi-step actions stay linked.
+4. Tag each log entry with an explicit log level: `ERROR`, `WARN`, `INFO`, or `DEBUG`.
+5. Include an `intent_label` field to record the agent's classification decision.
+6. Store security-relevant events (injection attempts, auth failures) in a separate audit trail.
+7. Set distinct retention policies for production logs (90+ days) and debug logs (7-14 days).
+8. Enforce role-based access controls on log queries so only authorized teams see sensitive data.
+
+That's the short version. The rest of this guide covers each practice in detail, with schemas you can copy and mistakes I've seen teams make repeatedly.
+
+## Why unstructured logs fail for email agents
+
+Traditional logging, the kind where you write `console.log("Processing email from user")`, works fine when a human is reading output in real time. It falls apart when an autonomous agent handles hundreds of emails per hour across multiple inboxes.
+
+The problem is threefold. First, unstructured logs can't be filtered programmatically. If you want every log entry where the agent flagged a message as suspicious, you're stuck with regex. Second, you lose the thread. An email might trigger a classification step, then a draft, then a send, then a follow-up check. In flat text logs, those events are interleaved with everything else the agent did that minute. Third, debugging a failed workflow means manually piecing together timestamps and hoping nothing got truncated.
+
+Structured logging (JSON objects with consistent fields) solves all three. Each event is a self-contained record. You can filter, aggregate, and correlate without guessing.
+
+## A JSON schema for email agent events
+
+Every log entry your agent emits should contain these fields at minimum:
+
+```json
+{
+  "timestamp": "2026-03-09T14:23:01.442Z",
+  "agent_id": "inbox-agent-prod-01",
+  "correlation_id": "corr_8f3a2b1c",
+  "thread_id": "thread_abc123",
+  "action": "classify_inbound",
+  "intent_label": "verification_code",
+  "log_level": "INFO",
+  "result": "success",
+  "duration_ms": 342,
+  "metadata": {}
+}
+A few notes on specific fields:
+
+**`correlation_id`** ties together every step the agent takes for a single email thread. When an email arrives, generate a correlation ID and pass it through classification, drafting, sending, and any follow-up. This is the single most useful field for debugging. When something goes wrong, you query by `correlation_id` and get the full story in order.
+
+**`intent_label`** records what the agent decided the email was about. "verification_code", "sales_inquiry", "spam", "prompt_injection_attempt". Without this field, you can't answer the question "how many emails did the agent misclassify last week?"
+
+**`action`** should be a fixed enum, not freeform text. Values like `receive_inbound`, `classify_inbound`, `draft_reply`, `send_outbound`, `flag_injection` are specific enough to filter on and general enough to stay consistent across agent versions.
+
+The `metadata` object is your escape hatch for action-specific data. For a `send_outbound` action, it might contain `{"recipient_hash": "a1b2c3", "subject_length": 45}`. For a `classify_inbound` action, it might contain `{"confidence": 0.92, "model": "gpt-4o"}`.
+
+## Masking PII before it hits the log pipeline
+
+This is where I see the most mistakes. An agent processes an email from `jane.doe@company.com`, and the full address ends up in the log. Multiply that across thousands of emails, and your log store becomes a PII liability.
+
+The fix: hash or redact PII fields at the point of emission, before the log leaves the agent process.
+
+```typescript
+import { createHash } from "crypto";
+
+function hashEmail(email: string): string {
+  return createHash("sha256").update(email).digest("hex").slice(0, 12);
+}
+
+// In your log entry:
+// recipient_hash: hashEmail("jane.doe@company.com") → "a1b2c3d4e5f6"
+Hash the email address. Hash the sender name. Never log the raw subject line if it might contain personal data. For debugging, the hash gives you a consistent identifier you can correlate across events without storing the actual address.
+
+This matters for GDPR compliance specifically. Article 30 requires records of processing activities, but those records shouldn't contain more personal data than necessary. If your logs are subpoenaed or breached, hashed fields limit the exposure.
+
+If you're running email agents on LobsterMail, the SDK's security metadata already separates content from envelope data. You can log the envelope (hashed sender, timestamp, size) without touching the body. We covered related concerns in [is your OpenClaw agent's email secure? probably not](/blog/openclaw-agent-email-security).
+
+## Audit trails vs. operational logs
+
+These serve different purposes and should live in different places.
+
+**Operational logs** help you debug. They answer "what happened and why did it fail?" They're high-volume, short-lived, and queried by engineers. Set retention to 14-30 days for INFO level, 7 days for DEBUG.
+
+**Audit trails** help you prove compliance. They answer "what did the agent do with this person's data?" They're lower-volume, long-lived, and might be queried by legal. Set retention to 1-3 years depending on your regulatory requirements.
+
+The distinction matters because audit trail entries need to be immutable. Once written, they shouldn't be modifiable. Operational logs can be rotated, sampled, and compressed aggressively.
+
+For audit trails, log every outbound action (email sent, email deleted, inbox created) with the correlation ID, a timestamp, and the agent's identity. Skip debug noise. An auditor doesn't care about your retry backoff logic.
+
+## Log levels for email agent events
+
+Not every event deserves the same severity. Here's a practical mapping:
+
+| Event | Level |
+|---|---|
+| Email received and queued | `INFO` |
+| Classification completed | `INFO` |
+| Outbound email sent | `INFO` |
+| Classification confidence below threshold | `WARN` |
+| Prompt injection pattern detected | `WARN` |
+| Outbound send failed (non-retryable) | `ERROR` |
+| Agent unable to reach mail server | `ERROR` |
+| Unhandled exception in agent loop | `FATAL` |
+
+When an agent fails to classify an incoming message, that's a `WARN`, not an `ERROR`. The agent can still fall back to a default behavior. An `ERROR` means something broke and the workflow can't continue. This distinction matters because alerting on `ERROR` is practical. Alerting on every `WARN` will bury you in noise.
+
+For prompt injection specifically, log at `WARN` level with the action `flag_injection` and include the injection risk score in metadata, but never log the actual injection payload. You don't want attack strings sitting in your log store where they could be re-ingested by another system. We wrote more about this attack surface in [prompt injection through email: what agents need to watch for](/blog/prompt-injection-email-agents).
+
+## Controlling log volume and cost
+
+An agent processing 1,000 emails per hour might generate 5,000-10,000 log entries (multiple steps per email). At scale, that's real money in log ingestion and storage.
+
+Three strategies that work:
+
+**Sampling for DEBUG level.** In production, you don't need DEBUG logs for every email. Sample 5-10% of threads by correlation ID (not random entries, full threads) so you can still debug representative workflows without paying for 100% volume.
+
+**Tiered storage.** Hot storage (Elasticsearch, Datadog) for the last 7 days. Warm storage (S3 with Athena) for 7-90 days. Cold storage (Glacier) for audit trails beyond 90 days. Most queries hit the last 24 hours.
+
+**Field cardinality limits.** Don't put unbounded values (like full email subjects) in indexed fields. Hash them or move them to the metadata blob. High-cardinality fields inflate index sizes and slow down queries.
+
+## Connecting to observability platforms
+
+Structured JSON logs plug directly into most observability tools. Langfuse and Traceloop work well for LLM-specific tracing (they understand token counts, model latency, prompt/completion pairs). Datadog, Grafana Loki, and Azure Monitor handle the infrastructure side.
+
+The integration pattern is simple: emit JSON to stdout, use a log shipper (Fluentd, Vector, or the platform's native agent) to route entries to your backend. Tag each entry with `service: email-agent` and `environment: production` for filtering.
+
+If you want to replay a failed workflow, the correlation ID is your key. Query all events for a single correlation ID, sort by timestamp, and you have the exact sequence of decisions the agent made. This is far more useful than trying to reproduce the failure by re-running the agent, because the email content and timing will never be identical.
+
+## Getting started
+
+If you're building email agents on LobsterMail, the SDK handles inbox provisioning and email delivery. The logging layer is yours. Start with the JSON schema above, add a correlation ID generator, hash your PII fields, and ship to whatever observability platform you already use. You don't need a custom framework. You need consistent field names and the discipline to use them.
+
+The agents that run reliably in production aren't the ones with the fanciest models. They're the ones where, when something breaks at 2 AM, you can pull up a correlation ID and see exactly what happened in under a minute.
+
+<FAQ>
+  <FAQItem question="What is structured logging and why does it matter for AI email agents?">
+    Structured logging means emitting log entries as machine-readable objects (typically JSON) with consistent fields, instead of freeform text. For AI email agents, this lets you filter, search, and correlate events across multi-step workflows like receiving, classifying, and replying to emails.
+  </FAQItem>
+  <FAQItem question="Which JSON fields should every AI email agent log entry include?">
+    At minimum: `timestamp`, `agent_id`, `correlation_id`, `thread_id`, `action`, `intent_label`, `log_level`, and `result`. Add `duration_ms` for performance tracking and a `metadata` object for action-specific data.
+  </FAQItem>
+  <FAQItem question="How should an AI email agent log outbound sends without exposing recipient PII?">
+    Hash the recipient email address with SHA-256 before logging. Store the hash as `recipient_hash` in your log entry. This gives you a consistent, correlatable identifier without storing the raw address.
+  </FAQItem>
+  <FAQItem question="What log retention periods work for AI email agents in production vs. development?">
+    Production: 14-30 days for INFO, 7 days for DEBUG, 1-3 years for audit trail entries. Development: 3-7 days for everything. Adjust based on your compliance requirements and storage budget.
+  </FAQItem>
+  <FAQItem question="How do correlation IDs help trace a single email thread across multiple agent steps?">
+    Generate a unique `correlation_id` when an email arrives and pass it through every subsequent step (classification, drafting, sending, follow-up). Query by this ID to reconstruct the full sequence of agent decisions for that thread.
+  </FAQItem>
+  <FAQItem question="What log level should I use when my agent fails to classify an incoming email?">
+    Use `WARN`. A classification failure is recoverable (the agent can fall back to a default action). Reserve `ERROR` for non-recoverable failures like send rejections or server connectivity loss.
+  </FAQItem>
+  <FAQItem question="How can I replay or debug a failed email agent workflow using structured logs?">
+    Query all log entries with the same `correlation_id`, sort by timestamp, and you'll see the exact sequence of actions the agent took. This lets you identify where the workflow diverged from expected behavior.
+  </FAQItem>
+  <FAQItem question="What observability tools integrate well with AI email agent logging?">
+    Langfuse and Traceloop for LLM-specific tracing (token counts, model latency). Datadog, Grafana Loki, and Azure Monitor for general infrastructure observability. All accept structured JSON via standard log shippers.
+  </FAQItem>
+  <FAQItem question="How do I enforce role-based access controls on email agent logs?">
+    Configure your log backend to restrict query access by team or role. Engineers get full access to operational logs. Legal/compliance teams get read-only access to audit trails. Mask or exclude PII-containing fields from roles that don't need them.
+  </FAQItem>
+  <FAQItem question="Should AI email agent logs be encrypted at rest?">
+    Yes. Use AES-256 encryption at rest for all log storage. Most cloud observability platforms (Datadog, AWS CloudWatch, Azure Monitor) offer this by default. For self-hosted solutions, enable encryption on the underlying storage layer.
+  </FAQItem>
+  <FAQItem question="How does GDPR affect what fields I can log in an AI email agent?">
+    GDPR Article 30 requires records of processing activities, but you should minimize personal data in logs. Hash email addresses and names before logging. Never log email body content. Set retention policies so personal data isn't stored longer than necessary.
+  </FAQItem>
+  <FAQItem question="What is the difference between an operational log and a compliance audit trail?">
+    Operational logs are high-volume, short-lived records for debugging ("what happened and why did it fail?"). Audit trails are immutable, long-lived records for compliance ("what did the agent do with this person's data?"). They should be stored separately with different retention policies.
+  </FAQItem>
+  <FAQItem question="How do I prevent prompt injection details from leaking into agent logs?">
+    Log the detection event (action: `flag_injection`, risk score, timestamp) but never log the actual injection payload. Attack strings in your log store could be re-ingested by other systems or exposed in a breach. See [prompt injection through email](/blog/prompt-injection-email-agents) for more.
+  </FAQItem>
+  <FAQItem question="What sampling strategy should high-volume email agents use to control log costs?">
+    Sample 5-10% of threads at DEBUG level by correlation ID (not random individual entries). This preserves complete thread traces for debugging while cutting volume by 90%+. Keep all ERROR and WARN entries unsampled.
+  </FAQItem>
+  <FAQItem question="How is structured logging different from unstructured logging?">
+    Unstructured logging writes freeform text strings (`"Processing email from user"`). Structured logging writes key-value objects with consistent fields (`{"action": "classify_inbound", "agent_id": "prod-01"}`). Structured logs can be filtered, aggregated, and queried programmatically without regex.
+  </FAQItem>
+</FAQ>
