@@ -1,0 +1,251 @@
+---
+title: how to use functioncallingagent in llamaindex for agentic workflows
+description: >-
+  A practical guide to using FunctionCallingAgent and FunctionCallingAgentWorker
+  in LlamaIndex, with real code examples for tool integration, memory, and email
+  workflows.
+date: '2026-03-09'
+author: Samuel Chenard
+tags:
+  - guides
+  - automation
+  - infrastructure
+  - email
+image: /blog/how-to-use-functioncallingagent-in-llamaindex-for-agentic-workflows.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — "from
+  llama_index.core.agent import functioncallingagent"
+publish_at: '2026-03-09T17:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-09T18:32:22.054Z'
+---
+If you've been building agents with LlamaIndex, you've probably seen this import floating around in tutorials and GitHub issues:
+
+```python
+from llama_index.core.agent import FunctionCallingAgent
+Maybe you copied it into your project, hit a confusing error about `FunctionCallingAgentWorker`, and spent 20 minutes figuring out which class you actually need. You're not alone. The naming is genuinely confusing, the docs split responsibilities across multiple classes, and most examples online skip the parts that matter for production use.
+
+This guide covers the full picture: what `FunctionCallingAgent` does, how it relates to `FunctionCallingAgentWorker` and `AgentRunner`, and how to wire it into real workflows (including giving your agent the ability to send email).
+
+## What FunctionCallingAgent actually is
+
+`FunctionCallingAgent` is a convenience wrapper that combines two lower-level pieces: `FunctionCallingAgentWorker` (which handles the tool-calling logic) and `AgentRunner` (which manages the conversation loop, memory, and execution). When you call `FunctionCallingAgent.from_tools()`, it creates both under the hood and gives you a single object you can call `.chat()` or `.query()` on.
+
+The worker handles the back-and-forth with your LLM's function-calling API. The runner handles state, memory, and orchestration. For most use cases, you don't need to think about the split. But if you want custom memory, multi-agent setups, or fine-grained control over the execution loop, you'll want to instantiate `FunctionCallingAgentWorker` and `AgentRunner` separately.
+
+## How to use FunctionCallingAgent in LlamaIndex (step-by-step)
+
+1. **Install dependencies:** `pip install llama-index-core llama-index-llms-openai` (or swap in your preferred LLM provider).
+2. **Import the agent and tool classes:** `from llama_index.core.agent import FunctionCallingAgentWorker` and `from llama_index.core.tools import FunctionTool`.
+3. **Define your tools** by wrapping Python functions with `FunctionTool.from_defaults(fn=your_function)`.
+4. **Initialize the agent** with `FunctionCallingAgentWorker.from_tools(tools=[...], llm=llm)`, then wrap it: `agent = worker.as_agent()`.
+5. **Alternatively, use the shorthand:** `agent = FunctionCallingAgent.from_tools(tools=[...], llm=llm)` to skip the worker/runner split.
+6. **Run a query** with `response = agent.chat("your prompt here")` and read `response.response`.
+
+Here's that as runnable code:
+
+```python
+from llama_index.core.agent import FunctionCallingAgent
+from llama_index.core.tools import FunctionTool
+from llama_index.llms.openai import OpenAI
+
+def get_weather(city: str) -> str:
+    """Get the current weather for a city."""
+    return f"The weather in {city} is 22°C and sunny."
+
+weather_tool = FunctionTool.from_defaults(fn=get_weather)
+llm = OpenAI(model="gpt-4o")
+
+agent = FunctionCallingAgent.from_tools(
+    tools=[weather_tool],
+    llm=llm,
+    verbose=True,
+    system_prompt="You are a helpful assistant that checks the weather.",
+)
+
+response = agent.chat("What's the weather like in Montreal?")
+print(response)
+The LLM sees `get_weather` as a callable function, decides when to invoke it based on the user's message, and incorporates the result into its response. No prompt hacking, no regex parsing of tool calls. The LLM's native function-calling interface handles all of that.
+
+## FunctionCallingAgent vs. ReActAgent
+
+Both are agent types in LlamaIndex, but they work differently under the hood. `FunctionCallingAgent` relies on the LLM's built-in function-calling API (like OpenAI's tool_calls or Anthropic's tool_use). The LLM returns structured JSON specifying which function to call and with what arguments. It's reliable, fast, and produces clean outputs.
+
+`ReActAgent` uses a prompt-based reasoning loop instead. The LLM generates a "Thought → Action → Observation" chain in plain text, and LlamaIndex parses that text to extract tool calls. This works with any LLM, even ones that don't support function calling natively.
+
+The tradeoff: `FunctionCallingAgent` is more accurate and less token-hungry, but it only works with LLMs that support function calling. `ReActAgent` is more flexible but slower and prone to parsing failures with weaker models.
+
+If your LLM supports tool calling (OpenAI, Anthropic, Gemini, newer Bedrock models), use `FunctionCallingAgent`. If you're running a local model through Ollama that doesn't expose a function-calling API, `ReActAgent` is your fallback.
+
+## Using FunctionCallingAgentWorker with local LLMs
+
+This is where most people hit walls. You install Ollama, load up LLaMA 3, pass it to `FunctionCallingAgentWorker`, and get an error like `llm does not support function calling`. That's because the worker expects the LLM to implement a `chat_with_tools` method, and many local LLM wrappers don't.
+
+Two options:
+
+**Option A: Use a local LLM that supports tool calling.** Some Ollama models (like `llama3.1` and newer) do support function calling when accessed through the right LlamaIndex wrapper. Check that your LLM class has `is_function_calling_model = True`.
+
+```python
+from llama_index.llms.ollama import Ollama
+
+llm = Ollama(model="llama3.1", request_timeout=120)
+# Verify before passing to the agent:
+print(llm.metadata.is_function_calling_model)
+```
+
+**Option B: Fall back to ReActAgent.** If the model doesn't support function calling, don't fight it. Switch to `ReActAgent`, which works with any LLM that can generate text.
+
+```python
+from llama_index.core.agent import ReActAgent
+
+agent = ReActAgent.from_tools(
+    tools=[weather_tool],
+    llm=llm,
+    verbose=True,
+)
+```
+
+Wrapping a LangChain LLM with `LangChainLLM` and passing it to `FunctionCallingAgentWorker` is another common source of errors. The wrapper often doesn't expose the function-calling interface correctly. If you go this route, make sure you bind the tools to the LangChain model first with `.bind_tools()` before wrapping.
+
+## Adding memory to your agent
+
+By default, `FunctionCallingAgent` maintains conversation history within a single session. Once the process ends, the memory is gone. For persistent memory across sessions, you can plug in a memory module:
+
+```python
+from llama_index.core.memory import ChatMemoryBuffer
+
+memory = ChatMemoryBuffer.from_defaults(token_limit=4096)
+
+agent = FunctionCallingAgent.from_tools(
+    tools=[weather_tool],
+    llm=llm,
+    memory=memory,
+    system_prompt="You are a helpful assistant.",
+)
+```
+
+For more advanced setups (like Mem0 integration or vector-backed long-term memory), instantiate the worker and runner separately so you can inject custom memory into the runner.
+
+## Building agentic RAG with FunctionCallingAgent
+
+One of the most practical patterns is combining `FunctionCallingAgent` with `QueryEngineTool` to build an agent that can search over your own documents:
+
+```python
+from llama_index.core.tools import QueryEngineTool
+
+query_tool = QueryEngineTool.from_defaults(
+    query_engine=your_index.as_query_engine(),
+    name="document_search",
+    description="Search through the knowledge base for answers.",
+)
+
+agent = FunctionCallingAgent.from_tools(
+    tools=[query_tool],
+    llm=llm,
+    verbose=True,
+)
+```
+
+The agent decides when to search vs. when to answer from its own knowledge. You can combine multiple `QueryEngineTool` instances (one per document collection) and the agent will route queries to the right one.
+
+## Triggering external services from a tool
+
+Tools aren't limited to search. Any Python function works. This is where things get interesting for real-world workflows. Your agent can book meetings, update databases, or send notifications.
+
+Here's a practical example: giving your agent the ability to send email when a workflow step requires it.
+
+```python
+from lobstermail import LobsterMail
+from llama_index.core.tools import FunctionTool
+
+lm = LobsterMail.create()
+inbox = lm.create_smart_inbox(name="rag-agent")
+
+def send_email(to: str, subject: str, body: str) -> str:
+    """Send an email from the agent's inbox."""
+    inbox.send(to=to, subject=subject, body=body)
+    return f"Email sent to {to}"
+
+email_tool = FunctionTool.from_defaults(fn=send_email)
+
+agent = FunctionCallingAgent.from_tools(
+    tools=[query_tool, email_tool],
+    llm=llm,
+    system_prompt="You are a research assistant. When you find an answer, email it to the requester.",
+)
+```
+
+The agent provisions its own inbox (no API keys to configure, no human signup needed), then uses it as a tool alongside its RAG pipeline. When a user asks a question and provides an email address, the agent searches the docs, composes an answer, and sends it. The whole loop is autonomous.
+
+If you want your agent to handle email without writing custom tool wrappers, [LobsterMail's SDK](/) handles inbox creation, sending, receiving, and even injection protection out of the box. The free tier includes 1,000 emails per month.
+
+## Production considerations
+
+A few things that don't show up in tutorials but matter when you ship:
+
+**Error handling in tools.** If a tool throws an exception, the default behavior is to surface the error message back to the LLM, which then tries to recover. For external API calls (email, databases, HTTP requests), wrap your tool functions in try/except blocks and return meaningful error strings instead of letting raw exceptions propagate.
+
+**Rate limiting.** If your agent calls tools in a loop (e.g., processing a list of 50 items), you can exhaust API rate limits fast. The `allow_parallel_tool_calls` parameter controls whether the LLM can request multiple tool calls in a single turn. Set it to `False` if your tools have rate limits or side effects that shouldn't run concurrently.
+
+**Token budgets.** Every tool call adds to the conversation history. Long conversations with many tool invocations can blow past your context window. Use `ChatMemoryBuffer` with a reasonable `token_limit` to keep things under control.
+
+**System prompts matter.** A vague system prompt produces vague tool usage. Be specific: tell the agent when to use each tool, what format to return results in, and what to do when a tool fails.
+
+---
+
+<FAQ>
+  <FAQItem question="What is the difference between FunctionCallingAgent and FunctionCallingAgentWorker in LlamaIndex?">
+    `FunctionCallingAgent` is a convenience class that bundles `FunctionCallingAgentWorker` (tool-calling logic) and `AgentRunner` (execution loop and memory) into one object. Use the combined class for simple setups, and the separate worker + runner pattern when you need custom memory or multi-agent orchestration.
+  </FAQItem>
+
+  <FAQItem question="When should I use ReActAgent instead of FunctionCallingAgent?">
+    Use `ReActAgent` when your LLM doesn't support native function calling (most local models via Ollama, older API providers). `FunctionCallingAgent` is more reliable and efficient, but it requires an LLM with a tool-calling API.
+  </FAQItem>
+
+  <FAQItem question="What LLMs are compatible with FunctionCallingAgent out of the box?">
+    OpenAI (GPT-4o, GPT-4, GPT-3.5 Turbo), Anthropic Claude (via tool_use), Google Gemini, and AWS Bedrock Converse models all support function calling. Check `llm.metadata.is_function_calling_model` to verify before initializing the agent.
+  </FAQItem>
+
+  <FAQItem question="Why does FunctionCallingAgentWorker fail with Ollama or local LLMs?">
+    Most local LLMs don't implement the `chat_with_tools` interface that `FunctionCallingAgentWorker` requires. Either use a model that supports tool calling (like `llama3.1` through the Ollama wrapper) or switch to `ReActAgent`.
+  </FAQItem>
+
+  <FAQItem question="How do I add persistent memory to a FunctionCallingAgent?">
+    Pass a `ChatMemoryBuffer` via the `memory` parameter: `FunctionCallingAgent.from_tools(tools=[...], llm=llm, memory=ChatMemoryBuffer.from_defaults(token_limit=4096))`. For cross-session persistence, use an external memory provider like Mem0 with the worker/runner pattern.
+  </FAQItem>
+
+  <FAQItem question="What does allow_parallel_tool_calls do in FunctionCallingAgent?">
+    It controls whether the LLM can request multiple tool calls in a single response. Set it to `False` if your tools have side effects (like sending emails or writing to a database) that shouldn't execute simultaneously.
+  </FAQItem>
+
+  <FAQItem question="How do I pass a system prompt to FunctionCallingAgent?">
+    Use the `system_prompt` parameter: `FunctionCallingAgent.from_tools(tools=[...], llm=llm, system_prompt="Your instructions here")`. Be specific about when and how the agent should use each tool.
+  </FAQItem>
+
+  <FAQItem question="How do I use QueryEngineTool with FunctionCallingAgent for RAG?">
+    Wrap your query engine with `QueryEngineTool.from_defaults(query_engine=index.as_query_engine(), name="search", description="...")` and pass it in the tools list. The agent will call it when it needs to look up information from your documents.
+  </FAQItem>
+
+  <FAQItem question="What errors commonly occur when wrapping LangChain LLMs with FunctionCallingAgentWorker?">
+    The `LangChainLLM` wrapper often doesn't expose the function-calling interface correctly. Bind your tools to the LangChain model with `.bind_tools()` before wrapping, and verify that `is_function_calling_model` returns `True` on the wrapped object.
+  </FAQItem>
+
+  <FAQItem question="How do I trigger an external service like email from a FunctionCallingAgent tool?">
+    Define a Python function that calls the external service, wrap it with `FunctionTool.from_defaults(fn=your_function)`, and include it in the agent's tool list. For email specifically, [LobsterMail](/) lets your agent provision its own inbox and send messages with a few lines of code.
+  </FAQItem>
+
+  <FAQItem question="How do I build a multi-agent system with FunctionCallingAgentWorker?">
+    Create separate `FunctionCallingAgentWorker` instances with different tools, wrap each in its own `AgentRunner`, then build a parent agent that routes to sub-agents using tools. Each sub-agent handles a specific domain (search, email, database, etc.).
+  </FAQItem>
+
+  <FAQItem question="Is FunctionCallingAgent suitable for production use?">
+    Yes, with caveats. Add error handling in your tool functions, set reasonable token limits on memory, manage rate limits for external API calls, and test the system prompt thoroughly. The agent class itself is stable, but production reliability depends on how you handle edge cases in your tools.
+  </FAQItem>
+
+  <FAQItem question="Can I use FunctionCallingAgent with Azure OpenAI?">
+    Yes. Use `llama_index.llms.azure_openai.AzureOpenAI` as your LLM and pass it to `FunctionCallingAgent.from_tools()`. Make sure your Azure deployment supports the function-calling API (GPT-4 and GPT-3.5 Turbo deployments do).
+  </FAQItem>
+</FAQ>
