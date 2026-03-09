@@ -1,0 +1,194 @@
+---
+title: >-
+  the email authentication chain: how SPF, DKIM, DMARC, and ARC actually work
+  together
+description: >-
+  SPF, DKIM, DMARC, and ARC form a chain of trust that decides whether your
+  email lands in the inbox or gets rejected. Here's how each layer works.
+date: '2026-03-09'
+author: Ian Bussières
+tags:
+  - email
+  - infrastructure
+  - security
+  - guides
+image: >-
+  /blog/the-email-authentication-chain-how-spf-dkim-dmarc-and-arc-actually-work-together.png
+imageAlt: >-
+  Pixel art lobster mascot illustration for email infrastructure — email
+  authentication chain SPF DKIM DMARC ARC
+publish_at: '2026-03-09T10:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-09T18:02:32.214Z'
+---
+Most people learn about email authentication backwards. They get a bounce, Google "why is my email going to spam," and land on a tutorial that tells them to add a DNS record. They add it. Things seem to work. Then three months later something breaks again and they're back to square one.
+
+The problem isn't any single protocol. It's that SPF, DKIM, DMARC, and ARC aren't independent features you toggle on. They form a chain. Each one builds on the last, and a failure at any link can tank your deliverability. Understanding the chain as a whole takes about ten minutes. It'll save you hours of debugging.
+
+## SPF: who's allowed to send
+
+SPF (Sender Policy Framework) answers one question: did this email come from a server that's authorized to send on behalf of this domain?
+
+When you publish an SPF record in your DNS, you're listing the IP addresses and mail servers that are allowed to send email as `@yourdomain.com`. When a receiving server gets a message claiming to be from your domain, it checks that list. If the sending server's IP matches, SPF passes. If it doesn't, SPF fails.
+
+Here's what a typical SPF record looks like:
+
+```dns
+v=spf1 ip4:203.0.113.5 include:_spf.google.com ~all
+This says: "Allow emails from IP `203.0.113.5`, allow anything Google's SPF record authorizes, and soft-fail everything else."
+
+SPF has a real limitation, though. It checks the *envelope sender* (the Return-Path header), not the From address that humans see in their inbox. An attacker can spoof the visible From address while using a different envelope sender that passes SPF just fine. That's why SPF alone isn't enough.
+
+There's also the forwarding problem. When someone forwards your email through a mailing list or a forwarding service, the message now comes from a different server. One that isn't in your SPF record. So SPF fails, even though the email is legitimate. This is the exact gap that ARC was designed to fill (more on that below).
+
+## DKIM: proving the message wasn't tampered with
+
+DKIM (DomainKeys Identified Mail) takes a different approach. Instead of checking where the email came from, it checks whether the email was modified in transit.
+
+When your mail server sends a message, it creates a cryptographic signature of specific headers and the body, then attaches that signature as a header. The receiving server looks up your public key (published as a DNS record) and verifies the signature. If the content matches, DKIM passes. If anyone altered the subject line, body, or signed headers along the way, DKIM fails.
+
+A DKIM signature header looks something like this:
+DKIM-Signature: v=1; a=rsa-sha256; d=yourdomain.com; s=selector1;
+  h=from:to:subject:date; bh=abc123...; b=xyz789...
+```
+
+The `d=` is your domain. The `s=` is the selector (you can have multiple keys). The `b=` is the actual signature.
+
+DKIM is strong because it's tied to the content, not the transport path. Even if the message gets forwarded through three different servers, the signature can still verify, as long as nobody changed the signed parts. But "as long as" is doing real work in that sentence. Mailing lists often modify subject lines (adding "[listname]" prefixes) or append footers, which breaks the DKIM signature.
+
+## DMARC: connecting SPF and DKIM to the From address
+
+Here's where things click together. SPF checks the envelope sender. DKIM checks content integrity. But neither one verifies that the From address the human reads is legitimate. DMARC (Domain-based Message Authentication, Reporting, and Conformance) bridges that gap.
+
+DMARC requires that at least one of SPF or DKIM passes *and* aligns with the domain in the From header. "Alignment" means the domain authenticated by SPF or DKIM matches (or is a subdomain of) the domain in the From address.
+
+So if your email says `From: hello@yourdomain.com`, DMARC checks:
+
+1. Did SPF pass for `yourdomain.com`? (Does the envelope sender's domain match?)
+2. Did DKIM pass with `d=yourdomain.com`? (Does the signing domain match?)
+
+If at least one of those passes with alignment, DMARC passes.
+
+A DMARC DNS record tells receiving servers what to do when authentication fails:
+
+```dns
+_dmarc.yourdomain.com  TXT  "v=DMARC1; p=reject; rua=mailto:reports@yourdomain.com"
+```
+
+The `p=` policy has three options:
+
+- `none`: monitor only, don't reject anything (good for initial setup)
+- `quarantine`: put failures in spam
+- `reject`: block failures entirely
+
+The `rua=` address receives aggregate reports showing who's sending email as your domain and whether they're passing or failing. These reports are gold for spotting unauthorized senders or configuration problems.
+
+In 2026, the standard is using all three: SPF published, DKIM signing enabled, and DMARC set to `reject`. Google and Yahoo started requiring DMARC for bulk senders in 2024, and most major providers now penalize domains without it.
+
+## ARC: preserving trust through forwarding
+
+This is the newest piece of the chain, and it solves the forwarding problem that has plagued email authentication for years.
+
+When an email gets forwarded through a mailing list, a forwarding service, or any intermediate server, SPF almost always breaks (the forwarding server isn't in the original SPF record). DKIM often breaks too (mailing lists modify headers or append content). Which means DMARC fails. Legitimate email gets rejected.
+
+ARC (Authenticated Received Chain) fixes this by letting each intermediate server record a snapshot of the authentication results it observed when it received the message. Think of it as a chain of custody. Each server in the path signs a set of three headers:
+
+- `ARC-Authentication-Results`: the SPF/DKIM/DMARC results this server saw
+- `ARC-Message-Signature`: a DKIM-like signature of the message at this point
+- `ARC-Seal`: a signature over the ARC headers themselves, preventing tampering with the chain
+
+Each set is numbered (`i=1`, `i=2`, `i=3`) so the final recipient can trace the authentication state at every hop.
+
+When the destination server receives the message and sees that SPF and DKIM have failed (because of forwarding), it can look at the ARC chain. If a trusted intermediate server recorded that the original authentication passed, the destination server can choose to honor that result instead of rejecting the message.
+
+ARC doesn't override DMARC. It gives receiving servers evidence to make a more informed decision. Gmail, Microsoft, and other major providers already evaluate ARC chains when making delivery decisions.
+
+## How the chain works end to end
+
+Here's the full sequence when your agent (or any sender) sends an email:
+
+1. Your server composes the email and signs it with DKIM.
+2. Your server sends the message. The receiving server checks SPF against the sending IP.
+3. The receiving server verifies the DKIM signature against your public key.
+4. The receiving server evaluates DMARC: did SPF or DKIM pass with domain alignment?
+5. If the message was forwarded through intermediaries, ARC headers provide a record of the original authentication results.
+6. Based on all of this, the receiving server delivers, quarantines, or rejects the message.
+
+Each protocol handles one piece. SPF validates the server. DKIM validates the content. DMARC ties both to the visible sender. ARC preserves trust across forwarding hops. Remove any link and the chain weakens.
+
+## What breaks in practice
+
+The most common failures aren't exotic attacks. They're configuration mistakes.
+
+**Forgetting to update SPF when adding a new sending service.** You start using a new CRM or transactional email provider, their servers aren't in your SPF record, and outbound email from that service starts failing.
+
+**DKIM key rotation.** DKIM keys should be rotated periodically, but if you update the private key on your mail server without publishing the new public key in DNS first, every outbound email fails DKIM validation until DNS propagates.
+
+**Overly strict DMARC before you're ready.** Jumping straight to `p=reject` without monitoring with `p=none` first means you'll reject legitimate email from services you forgot to authenticate.
+
+**Mailing list breakage without ARC.** If your recipients use mailing lists or forwarding rules and the intermediate servers don't support ARC, your emails may get rejected even though you've configured everything correctly on your end.
+
+## Getting it right
+
+Start with monitoring. Publish SPF and DKIM, set DMARC to `p=none`, and read the aggregate reports for a few weeks. You'll discover which services send email as your domain and whether they're properly authenticated.
+
+Once you're confident, move to `p=quarantine` and eventually `p=reject`. This gradual approach prevents you from accidentally blocking your own legitimate email.
+
+For agents that need to send and receive email autonomously, the authentication chain matters even more. An agent can't call IT when its outbound messages start bouncing. The infrastructure needs to handle SPF, DKIM, and DMARC correctly from the start. If you're looking for a simple way to give your agent email without configuring authentication records manually, [LobsterMail](/) handles the entire chain out of the box.
+
+The email authentication chain isn't complicated once you see how the pieces connect. Four protocols, one job: prove that an email is real.
+
+---
+
+<FAQ>
+  <FAQItem question="What is the email authentication chain?">
+    The email authentication chain refers to SPF, DKIM, DMARC, and ARC working together to verify that an email is legitimate. Each protocol handles one aspect of verification, and they build on each other to form a complete trust chain.
+  </FAQItem>
+
+  <FAQItem question="Do I need all four protocols (SPF, DKIM, DMARC, ARC)?">
+    SPF, DKIM, and DMARC are considered mandatory in 2026. ARC is handled by intermediate mail servers (forwarding services, mailing lists) rather than something you configure yourself, but supporting it on your receiving infrastructure helps preserve legitimate forwarded mail.
+  </FAQItem>
+
+  <FAQItem question="What happens if SPF fails but DKIM passes?">
+    DMARC only requires one of SPF or DKIM to pass with domain alignment. So if DKIM passes and aligns with your From domain, DMARC will still pass even if SPF fails.
+  </FAQItem>
+
+  <FAQItem question="Why does email forwarding break SPF?">
+    When an email is forwarded, it's sent from the forwarding server's IP address, which isn't listed in the original sender's SPF record. The receiving server sees an unauthorized IP and SPF fails. This is one of the main problems ARC was created to solve.
+  </FAQItem>
+
+  <FAQItem question="What DMARC policy should I start with?">
+    Start with `p=none` to monitor authentication results without affecting delivery. Review your DMARC aggregate reports for a few weeks, fix any issues, then move to `p=quarantine` and eventually `p=reject`.
+  </FAQItem>
+
+  <FAQItem question="How often should I rotate DKIM keys?">
+    Most security recommendations suggest rotating DKIM keys every 6 to 12 months. Always publish the new public key in DNS before switching the private key on your mail server to avoid a gap where signatures can't be verified.
+  </FAQItem>
+
+  <FAQItem question="Can an AI agent handle email authentication on its own?">
+    If the agent is using managed email infrastructure like [LobsterMail](/), authentication (SPF, DKIM, DMARC) is pre-configured. The agent doesn't need to manage DNS records or key rotation. If you're self-hosting, the agent would need access to DNS management APIs.
+  </FAQItem>
+
+  <FAQItem question="What is ARC and when was it introduced?">
+    ARC (Authenticated Received Chain) is an email authentication protocol defined in RFC 8617, published in 2019. It allows intermediate mail servers to record the original authentication results so that forwarded messages aren't incorrectly rejected by DMARC.
+  </FAQItem>
+
+  <FAQItem question="How do I read DMARC aggregate reports?">
+    DMARC aggregate reports are XML files sent to the address in your `rua=` tag. They show which IPs sent email as your domain and whether SPF/DKIM/DMARC passed or failed. Tools like DMARC Analyzer, Postmark's DMARC tool, or dmarcian can parse these into readable dashboards.
+  </FAQItem>
+
+  <FAQItem question="What's the difference between SPF hard fail and soft fail?">
+    In your SPF record, `-all` is a hard fail (reject unauthorized senders) and `~all` is a soft fail (flag but don't reject). Most domains use `~all` during initial setup and switch to `-all` once they've confirmed all legitimate senders are included.
+  </FAQItem>
+
+  <FAQItem question="Does DKIM encrypt my email?">
+    No. DKIM signs the email with a cryptographic signature to prove it hasn't been modified, but it doesn't encrypt the content. Anyone who intercepts the email can still read it. For encryption, you'd need TLS (in transit) or S/MIME/PGP (end to end).
+  </FAQItem>
+
+  <FAQItem question="What does DMARC alignment mean?">
+    Alignment means the domain authenticated by SPF or DKIM matches the domain in the visible From header. Without alignment, an attacker could pass SPF with their own domain while spoofing your domain in the From address. DMARC closes that loophole.
+  </FAQItem>
+</FAQ>
