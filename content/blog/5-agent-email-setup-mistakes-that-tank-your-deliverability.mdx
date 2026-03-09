@@ -1,0 +1,143 @@
+---
+title: 5 agent email setup mistakes that tank your deliverability
+description: >-
+  Most AI agents fail at email before sending a single message. Here are the
+  setup mistakes that destroy deliverability and how to avoid them.
+date: '2026-03-09'
+author: Samuel Chenard
+tags:
+  - email
+  - troubleshooting
+  - infrastructure
+  - guides
+  - openclaw
+image: /blog/5-agent-email-setup-mistakes-that-tank-your-deliverability.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — agent email
+  setup mistakes deliverability
+publish_at: '2026-03-09T07:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-09T20:51:46.793Z'
+---
+Your agent sent 200 emails last week. Twelve arrived in the primary inbox. The rest? Spam folders, bounced, or silently dropped into a void where no recipient will ever find them.
+
+Deliverability isn't a toggle you flip. It's the result of dozens of small decisions made during setup, and AI agents get most of them wrong by default. Not because agents are bad at email, but because email infrastructure was designed for humans who manually configure DNS records, warm up domains over weeks, and intuitively know not to blast 500 cold messages from a brand-new address on day one.
+
+Agents don't have that intuition. They have speed. And speed without proper setup is how you burn a domain in 48 hours.
+
+I've watched this pattern repeat across dozens of agent deployments. The mistakes are almost always the same five, and they're all fixable before you send your first message.
+
+## Mistake 1: skipping authentication records entirely
+
+SPF, DKIM, and DMARC aren't optional extras. They're the baseline that every receiving mail server checks before deciding whether your message is real or forged. Gmail, Outlook, and Yahoo all started enforcing strict authentication requirements in 2024, and the bar has only gotten higher since.
+
+Here's what happens when your agent sends email from a domain without proper records: the receiving server sees an unsigned message from an unverified source. Even if the content is perfectly legitimate, it looks identical to a phishing attempt. The server either rejects it outright (a 550 bounce) or quietly routes it to spam.
+
+The fix is straightforward. Before your agent sends anything, confirm three things:
+
+1. **SPF record** exists and includes your sending service's IP ranges
+2. **DKIM signing** is enabled and the public key is published in DNS
+3. **DMARC policy** is set (even `p=none` with reporting is better than nothing)
+
+If you're managing this yourself, that's a few hours of DNS configuration and propagation waiting. If your agent provisions its own inbox through a service like [LobsterMail](/), authentication is handled automatically at the infrastructure level.
+
+## Mistake 2: sending at full volume from a new address
+
+A thread on [r/Emailmarketing](https://www.reddit.com/r/Emailmarketing/comments/1pzxs30/before_2026_starts_what_is_one_email_marketing/) captured this perfectly. One user described their 2025 deliverability as "a total jump scare" with everything "rotting in the promo tab graveyard." The cause? They skipped warmup.
+
+Email warmup is the process of gradually increasing send volume so mailbox providers learn to trust your sending address. WarmySender's research suggests a minimum of 14 days, ideally 21, before running any real campaigns. Most agents don't wait 14 minutes.
+
+The math works against you here. A new domain or address has zero reputation. Sending 100 emails on day one from a zero-reputation address looks like spam to every major provider. Google's systems are especially aggressive about this. They track sender behavior patterns, and a sudden spike from an unknown sender triggers automated throttling.
+
+The warmup schedule doesn't need to be complicated:
+
+- **Days 1-3:** 5-10 emails per day to engaged recipients who will open and reply
+- **Days 4-7:** Scale to 20-30 per day
+- **Days 8-14:** Gradually increase toward your target daily volume
+- **Day 15+:** Full volume, assuming engagement metrics look healthy
+
+For agents that need email immediately (verification flows, one-off notifications), using a pre-warmed infrastructure provider sidesteps this entirely. Your agent gets a ready-to-use address backed by an already-established sending reputation.
+
+## Mistake 3: ignoring bounce signals
+
+When your agent gets a 550 rejection, that's the receiving server telling you something specific. The sub-code matters: `550 5.1.1` means the address doesn't exist. `550 5.7.1` means you were blocked for policy reasons. `550 5.7.25` means authentication failed.
+
+Most agent implementations I've seen treat all bounces identically. They either retry (making everything worse) or silently swallow the error and move on. Neither response is correct.
+
+Hard bounces (invalid addresses) need to be removed from your contact list permanently. Continuing to send to addresses that return 550 errors tells mailbox providers that you don't maintain your lists, which is a strong spam signal. After enough hard bounces, providers start penalizing all mail from your domain, not just the messages to bad addresses.
+
+Your agent should track bounce codes, categorize them, and act accordingly. Invalid address? Remove it. Authentication failure? Fix your DNS. Policy block? Check if you've been blacklisted and file a delisting request.
+
+## Mistake 4: using one inbox for everything
+
+Agents love efficiency. One inbox handles customer outreach, processes inbound verification emails, sends transactional notifications, and receives replies. Clean and simple, right?
+
+The problem is that mailbox providers evaluate reputation per sending address. When your agent sends marketing-style outreach and transactional emails from the same address, the lower engagement rates on outreach drag down deliverability for everything. Your verification emails start landing in spam because your sales emails had a 2% open rate.
+
+The fix: separate inboxes for separate purposes. At minimum, use different addresses for transactional email (confirmations, verifications, receipts) and discretionary email (outreach, follow-ups, newsletters). This isolates reputation so a problem in one stream doesn't poison the other.
+
+This is where agent-first email infrastructure pays for itself. When spinning up a new inbox takes one function call instead of a manual provisioning process, there's no reason to cram everything into a single address.
+
+## Mistake 5: writing content that triggers filters
+
+Even with perfect authentication, a warmed domain, clean lists, and separated inboxes, your agent can still land in spam by writing like a spammer.
+
+Content-based filtering has gotten smarter, but the triggers haven't changed much. Emails that are mostly images with minimal text get flagged (Mailmunch recommends at least 60% text). Excessive use of words like "free," "guarantee," "limited time," and "act now" still trip filters. Messages with no plain-text alternative, only HTML, look suspicious. And emails with mismatched "From" display names and actual sending addresses are a classic phishing indicator.
+
+For agents generating email content dynamically, add a content review step before sending. Check the text-to-image ratio. Scan for common spam trigger words. Ensure every HTML email includes a plain-text version. And always, always include a working unsubscribe mechanism for anything that resembles marketing.
+
+Bird's deliverability team emphasizes that [content and targeting together](https://bird.com/en-us/resources/blog/8-email-deliverability-mistakes-costing-you-revenue-(and-how-to-fix-them)) account for a significant portion of deliverability failures, often more than technical misconfigurations alone.
+
+## The compound effect
+
+These five mistakes interact with each other. An unauthenticated domain sending at full volume to a poorly maintained list from a single inbox with spammy content isn't just five problems. It's five problems multiplying each other. Each one makes the others harder to recover from.
+
+The good news is the reverse is also true. Fix authentication and your content-based filtering threshold gets more forgiving. Warm up properly and bounces decrease. Separate your inboxes and engagement metrics improve across the board.
+
+If you're building an agent that needs to send email reliably, treat deliverability as a first-class concern during setup, not something you debug after your domain gets blacklisted. The best time to fix these mistakes is before your agent sends its first message.
+
+For agents that need email without the configuration overhead, [LobsterMail](/) handles authentication, warmup, and inbox provisioning automatically. Your agent gets a working address in one call, backed by infrastructure that's already trusted by major providers.
+
+---
+
+<FAQ>
+  <FAQItem question="What is email deliverability for AI agents?">
+    Email deliverability is the percentage of emails your agent sends that actually reach the recipient's inbox (not spam, not bounced). For agents, it depends on authentication, sender reputation, content quality, and sending patterns.
+  </FAQItem>
+  <FAQItem question="How long does email warmup take?">
+    Minimum 14 days, ideally 21 days of gradually increasing send volume. During warmup, send to engaged recipients who are likely to open and reply, which builds positive reputation signals with mailbox providers.
+  </FAQItem>
+  <FAQItem question="What does a 550 email error mean?">
+    A 550 is a permanent rejection from the receiving mail server. The sub-code tells you why: `5.1.1` means invalid address, `5.7.1` means policy block, and `5.7.25` means authentication failed. Never retry a 550 without fixing the root cause.
+  </FAQItem>
+  <FAQItem question="Do AI agents need SPF, DKIM, and DMARC?">
+    Yes. Gmail, Outlook, and Yahoo all require proper authentication records. Without them, your agent's emails will be rejected or routed to spam regardless of content quality.
+  </FAQItem>
+  <FAQItem question="Why do my agent's emails go to spam?">
+    Common causes: missing authentication records, no warmup period, high bounce rates, image-heavy content with little text, spam trigger words, or sending marketing and transactional email from the same address.
+  </FAQItem>
+  <FAQItem question="Can my agent send emails immediately from a new address?">
+    Technically yes, but deliverability will be poor. New addresses have zero reputation. Services like LobsterMail provide pre-warmed infrastructure so agents can send reliably from the start.
+  </FAQItem>
+  <FAQItem question="How many inboxes should my agent use?">
+    At minimum two: one for transactional email (verifications, confirmations) and one for outreach or marketing. This prevents low engagement on outreach from hurting deliverability on transactional messages.
+  </FAQItem>
+  <FAQItem question="What's the ideal text-to-image ratio in agent emails?">
+    At least 60% text to 40% images. Emails that are mostly images with minimal text are flagged by spam filters as potential phishing or promotional spam.
+  </FAQItem>
+  <FAQItem question="How do I check if my domain is blacklisted?">
+    Use tools like MXToolbox, Spamhaus lookup, or Barracuda Reputation to check your domain and sending IPs. If blacklisted, follow the provider's delisting process and fix the underlying issue before requesting removal.
+  </FAQItem>
+  <FAQItem question="Is LobsterMail free to use?">
+    Yes, LobsterMail has a free tier at $0/month that includes send and receive capability with up to 1,000 emails per month. No credit card required, and your agent can self-provision without human signup.
+  </FAQItem>
+  <FAQItem question="What's the difference between a hard bounce and a soft bounce?">
+    A hard bounce (5xx) is permanent: the address doesn't exist or you're blocked. Remove it from your list immediately. A soft bounce (4xx) is temporary: the mailbox might be full or the server is down. Retrying later may work.
+  </FAQItem>
+  <FAQItem question="Does sending volume affect deliverability?">
+    Yes. Sudden spikes in volume from a new or low-reputation sender trigger automated throttling and spam classification. Gradual, consistent sending patterns build trust with mailbox providers.
+  </FAQItem>
+</FAQ>
