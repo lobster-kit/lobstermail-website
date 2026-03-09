@@ -2,6 +2,7 @@ import Image from "next/image";
 import type { ReactNode } from "react";
 import { docsComponents } from "@/components/docs/mdx-components";
 import { Callout } from "@/components/docs/Callout";
+import { BlogCTA } from "./BlogCTA";
 
 /* ─── Blog-specific Components ─── */
 
@@ -105,4 +106,5 @@ export const blogComponents: Record<string, React.ComponentType<any>> = {
   Callout,
   FAQ,
   FAQItem,
+  BlogCTA,
 };

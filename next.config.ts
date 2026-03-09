@@ -5,20 +5,31 @@ import { join } from "path";
 const nextConfig: NextConfig = {
   trailingSlash: false,
   async redirects() {
+    const fileRedirects: Array<{ source: string; destination: string; permanent: boolean }> = [];
     const redirectsPath = join(process.cwd(), "redirects.json");
-    if (!existsSync(redirectsPath)) return [];
-    try {
-      const data = JSON.parse(readFileSync(redirectsPath, "utf-8"));
-      return (data.redirects ?? []).map(
-        (r: { source: string; destination: string }) => ({
-          source: r.source,
-          destination: r.destination,
-          permanent: true,
-        })
-      );
-    } catch {
-      return [];
+    if (existsSync(redirectsPath)) {
+      try {
+        const data = JSON.parse(readFileSync(redirectsPath, "utf-8"));
+        for (const r of data.redirects ?? []) {
+          fileRedirects.push({
+            source: r.source,
+            destination: r.destination,
+            permanent: true,
+          });
+        }
+      } catch {}
     }
+
+    return [
+      // www → non-www canonical redirect
+      {
+        source: "/:path*",
+        has: [{ type: "host" as const, value: "www.lobstermail.ai" }],
+        destination: "https://lobstermail.ai/:path*",
+        permanent: true,
+      },
+      ...fileRedirects,
+    ];
   },
   async headers() {
     return [
