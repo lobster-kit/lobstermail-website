@@ -92,7 +92,7 @@ SMTP has a well-defined error system. Response codes in the 2xx range mean succe
 
 For humans, a bounce notification appears in the inbox and they figure it out. For agents, error handling needs to be automatic. A 421 response ("try again later") should trigger a backoff-and-retry loop. A 550 ("mailbox not found") should mark that address as invalid and stop attempting delivery.
 
-Rate limiting is the other concern. Most SMTP relay services enforce per-hour or per-day sending limits. An agent that hits the limit mid-workflow needs to queue remaining messages and resume later. Without this, the workflow just fails silently. If you're evaluating relay services for agent use, [agent email APIs compared: LobsterMail vs SendGrid vs Resend](/blog/agent-email-api-comparison) breaks down how each handles rate limits and error responses.
+Rate limiting is the other concern. Most SMTP relay services enforce per-hour or per-day sending limits. An agent that hits the limit mid-workflow needs to queue remaining messages and resume later. Without this, the workflow just fails silently. If you're evaluating relay services for agent use, [agent email APIs compared: LobsterMail vs SendGrid vs Resend](/blog/lobstermail-vs-popular-alternatives) breaks down how each handles rate limits and error responses.
 
 ## Choosing an SMTP relay approach for agents
 

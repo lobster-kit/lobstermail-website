@@ -99,7 +99,7 @@ Neither was designed for agents.
 
 Neither supports receiving email out of the box. SendGrid has an inbound parse [webhook](/glossary/webhook) that technically forwards incoming email to a URL, but it requires DNS configuration on a verified domain, behaves inconsistently, and isn't the same as a proper agent inbox. Both require a human to create an account, generate API keys, verify a sending domain, and configure everything before the agent can do anything at all.
 
-For sending at scale, bulk transactional email, notifications to thousands of users, they're the right choice and you probably already know it. [The comparison post](/blog/agent-email-api-comparison) covers the outbound tradeoffs in detail. For agents that need to receive email or operate without human setup, they're the wrong tool.
+For sending at scale, bulk transactional email, notifications to thousands of users, they're the right choice and you probably already know it. [The comparison post](/blog/lobstermail-vs-popular-alternatives) covers the outbound tradeoffs in detail. For agents that need to receive email or operate without human setup, they're the wrong tool.
 
 ## Self-hosted IMAP/SMTP
 
@@ -177,7 +177,7 @@ Getting the use case right before picking an API will save more time than any be
   </FAQItem>
 
   <FAQItem question="Can I use a custom domain with LobsterMail?">
-    Yes. You can provision inboxes at your own domain instead of `@lobstermail.ai`. Setup instructions are in the [custom domains guide](/docs/getting-started).
+    Yes. You can provision inboxes at your own domain instead of `@lobstermail.ai`. Setup instructions are in the [custom domains guide](/docs/custom-domains).
   </FAQItem>
 
   <FAQItem question="Should I self-host an email server for my AI agent?">

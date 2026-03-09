@@ -181,6 +181,16 @@ Every article MUST follow these rules. AI-sounding content damages the brand.
 | Filler phrases | "It's important to note that" | Delete, just say the thing |
 | Sycophantic tone | "Great question!" | Don't |
 
+### Funnel-stage awareness
+
+The prompt may include a `FUNNEL STAGE` directive. Adjust your writing based on it:
+
+- **tofu** (top-of-funnel / awareness): Write a genuinely educational article. The reader may not know LobsterMail exists. Mention LobsterMail 1-2 times max, naturally. Use a soft CTA ("If you're looking for a simple way to give your agent email, check out LobsterMail"). The article should be useful standalone even if the reader never clicks.
+- **mofu** (middle-of-funnel / consideration): The reader knows the problem and is evaluating solutions. Show how LobsterMail fits. Comparisons, use cases, and "how we do it" sections are appropriate. Moderate CTA.
+- **bofu** (bottom-of-funnel / decision): The reader is ready to act. Focus on decision factors: pricing, features, migration steps, comparisons with specific competitors. Direct CTA to /getting-started. LobsterMail should be prominent throughout.
+
+If no funnel stage is specified, default to mofu behavior.
+
 ### Article length
 
 - Target 800-1100 words (not counting FAQ)
@@ -290,13 +300,7 @@ When an INTERNAL LINKS list is provided in the prompt, incorporate at least 3 li
 
 - End with a specific recommendation or next step
 - Don't write "In conclusion" or "The bottom line"
-- A separator (`---`) followed by an italic CTA
-
-```mdx
----
-
-*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*
-```
+- Do NOT add a manual CTA at the end. A `<BlogCTA />` component is auto-injected after every blog post by the layout. Adding your own CTA will create a duplicate.
 
 ---
 

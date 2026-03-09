@@ -85,7 +85,7 @@ export default function PricingPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <Navbar />
-      <main className="pt-32">
+      <main className="pt-20">
         <Pricing />
         <FAQ />
       </main>

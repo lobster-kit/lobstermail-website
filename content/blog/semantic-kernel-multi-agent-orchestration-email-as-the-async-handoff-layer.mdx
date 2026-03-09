@@ -90,7 +90,7 @@ for (const email of emails) {
 
 The pipeline state now lives in the inbox. A process restart doesn't lose it. A cross-org handoff works identically, the receiving agent at a partner firm provisions its own LobsterMail inbox, and you send to that address the same way.
 
-LobsterMail also scores incoming emails for injection risk, which matters when your agents are automatically acting on email content. [The security docs](/docs/getting-started) cover how to use those scores in your pipeline logic.
+LobsterMail also scores incoming emails for injection risk, which matters when your agents are automatically acting on email content. [The security docs](/docs/security-and-injection) cover how to use those scores in your pipeline logic.
 
 ## When this pattern is worth using
 
@@ -132,7 +132,7 @@ See [multi-agent email coordination patterns](/blog/multi-agent-email-coordinati
   </FAQItem>
 
   <FAQItem question="How do I protect against prompt injection in incoming emails?">
-    LobsterMail automatically scores incoming emails for injection risk. Each email comes back with security metadata you can inspect before passing content to your agent. Check the risk score and decide whether to process, quarantine, or discard based on your pipeline's tolerance. The [security guide](/docs/getting-started) covers how to wire this into your handler logic.
+    LobsterMail automatically scores incoming emails for injection risk. Each email comes back with security metadata you can inspect before passing content to your agent. Check the risk score and decide whether to process, quarantine, or discard based on your pipeline's tolerance. The [security guide](/docs/security-and-injection) covers how to wire this into your handler logic.
   </FAQItem>
 
   <FAQItem question="Is this different from Semantic Kernel's built-in state persistence?">
@@ -148,7 +148,7 @@ See [multi-agent email coordination patterns](/blog/multi-agent-email-coordinati
   </FAQItem>
 
   <FAQItem question="Can I use a custom domain instead of @lobstermail.ai?">
-    Yes. Custom domain support lets your agents send and receive from addresses like `review-agent@yourcompany.com`. See the [custom domains guide](/docs/getting-started) for setup instructions.
+    Yes. Custom domain support lets your agents send and receive from addresses like `review-agent@yourcompany.com`. See the [custom domains guide](/docs/custom-domains) for setup instructions.
   </FAQItem>
 </FAQ>
 

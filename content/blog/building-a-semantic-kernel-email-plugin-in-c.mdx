@@ -149,7 +149,7 @@ This pattern covers the most common production use cases: service signups, confi
 
 When your agent reads email from the outside world, it's consuming untrusted input. Someone could send a message with text designed to hijack your agent's instructions. LobsterMail scores every inbound email for injection risk across multiple categories and returns that metadata alongside the message content.
 
-Check the risk score before passing email bodies into your agent's context. The [security docs](/docs/getting-started) cover how to use injection scores in your pipeline. If you're building agents that process external email regularly, [the prompt injection in email guide](/blog/what-is-prompt-injection-in-email) goes deeper on the threat model.
+Check the risk score before passing email bodies into your agent's context. The [security docs](/docs/security-and-injection) cover how to use injection scores in your pipeline. If you're building agents that process external email regularly, [the prompt injection in email guide](/blog/what-is-prompt-injection-in-email) goes deeper on the threat model.
 
 ## Going further: multi-agent handoffs
 
@@ -197,7 +197,7 @@ When you need more volume, the Builder plan at $9/month raises limits to 5,000 e
   </FAQItem>
 
   <FAQItem question="How does LobsterMail handle prompt injection in email content?">
-    Every inbound email is scored for injection risk across multiple categories (boundary manipulation, [system prompt](/glossary/system-prompt) override, data exfiltration, role hijacking, tool invocation, encoding tricks). The risk metadata comes back with the email so you can filter before your agent processes the body. See the [security guide](/docs/getting-started) for implementation details.
+    Every inbound email is scored for injection risk across multiple categories (boundary manipulation, [system prompt](/glossary/system-prompt) override, data exfiltration, role hijacking, tool invocation, encoding tricks). The risk metadata comes back with the email so you can filter before your agent processes the body. See the [security guide](/docs/security-and-injection) for implementation details.
   </FAQItem>
 
   <FAQItem question="What happens if the inbox name I request is already taken?">

@@ -195,7 +195,7 @@ LobsterMail returns an injection risk score with every email. It scans across si
 safe_emails = [e for e in emails if e.get("injection_risk", 0) <= 0.7]
 ```
 
-Log the high-risk ones for review rather than silently dropping them. You want visibility into what's being blocked. More detail on how the scoring works is in the [security and injection guide](/docs/getting-started).
+Log the high-risk ones for review rather than silently dropping them. You want visibility into what's being blocked. More detail on how the scoring works is in the [security and injection guide](/docs/security-and-injection).
 
 ## Where this pattern goes
 
@@ -213,7 +213,7 @@ PydanticAI handles the typed outputs. LobsterMail handles the inbox. Your agent 
   </FAQItem>
 
   <FAQItem question="Can I use PydanticAI with the LobsterMail [MCP](/glossary/mcp) server instead of direct API calls?">
-    Yes. LobsterMail ships an MCP server that exposes email tools without any code. PydanticAI supports MCP tool servers natively, so if you'd rather skip writing the httpx functions yourself, that's a clean alternative. See the [MCP server guide](/docs/getting-started) for setup.
+    Yes. LobsterMail ships an MCP server that exposes email tools without any code. PydanticAI supports MCP tool servers natively, so if you'd rather skip writing the httpx functions yourself, that's a clean alternative. See the [MCP server guide](/docs/mcp-server) for setup.
   </FAQItem>
 
   <FAQItem question="How many emails can I send on the free tier?">
@@ -221,7 +221,7 @@ PydanticAI handles the typed outputs. LobsterMail handles the inbox. Your agent 
   </FAQItem>
 
   <FAQItem question="Can my agent use a custom domain instead of @lobstermail.ai?">
-    Yes. LobsterMail supports custom domains so your agent's inbox can be `agent@yourcompany.com` rather than `@lobstermail.ai`. LobsterMail handles [SPF](/glossary/spf), [DKIM](/glossary/dkim), and [DMARC](/glossary/dmarc) configuration for you. See the [custom domains guide](/docs/getting-started) for the setup steps.
+    Yes. LobsterMail supports custom domains so your agent's inbox can be `agent@yourcompany.com` rather than `@lobstermail.ai`. LobsterMail handles [SPF](/glossary/spf), [DKIM](/glossary/dkim), and [DMARC](/glossary/dmarc) configuration for you. See the [custom domains guide](/docs/custom-domains) for the setup steps.
   </FAQItem>
 
   <FAQItem question="How does the injection risk score work?">
@@ -237,7 +237,7 @@ PydanticAI handles the typed outputs. LobsterMail handles the inbox. Your agent 
   </FAQItem>
 
   <FAQItem question="How do I get notified in real time when an email arrives, instead of polling?">
-    LobsterMail supports both webhooks and WebSockets. With webhooks, your server gets an HTTP POST the moment an email arrives, signed with HMAC-SHA256. With WebSockets, you subscribe to an inbox and receive push notifications. See the [webhooks guide](/docs/getting-started) or our [WebSocket tutorial](/blog/openclaw-real-time-email-notifications-with-websockets-a-working-tutorial).
+    LobsterMail supports both webhooks and WebSockets. With webhooks, your server gets an HTTP POST the moment an email arrives, signed with HMAC-SHA256. With WebSockets, you subscribe to an inbox and receive push notifications. See the [webhooks guide](/docs/webhooks) or our [WebSocket tutorial](/blog/openclaw-real-time-email-notifications-with-websockets-a-working-tutorial).
   </FAQItem>
 
   <FAQItem question="Can I use this REST API pattern with other Python agent frameworks?">

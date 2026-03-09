@@ -53,7 +53,7 @@ SendGrid has Inbound Parse, which forwards incoming email to a webhook as an HTT
 
 Both require a human to create an account, verify a domain, and generate API keys. Fine for application email. Not viable if you want your agent to provision its own inbox.
 
-SendGrid's Essentials plan starts at $15/month. Resend's Pro runs $20/month. Both are for sending only — you'd still need to build your own inbox infrastructure on top. We compared these in detail in [agent email APIs compared](/blog/agent-email-api-comparison).
+SendGrid's Essentials plan starts at $15/month. Resend's Pro runs $20/month. Both are for sending only — you'd still need to build your own inbox infrastructure on top. We compared these in detail in [agent email APIs compared](/blog/lobstermail-vs-popular-alternatives).
 
 ## AgentMail: agent email, enterprise-first
 
@@ -109,7 +109,7 @@ Different tools, different jobs. But if you're building autonomous agents that n
     LobsterMail's free tier gives your agent a receive-only inbox at no cost. AgentMail's free tier includes 3 inboxes with sending. Gmail is free but requires OAuth setup and puts the agent inside your personal inbox. For sending capability, LobsterMail's Builder plan at $9/month is the cheapest option with unlimited inboxes.
   </FAQItem>
   <FAQItem question="Can SendGrid or Resend receive email for my agent?">
-    SendGrid can forward inbound email to a webhook via Inbound Parse, but there's no persistent inbox or querying API. If your webhook endpoint is down, the message is lost. Resend has no inbound capability at all. Neither is suitable as an agent inbox. See our [detailed API comparison](/blog/agent-email-api-comparison).
+    SendGrid can forward inbound email to a webhook via Inbound Parse, but there's no persistent inbox or querying API. If your webhook endpoint is down, the message is lost. Resend has no inbound capability at all. Neither is suitable as an agent inbox. See our [detailed API comparison](/blog/lobstermail-vs-popular-alternatives).
   </FAQItem>
   <FAQItem question="Why shouldn't I just use Gmail for my agent?">
     Three reasons: OAuth tokens break and need human intervention, your agent lives inside your personal inbox (with access to your entire email history), and Gmail can't create new inboxes programmatically. At scale, it's $12/user/month with manual setup per account. We wrote a [full article on this](/blog/why-agent-shouldnt-use-gmail).

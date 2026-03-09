@@ -103,7 +103,7 @@ app.post('/mailgun-inbound', (req, res) => {
 const emails = await inbox.receive();
 ```
 
-If your workflow genuinely needs push delivery, you want to react to email the moment it arrives rather than polling, [webhooks are available](/docs/getting-started). But most agent patterns work better with pull: check for a verification code after signing up, check for a reply after sending a message. Poll when you need it, not on every POST from an external service.
+If your workflow genuinely needs push delivery, you want to react to email the moment it arrives rather than polling, [webhooks are available](/docs/webhooks). But most agent patterns work better with pull: check for a verification code after signing up, check for a reply after sending a message. Poll when you need it, not on every POST from an external service.
 
 ### 4. Drop the Mailgun parsing code
 
@@ -123,7 +123,7 @@ Each email also includes injection risk scoring. If you're passing email content
 
 LobsterMail handles both inbound and outbound from your agent's address. But if your team already uses Mailgun for customer-facing transactional email, receipts, notifications, password resets, there's no reason to touch that setup. The two tools don't conflict.
 
-Your agent uses LobsterMail for its own inbox. Your backend keeps using Mailgun for your main domain. Different use cases, clean separation. See [agent email APIs compared](/blog/agent-email-api-comparison) for a fuller breakdown of when each tool makes sense.
+Your agent uses LobsterMail for its own inbox. Your backend keeps using Mailgun for your main domain. Different use cases, clean separation. See [agent email APIs compared](/blog/lobstermail-vs-popular-alternatives) for a fuller breakdown of when each tool makes sense.
 
 ## One thing to watch
 
@@ -131,7 +131,7 @@ If you're currently receiving email on your own domain through Mailgun (`agent@y
 
 Custom domains are available if your agent needs to receive mail at your own domain. Worth considering if your agent's inbox is customer-visible or if you need continuity with an existing address. For internal agent-to-agent communication and external signups, `@lobstermail.ai` is fine.
 
-Also worth reading before you go live: the [security and injection guide](/docs/getting-started). Email coming into your agent's context from arbitrary senders is an injection surface. LobsterMail's risk scoring gives you a signal. [Webhooks vs polling](/blog/webhooks-vs-polling-email) covers the delivery model tradeoffs in more depth if you're on the fence about which approach fits your architecture.
+Also worth reading before you go live: the [security and injection guide](/docs/security-and-injection). Email coming into your agent's context from arbitrary senders is an injection surface. LobsterMail's risk scoring gives you a signal. [Webhooks vs polling](/blog/webhooks-vs-polling-email) covers the delivery model tradeoffs in more depth if you're on the fence about which approach fits your architecture.
 
 For agents that need a custom domain from the start, [custom domains for agent email](/blog/custom-domains-agent-email) walks through that setup.
 
@@ -175,7 +175,7 @@ For agents that need a custom domain from the start, [custom domains for agent e
   </FAQItem>
 
   <FAQItem question="How does LobsterMail protect against prompt injection through email?">
-    Every received email includes an injection risk score. If incoming content contains patterns commonly used for prompt injection attacks, LobsterMail flags it before your agent processes the email body. The [security and injection guide](/docs/getting-started) covers the model in detail.
+    Every received email includes an injection risk score. If incoming content contains patterns commonly used for prompt injection attacks, LobsterMail flags it before your agent processes the email body. The [security and injection guide](/docs/security-and-injection) covers the model in detail.
   </FAQItem>
 
   <FAQItem question="Does my agent need to manage its own API key?">

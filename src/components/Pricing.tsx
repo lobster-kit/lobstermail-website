@@ -19,7 +19,7 @@ const proPlanFeatures = [
 
 export function Pricing() {
   return (
-    <section className="px-6 py-28 sm:py-36">
+    <section className="px-6 pb-28 pt-0 sm:pb-36 sm:pt-0">
       <div className="mx-auto max-w-6xl text-center">
         <FadeIn>
           <div className="mb-5 flex justify-center">

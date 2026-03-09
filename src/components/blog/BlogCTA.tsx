@@ -28,8 +28,8 @@ export function BlogCTA({ variant = "soft" }: BlogCTAProps) {
 
         <p className="max-w-md text-sm leading-relaxed text-secondary">
           {variant === "direct"
-            ? "Install the skill, and your agent creates its own inbox. No API keys, no human signup."
-            : "LobsterMail lets your agent create inboxes, send and receive email on its own. Free to start."}
+            ? "Give your agent these instructions and it sets up its own inbox. No API keys, no human signup."
+            : "Give your agent these instructions and it creates its own inbox, sends and receives email on its own. Free to start."}
         </p>
 
         <div className="w-full max-w-sm">
@@ -40,12 +40,6 @@ export function BlogCTA({ variant = "soft" }: BlogCTAProps) {
         </div>
 
         <div className="flex flex-wrap items-center justify-center gap-4">
-          <Link
-            href="/getting-started"
-            className="rounded-lg border-2 border-accent bg-accent/10 px-5 py-2 text-sm font-medium text-accent shadow-[0_4px_8px_3px_rgba(251,87,5,0.15),0_1px_3px_0_rgba(0,0,0,0.30)] transition-all hover:bg-accent/20 hover:shadow-[0_6px_12px_3px_rgba(251,87,5,0.20),0_2px_4px_0_rgba(0,0,0,0.30)]"
-          >
-            Get started free
-          </Link>
           <Link
             href="/docs"
             className="link-underline text-sm text-secondary transition-colors hover:text-foreground"

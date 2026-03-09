@@ -117,7 +117,7 @@ Feed the result into the next node in your flow. The regex handles predictable f
 
 ### A note on the risk score
 
-LobsterMail returns a `riskScore` with every received email. That's there to flag prompt injection attempts, cases where a bad actor sends a malicious instruction disguised as a verification code or legitimate reply. For most Flowise chatflows this isn't the primary concern, but if your flow acts autonomously on inbound content, it's worth checking. More on how that works in the [security and injection guide](/docs/guides/security-and-injection).
+LobsterMail returns a `riskScore` with every received email. That's there to flag prompt injection attempts, cases where a bad actor sends a malicious instruction disguised as a verification code or legitimate reply. For most Flowise chatflows this isn't the primary concern, but if your flow acts autonomously on inbound content, it's worth checking. More on how that works in the [security and injection guide](/docs/security-and-injection).
 
 ## Managing inboxes as your chatflows scale
 
@@ -161,11 +161,11 @@ The Gmail node is fine for what it was designed for. For chatflows that need iso
   </FAQItem>
 
   <FAQItem question="How do I receive emails in real time instead of polling?">
-    LobsterMail supports webhooks, it can POST to a URL whenever new mail arrives. See the [webhooks guide](/docs/guides/webhooks) for setup. For most Flowise chatflows that run in response to user input, polling with `receive()` is simpler and works fine.
+    LobsterMail supports webhooks, it can POST to a URL whenever new mail arrives. See the [webhooks guide](/docs/webhooks) for setup. For most Flowise chatflows that run in response to user input, polling with `receive()` is simpler and works fine.
   </FAQItem>
 
   <FAQItem question="What email addresses do agents get by default?">
-    `createSmartInbox({ name: 'your-agent' })` generates `your-agent@lobstermail.ai`. It handles collisions automatically by trying variations. You can also bring your own domain, see the [custom domains guide](/docs/guides/custom-domains).
+    `createSmartInbox({ name: 'your-agent' })` generates `your-agent@lobstermail.ai`. It handles collisions automatically by trying variations. You can also bring your own domain, see the [custom domains guide](/docs/custom-domains).
   </FAQItem>
 
   <FAQItem question="Does this work with n8n, Make, or other no-code tools?">
@@ -177,6 +177,6 @@ The Gmail node is fine for what it was designed for. For chatflows that need iso
   </FAQItem>
 
   <FAQItem question="Can I send emails from a custom domain instead of @lobstermail.ai?">
-    Yes. LobsterMail supports custom domains on paid plans. The address your chatflow sends from can match your own domain rather than the default `@lobstermail.ai`. See the [custom domains guide](/docs/guides/custom-domains).
+    Yes. LobsterMail supports custom domains on paid plans. The address your chatflow sends from can match your own domain rather than the default `@lobstermail.ai`. See the [custom domains guide](/docs/custom-domains).
   </FAQItem>
 </FAQ>

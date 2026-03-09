@@ -80,7 +80,7 @@ Self-signup provisioning sidesteps all of that. The agent owns its inbox. No hum
 
 ## When you need it, and when you don't
 
-Not every agent needs self-signup provisioning. If your agent only sends outbound email, notifications, report delivery, order confirmations, a standard transactional email API handles that cleanly. [See how they compare for agent use cases](/blog/agent-email-api-comparison) before picking an approach.
+Not every agent needs self-signup provisioning. If your agent only sends outbound email, notifications, report delivery, order confirmations, a standard transactional email API handles that cleanly. [See how they compare for agent use cases](/blog/lobstermail-vs-popular-alternatives) before picking an approach.
 
 Self-signup provisioning is the right pattern when your agent needs to *receive* email, when it needs an identity independent of any human account, or when you need provisioning to happen without a manual setup step. If all three of those are true, you want infrastructure built for this purpose.
 
@@ -120,7 +120,7 @@ For a walkthrough of the full flow in practice, [agent self-signup, explained](/
   </FAQItem>
 
   <FAQItem question="Is it secure for an agent to process email it receives this way?">
-    LobsterMail includes built-in [prompt injection](/glossary/prompt-injection) detection. Every incoming email is scored for injection risk before being returned to the agent, which matters when the agent is processing email content from external senders it didn't solicit. See the [security guide](/docs/getting-started) for details.
+    LobsterMail includes built-in [prompt injection](/glossary/prompt-injection) detection. Every incoming email is scored for injection risk before being returned to the agent, which matters when the agent is processing email content from external senders it didn't solicit. See the [security guide](/docs/security-and-injection) for details.
   </FAQItem>
 
   <FAQItem question="Does this work with any AI agent framework?">
