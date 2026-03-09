@@ -1,0 +1,244 @@
+---
+title: 'clawhub login and clawhub whoami: authenticating with the clawhub cli'
+description: >-
+  Learn how to authenticate with the ClawHub CLI using clawhub login, verify
+  your identity with clawhub whoami, and troubleshoot common auth issues.
+date: '2026-03-09'
+author: Samuel Chenard
+tags:
+  - openclaw
+  - guides
+  - infrastructure
+  - getting-started
+image: /blog/clawhub-login-and-clawhub-whoami-authenticating-with-the-clawhub-cli.png
+imageAlt: >-
+  Pixel art lobster mascot illustration for email infrastructure — clawhub login
+  command or clawhub whoami
+publish_at: '2026-03-09T10:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-09T20:51:46.844Z'
+---
+You installed the ClawHub CLI, ran your first command, and got hit with a `401 Unauthorized` error. Or maybe you're staring at the docs wondering whether to use the browser flow, paste a token, or set an environment variable. Authentication shouldn't be the hard part, but it's the first wall most people hit when working with OpenClaw skills.
+
+Here's the short version of everything you need to know.
+
+## How to authenticate with ClawHub CLI
+
+1. Run `clawhub login` to open a browser-based authentication flow that links your CLI to your ClawHub account.
+2. If you don't have a browser available, run `clawhub login --token <token>` to paste an API token directly.
+3. Run `clawhub whoami` to verify which account is currently authenticated and confirm the login worked.
+4. For headless or automated environments, set `export CLAWHUB_AUTH="your-auth-here"` to authenticate without any interactive flow.
+
+That covers 90% of use cases. The rest of this article digs into what each command does, when to pick one method over another, and what to do when things break.
+
+## What is ClawHub and why does auth matter?
+
+ClawHub is the skill directory and package manager for OpenClaw. Think of it like npm, but for agent skills. You use the `clawhub` CLI to search, install, update, and manage skills that extend what your agent can do.
+
+Authentication ties every action back to your account. When you install a private skill, publish your own, or access rate-limited endpoints, ClawHub needs to know who you are. Without valid auth, you're limited to unauthenticated read-only operations, and most of the useful stuff (installing skills, managing versions, publishing) requires a logged-in session.
+
+## The browser login flow
+
+Running `clawhub login` with no flags starts an interactive browser-based flow. The CLI opens your default browser to ClawHub's OAuth page, you sign in (or confirm if you're already signed in), and the CLI receives a token that gets stored locally.
+
+```bash
+clawhub login
+The CLI prints a URL and waits. If your browser doesn't open automatically, copy the URL and paste it manually. Once you approve the session in the browser, the terminal confirms the login:
+✓ Logged in as @your-handle
+```
+
+This is the recommended flow for local development. It's the simplest path and the token it generates has the correct scopes for most operations.
+
+After logging in, the token is persisted to disk so you don't need to re-authenticate every session. On most systems, it's stored in `~/.config/clawhub/auth.json` (or the equivalent XDG config path). The file contains your token and account metadata.
+
+## Token-based login for headless environments
+
+The browser flow assumes you have a display and a browser. That's not always true. CI/CD runners, remote servers, Docker containers, and autonomous agents often run without any GUI. For those cases, you generate a token on the ClawHub website and pass it directly:
+
+```bash
+clawhub login --token lm_ch_live_abc123...
+```
+
+You can generate API tokens from your ClawHub account settings page. Each token can be scoped to specific permissions (read-only, install, publish) and given an expiry date. For CI/CD, I'd recommend creating a dedicated token with the minimum permissions needed and rotating it every 90 days.
+
+The `--token` flag writes the same auth file as the browser flow. From that point on, all CLI commands use that token automatically.
+
+### The environment variable alternative
+
+There's a third option that doesn't write anything to disk:
+
+```bash
+export CLAWHUB_AUTH="lm_ch_live_abc123..."
+```
+
+When `CLAWHUB_AUTH` is set, the CLI uses it instead of checking the auth file. This is useful in ephemeral environments where you don't want tokens persisted to the filesystem. GitHub Actions secrets, for example, work well with this pattern:
+
+```yaml
+- name: Install OpenClaw skills
+  env:
+    CLAWHUB_AUTH: ${{ secrets.CLAWHUB_TOKEN }}
+  run: clawhub install my-skill
+```
+
+The priority order is: environment variable > auth file > unauthenticated. If both are set, the environment variable wins.
+
+## Verifying your identity with clawhub whoami
+
+After logging in (by any method), confirm it worked:
+
+```bash
+clawhub whoami
+```
+
+This makes a network call to the ClawHub API and returns your authenticated handle:
+
+```
+@your-handle
+```
+
+If you're not logged in, you'll get:
+
+```
+Not authenticated. Run `clawhub login` to sign in.
+```
+
+And if your token has expired or been revoked:
+
+```
+401 Unauthorized — your token may have expired. Run `clawhub login` to re-authenticate.
+```
+
+One thing to note: `clawhub whoami` requires a network connection. It's not reading from a local cache. It's hitting the `/v1/auth/whoami` endpoint to confirm the token is still valid. If you're offline, the command will fail even if your stored token is technically fine.
+
+This makes `whoami` a good health check in CI pipelines. Run it at the start of your workflow to fail fast if credentials are misconfigured:
+
+```bash
+clawhub whoami || { echo "Auth failed"; exit 1; }
+```
+
+## Side-by-side comparison of auth methods
+
+| Method | Interactive? | Persists to disk? | Best for |
+|---|---|---|---|
+| `clawhub login` (browser) | Yes | Yes | Local development |
+| `clawhub login --token` | No | Yes | Servers, first-time headless setup |
+| `CLAWHUB_AUTH` env var | No | No | CI/CD, containers, ephemeral environments |
+
+All three methods result in the same outcome: an authenticated CLI session. The differences are in how the token gets delivered and stored.
+
+## Logging out and switching accounts
+
+To clear your stored credentials:
+
+```bash
+clawhub logout
+```
+
+This deletes the local auth file. Your token on the server side is not revoked, so if someone copied the token, it would still work until it expires. To fully invalidate a token, revoke it from your ClawHub account settings page.
+
+If you need to switch accounts, log out first and then log in again:
+
+```bash
+clawhub logout
+clawhub login
+```
+
+ClawHub doesn't support multiple simultaneous accounts in the CLI. You get one active session at a time. If you need to work with two accounts (say, a personal and an org account), you can swap between them using environment variables per terminal session:
+
+```bash
+# Terminal 1
+export CLAWHUB_AUTH="personal-token"
+
+# Terminal 2
+export CLAWHUB_AUTH="org-token"
+```
+
+## Troubleshooting auth failures
+
+Most auth problems fall into one of four categories.
+
+**Expired token.** Tokens generated from account settings have configurable expiry. Browser-flow tokens last longer but aren't permanent. Fix: run `clawhub login` again or generate a new token.
+
+**Revoked token.** If you (or an admin) revoked the token from the web dashboard, the CLI will get 401s on every request. The `clawhub whoami` command is the fastest way to confirm this. Fix: generate a new token and re-authenticate.
+
+**Wrong priority.** You have `CLAWHUB_AUTH` set in your shell profile, but you logged in with a different account via `clawhub login`. The environment variable takes priority, so the CLI uses the old token. Fix: unset the variable with `unset CLAWHUB_AUTH` or update it to the correct token.
+
+**Corrupted auth file.** Rare, but it happens. If `~/.config/clawhub/auth.json` gets partially written (say, during a crash), the CLI can't parse it. Fix: delete the file manually and run `clawhub login` again.
+
+```bash
+rm ~/.config/clawhub/auth.json
+clawhub login
+```
+
+## Using ClawHub auth in agent workflows
+
+If you're building agents with OpenClaw, your agent might need to install or update skills as part of its workflow. The `CLAWHUB_AUTH` environment variable is the cleanest approach here: set the token in the agent's environment, and every `clawhub` command the agent runs will authenticate automatically.
+
+For agents that manage their own email (signing up for services, receiving verification codes, handling notifications), you'll want a separate layer of infrastructure. We built [LobsterMail](/) specifically for this: your agent provisions its own inbox without human intervention, receives emails, and extracts what it needs. It pairs well with ClawHub-managed skills because the agent can handle the full lifecycle (install a skill, sign up for a service using its own email, activate with the verification code) without a human in the loop.
+
+<Callout type="tip">
+  If your agent needs to receive email as part of a ClawHub skill workflow, check out our [getting started guide](/docs/getting-started). Your agent can hatch its own inbox in two lines of code.
+</Callout>
+
+## Quick reference
+
+| Command | What it does |
+|---|---|
+| `clawhub login` | Opens browser auth flow |
+| `clawhub login --token <t>` | Authenticates with an API token |
+| `clawhub whoami` | Shows the currently authenticated user |
+| `clawhub logout` | Clears local credentials |
+| `export CLAWHUB_AUTH=<t>` | Sets auth via environment variable |
+
+The ClawHub CLI makes authentication straightforward once you know which method fits your environment. For local work, use the browser flow. For servers and CI, use token-based auth or the environment variable. And always run `clawhub whoami` after setup to confirm you're good.
+
+<FAQ>
+  <FAQItem question="What does the clawhub login command actually do under the hood?">
+    It starts a local HTTP server, opens your browser to ClawHub's OAuth page, waits for the callback with an auth token, and saves that token to `~/.config/clawhub/auth.json`. The entire flow happens in a few seconds.
+  </FAQItem>
+  <FAQItem question="How do I use clawhub login --token if I don't have a browser available?">
+    Generate an API token from your ClawHub account settings page, then run `clawhub login --token <your-token>`. The CLI stores it locally and uses it for all future commands.
+  </FAQItem>
+  <FAQItem question="What does clawhub whoami return?">
+    It makes a network call to the ClawHub API's `/v1/auth/whoami` endpoint and prints your authenticated handle (e.g., `@your-handle`). If you're not authenticated, it tells you to run `clawhub login`.
+  </FAQItem>
+  <FAQItem question="What happens if my ClawHub token is revoked?">
+    Every CLI command that requires auth will return a `401 Unauthorized` error. Run `clawhub login` to re-authenticate with a new token, or generate a fresh token from your account settings and use `clawhub login --token`.
+  </FAQItem>
+  <FAQItem question="How do I set the CLAWHUB_AUTH environment variable for manual authentication?">
+    Run `export CLAWHUB_AUTH="your-token-here"` in your terminal. This takes priority over any stored auth file. For persistent use, add it to your shell profile (`.bashrc`, `.zshrc`) or your CI/CD secrets.
+  </FAQItem>
+  <FAQItem question="Can I use clawhub login in a CI/CD pipeline?">
+    The browser flow won't work in CI since there's no display. Use `clawhub login --token <token>` or set the `CLAWHUB_AUTH` environment variable instead. The env var approach is preferred because it doesn't write credentials to disk.
+  </FAQItem>
+  <FAQItem question="Is there a difference between the browser flow and token-based login?">
+    Both result in a stored token and an authenticated session. The browser flow handles OAuth automatically. Token-based login skips the browser and takes a pre-generated token directly. The end result is identical.
+  </FAQItem>
+  <FAQItem question="Where is my ClawHub auth token stored after login?">
+    On most systems, it's stored in `~/.config/clawhub/auth.json`. This file contains your token and account metadata. You can delete it manually to clear credentials, or use `clawhub logout`.
+  </FAQItem>
+  <FAQItem question="Can I have multiple ClawHub accounts authenticated simultaneously?">
+    Not in a single CLI session. The CLI supports one active account at a time. To work with multiple accounts, use different `CLAWHUB_AUTH` environment variables in separate terminal sessions.
+  </FAQItem>
+  <FAQItem question="Does clawhub whoami work offline?">
+    No. It makes a live API call to verify your token. If you're offline, the command will fail even if your locally stored token is valid.
+  </FAQItem>
+  <FAQItem question="How do I fix a 401 Unauthorized error from clawhub whoami?">
+    Your token is either expired, revoked, or misconfigured. Run `clawhub logout`, then `clawhub login` to get a fresh token. Also check if a stale `CLAWHUB_AUTH` environment variable is overriding your auth file.
+  </FAQItem>
+  <FAQItem question="What is OpenClaw and how does ClawHub relate to it?">
+    OpenClaw is an open ecosystem for AI agent skills. ClawHub is its package manager and skill directory, like npm is to Node.js. You use the `clawhub` CLI to search, install, publish, and manage OpenClaw skills.
+  </FAQItem>
+  <FAQItem question="How do I rotate my ClawHub API token?">
+    Generate a new token from your ClawHub account settings, revoke the old one, then run `clawhub login --token <new-token>` or update your `CLAWHUB_AUTH` environment variable.
+  </FAQItem>
+  <FAQItem question="What does the --no-input flag do during login?">
+    It suppresses interactive prompts, which is useful in automated scripts. Combined with `--token`, it ensures the login flow never blocks waiting for user input.
+  </FAQItem>
+  <FAQItem question="How do I completely log out and switch to a different ClawHub account?">
+    Run `clawhub logout` to clear stored credentials, then `clawhub login` to authenticate with the new account. If you have `CLAWHUB_AUTH` set in your environment, unset it first with `unset CLAWHUB_AUTH`.
+  </FAQItem>
+</FAQ>
