@@ -1,0 +1,171 @@
+---
+title: >-
+  agent swarm shared email queue architecture: how to coordinate multiple agents
+  on one inbox
+description: >-
+  Compare transport layers for agent swarm email queues. Learn how multiple
+  agents claim, lock, and process emails without duplicating work.
+date: '2026-03-09'
+author: Ian Bussières
+tags:
+  - infrastructure
+  - email
+  - automation
+  - guides
+image: >-
+  /blog/agent-swarm-shared-email-queue-architecture-how-to-coordinate-multiple-agents-on-one-inbox.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — agent swarm
+  shared email queue architecture
+publish_at: '2026-03-09T12:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-09T16:51:28.683Z'
+---
+You've got five agents. One inbox. Emails are landing every few seconds. Each agent grabs whatever it can, processes it, fires off a reply. Sounds fine until two agents grab the same email and send duplicate responses to your most important client.
+
+This is the core coordination problem in any agent swarm shared email queue architecture. It's not a theoretical concern. The moment you scale past a single agent handling a single inbox, you need answers to three questions: how do agents claim work, how do you prevent duplicates, and what happens when an agent dies mid-task?
+
+I've seen teams bolt together Redis, IMAP flag hacks, and prayer. Some of those setups work. Most don't survive their first real load spike. Here's what actually matters when you're choosing a transport layer and coordination pattern for multi-agent email processing.
+
+## Shared email queue architecture options compared
+
+Before getting into the details, here's the quick comparison. If you're evaluating backends for your agent swarm's email queue, this table covers the main tradeoffs.
+
+| Transport layer | Durability | Concurrency control | Email-native | Best for |
+|---|---|---|---|---|
+| Filesystem mailbox | Moderate (disk-dependent) | File locks, rename-based claiming | Yes (Maildir) | Small swarms, local dev, prototyping |
+| Redis Streams | High (with AOF persistence) | Consumer groups, XACK | No | Low-latency swarms with existing Redis |
+| AWS SQS | Very high (replicated) | Visibility timeout, delete-on-complete | No | Cloud-native swarms needing guaranteed delivery |
+| IMAP flag locking | Moderate (server-dependent) | Custom flags, STORE commands | Yes | Legacy mailboxes you can't migrate off |
+| Dedicated email API | High (provider-managed) | Built-in claim/lock per message | Yes | Purpose-built agent email workflows |
+
+Each option has real tradeoffs. Let's break them down.
+
+## Filesystem mailboxes: boring and effective
+
+The Decode Claude architecture blog makes a smart observation: Claude Code's inter-agent transport uses filesystem mailboxes. Not because files are the best queue, but because they're persistent, auditable, and survive restarts. For email specifically, the Maildir format gives you one file per message. An agent claims a message by moving it from `new/` to `cur/` with a rename operation. Renames are atomic on most filesystems, so you get basic concurrency control for free.
+
+The downside? Filesystem mailboxes don't scale horizontally. If your agents run on different machines, you need a shared filesystem (NFS, EFS), and now you're dealing with lock contention over a network. For a two-agent swarm on one box, it's perfect. For ten agents across three servers, look elsewhere.
+
+## Redis Streams and consumer groups
+
+Redis Streams were designed for exactly this pattern. You push emails into a stream, create a consumer group, and each agent reads via `XREADGROUP`. Redis guarantees that each message goes to exactly one consumer in the group. When the agent finishes processing, it sends `XACK` to confirm completion.
+
+If an agent crashes before acknowledging, the message stays in its "pending entries list." Another agent can claim it after a timeout using `XCLAIM`. This gives you at-least-once delivery, which is what you want for email. Missing an email is worse than processing it twice (as long as your send logic is idempotent).
+
+The catch: Redis isn't email-native. You need a separate process to receive inbound email and push it into the stream. That's another component to monitor. If you're already running Redis for caching or session state, adding Streams is a natural extension. If you're spinning up Redis solely for email coordination, you might be overcomplicating things.
+
+## IMAP flag locking: the hack that works (sometimes)
+
+Some teams skip the external queue entirely and use the inbox itself as the queue. The idea: agents connect via IMAP, scan for unprocessed messages, set a custom flag like `\AgentClaimed` via STORE, and process only messages they successfully flagged.
+
+This works if your IMAP server handles concurrent flag updates correctly. Gmail's IMAP, for instance, has eventual consistency on labels, which means two agents can both think they claimed the same message. Dovecot with proper locking is more reliable. But you're building coordination logic on top of a protocol that was designed for human mail clients in the 1990s. Every edge case (network timeout during STORE, agent crash after flag but before processing) needs custom handling.
+
+I'd only recommend this if you're stuck with an existing mailbox you can't migrate. If you're starting fresh, use something purpose-built.
+
+## Dedicated email APIs: the inbox as a queue primitive
+
+This is where agent-first email infrastructure comes in. Instead of bolting a queue onto an email service, the email service *is* the queue. Each message has a status. Agents fetch unclaimed messages, the API locks them during processing, and completion is confirmed with a simple call.
+
+If you're [running 50 agent inboxes without losing your mind (or your budget)](/blog/running-50-agent-inboxes), this approach scales cleanly because the queue semantics are built into the email layer itself. No Redis, no IMAP hacks, no filesystem coordination. LobsterMail's inbox API works this way: agents call `receive()`, get messages with metadata, and the platform handles deduplication. For swarm architectures, you can point multiple agents at the same inbox and each one gets distinct messages.
+
+The tradeoff is vendor dependency. You're trusting the email provider to get queue semantics right. But that's the same tradeoff you make with SQS, Kafka, or any managed queue service.
+
+## Priority lanes and specialist routing
+
+Real email workloads aren't uniform. A password reset from Stripe matters more than a newsletter from a SaaS tool your agent signed up for last week. A swarm architecture needs priority lanes.
+
+The simplest pattern: route inbound email by sender or subject into separate queues (or tagged subsets of one queue). A triage agent scans each message, assigns a priority score, and routes it to the right specialist. Billing questions go to the billing agent. Support requests go to the support agent. Everything else goes to the general pool.
+
+This is where [multi-agent email: when agents need to talk to each other](/blog/multi-agent-email-coordination) gets interesting. The triage agent becomes your orchestrator, and the specialists become workers. The orchestrator doesn't process email itself. It reads, classifies, and routes.
+
+For priority within a single queue, most backends support it differently. SQS has separate FIFO queues per priority level. Redis Streams can use multiple streams with weighted reading. A dedicated email API might expose priority as a filter parameter on the receive call. Pick whichever matches your backend.
+
+## Fault tolerance: what happens when an agent dies
+
+An agent claims an email, starts processing it, and crashes. What now?
+
+The answer depends on your delivery guarantee. With at-least-once delivery (Redis Streams, SQS), the message returns to the queue after a timeout and another agent picks it up. This means your email-sending logic needs to be idempotent. Check whether a reply was already sent before sending again.
+
+With exactly-once delivery (which is hard to achieve in distributed systems and most solutions are really "effectively once"), you need a transaction log. The agent writes "I'm processing message X" to a shared store, processes it, then writes "message X complete." Other agents check this log before claiming.
+
+For most email swarms, at-least-once with idempotent sends is the right choice. It's simpler to implement, easier to debug, and the failure mode (occasionally checking if a reply already went out) is much cheaper than the complexity of exactly-once coordination.
+
+## Observability: what to track per message
+
+When something goes wrong in a five-agent swarm, you need to reconstruct what happened. At minimum, log these fields per message:
+
+- Message ID and timestamp of arrival
+- Which agent claimed it and when
+- Processing duration
+- Outcome (replied, forwarded, archived, errored)
+- If errored, the error type and whether it was retried
+
+If you're using [webhooks vs polling](/blog/webhooks-vs-polling-email) to trigger your agents, add the webhook delivery timestamp too. The gap between "email arrived" and "agent started processing" is your queue latency, and it's the first metric that degrades under load.
+
+## The minimum viable two-agent swarm
+
+If you're just getting started with multi-agent email, here's the smallest useful architecture:
+
+1. **One shared inbox** receiving all inbound email
+2. **Agent A** (triage): reads new messages, classifies them, tags them by type
+3. **Agent B** (worker): picks up tagged messages and handles responses
+
+Agent A runs on a short polling interval (or webhook trigger). Agent B watches for tagged messages. The "queue" is the inbox itself, with tags acting as claim markers. No Redis, no SQS, no external infrastructure.
+
+With LobsterMail, this setup takes about 20 lines of code per agent. Agent A calls `receive()`, scores each email, and could tag it via metadata. Agent B filters for its tags and processes. The platform handles the inbox provisioning and delivery. The agents handle the logic.
+
+Scale from there. Add Agent C for a different email type. Add priority scoring. Add a dead-letter process for messages that fail three times. But start with two agents and one inbox. Get the coordination patterns right before adding complexity.
+
+---
+
+<FAQ>
+  <FAQItem question="What is a shared email queue in the context of an agent swarm?">
+    It's an inbox (or abstraction over an inbox) where multiple agents compete to claim and process incoming emails. The queue ensures each email is handled by exactly one agent, preventing duplicates and dropped messages.
+  </FAQItem>
+  <FAQItem question="How do multiple agents claim and lock individual emails without duplicating work?">
+    The most reliable methods are consumer groups (Redis Streams), visibility timeouts (SQS), or API-level claim locks (dedicated email APIs). IMAP flag-based locking works but has consistency risks depending on the server.
+  </FAQItem>
+  <FAQItem question="What transport backends are best suited for agent swarm email architectures?">
+    Redis Streams for low-latency swarms with existing Redis infrastructure, SQS for cloud-native setups needing high durability, and dedicated email APIs like LobsterMail for agent-first workflows where the inbox itself acts as the queue.
+  </FAQItem>
+  <FAQItem question="How do you implement priority lanes so VIP emails are processed before general ones?">
+    Use a triage agent to classify and route emails into separate queues or tagged pools. Most backends support multiple streams or queues. Agents reading from VIP queues run at higher frequency or are given priority read access.
+  </FAQItem>
+  <FAQItem question="What delivery guarantees matter most when agents consume from an email queue?">
+    At-least-once delivery with idempotent send logic is the practical choice. Exactly-once is difficult in distributed systems and adds significant coordination overhead. Check whether a reply already exists before sending.
+  </FAQItem>
+  <FAQItem question="How does an agent swarm recover when one agent crashes mid-email task?">
+    With at-least-once delivery, unclaimed or unacknowledged messages return to the queue after a timeout. Another agent picks them up. The processing agent should be idempotent so re-processing a message doesn't cause duplicate sends.
+  </FAQItem>
+  <FAQItem question="Should the email queue live inside the inbox itself or in a separate message broker?">
+    If you're using an agent-first email API with built-in claim/lock semantics, the inbox works well as the queue. If your inbox is a standard IMAP mailbox, adding a separate broker like Redis Streams is more reliable.
+  </FAQItem>
+  <FAQItem question="How do you route inbound emails to the right specialist agent?">
+    A triage or orchestrator agent reads each email, classifies it by sender, subject, or content, and routes it to the appropriate specialist queue. This is a common fan-out pattern in swarm architectures.
+  </FAQItem>
+  <FAQItem question="What is a multi-agent swarm architecture?">
+    A swarm architecture is a system where multiple autonomous agents collaborate toward shared goals. Each agent has a specific role (triage, billing, support) and they coordinate through shared queues, message passing, or an orchestrator agent.
+  </FAQItem>
+  <FAQItem question="How does a swarm architecture for email differ from a simple round-robin worker pool?">
+    Round-robin distributes work evenly regardless of content. A swarm routes emails to specialist agents based on classification, supports priority lanes, and handles fault recovery per-agent. It's smarter routing, not just load balancing.
+  </FAQItem>
+  <FAQItem question="Can an agent swarm handle both inbound triage and outbound generation from the same queue?">
+    Yes, but it's cleaner to separate them. Use one queue for inbound processing and a separate queue (or direct API calls) for outbound sends. Mixing them complicates priority logic and observability.
+  </FAQItem>
+  <FAQItem question="What observability data should be captured per message in an agent swarm?">
+    At minimum: message ID, arrival timestamp, claiming agent, processing duration, outcome (replied, forwarded, archived, errored), and any error details. Queue latency (time from arrival to claim) is your most important health metric.
+  </FAQItem>
+  <FAQItem question="What is the minimum viable architecture for a two-agent swarm sharing one email inbox?">
+    One shared inbox, one triage agent that classifies and tags messages, and one worker agent that processes tagged messages. No external queue infrastructure needed if your email API supports tag-based filtering. About 20 lines of code per agent with LobsterMail.
+  </FAQItem>
+  <FAQItem question="How do agent swarm email architectures scale horizontally?">
+    Add more specialist agents for new email types, partition inboxes by domain or sender category, and use a backend that supports consumer groups or parallel readers. The triage/routing layer scales independently from the processing layer.
+  </FAQItem>
+  <FAQItem question="What message queue should I use for multi-agent coordination?">
+    It depends on your existing stack. Redis Streams if you already run Redis. SQS if you're on AWS. A dedicated email API if you want queue semantics built into the email layer. Don't add infrastructure you don't need yet.
+  </FAQItem>
+</FAQ>
