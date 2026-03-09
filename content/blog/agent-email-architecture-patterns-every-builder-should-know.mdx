@@ -1,0 +1,141 @@
+---
+title: agent email architecture patterns every builder should know
+description: >-
+  Five architecture patterns for giving AI agents email capabilities, from
+  single-inbox polling to multi-agent delegation. Practical tradeoffs included.
+date: '2026-03-09'
+author: Samuel Chenard
+tags:
+  - email
+  - infrastructure
+  - automation
+  - use-cases
+image: /blog/agent-email-architecture-patterns-every-builder-should-know.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — agent email
+  architecture patterns
+publish_at: '2026-03-09T07:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-09T18:32:22.004Z'
+---
+Most guides on multi-agent architecture talk about tool use, memory, and planning. Almost none of them talk about email. That's a gap, because email is still how the real world communicates. Contracts arrive by email. Verification codes arrive by email. Customer inquiries, invoices, signup confirmations, support tickets: email.
+
+If you're building an agent (or a system of agents) that interacts with external services, you'll eventually need to figure out how it handles email. Not as an afterthought. As an architecture decision.
+
+Google recently published a guide covering [eight essential multi-agent design patterns](https://www.infoq.com/news/2026/01/multi-agent-design-patterns/), from sequential pipelines to human-in-the-loop loops. LangChain's blog covers [how to choose the right multi-agent architecture](https://blog.langchain.com/choosing-the-right-multi-agent-architecture/) based on your coordination needs. Both are worth reading. But neither addresses how email fits into these patterns. So let's fill that in.
+
+Here are five agent email architecture patterns I've seen teams use in production, along with the tradeoffs that actually matter.
+
+## 1. Single agent, single inbox
+
+The simplest pattern. One agent owns one email address. It polls for new messages, processes them, and sends replies from the same address.
+
+This works well for:
+
+- Personal assistants that manage a founder's inbox
+- Agents that sign up for services and need to receive verification codes
+- Customer support bots handling a shared support address
+
+The tradeoff is obvious: it doesn't scale. If your agent needs to interact with 30 different services, using one inbox means all those emails land in the same place. Filtering gets messy. Contextual separation disappears. And if one service flags the address as spam, every workflow suffers.
+
+Still, for a single-purpose agent, this is the right starting point. Don't over-engineer it.
+
+## 2. Single agent, multiple inboxes
+
+Same agent, but it provisions a separate inbox for each external service or workflow. Sign up for Stripe with one address. Register on GitHub with another. Keep customer-facing communication on a third.
+
+This is a meaningful upgrade. Each inbox acts as a namespace. Your agent knows that any email arriving at `github-notifications@yourdomain` is from GitHub, without parsing headers or running classification logic. Isolation also limits blast radius: if one address gets compromised or flooded with spam, the others keep working.
+
+The pattern does require your agent to manage inbox lifecycle. It needs to create new inboxes, remember which inbox maps to which service, and clean up inboxes it no longer needs. That's state management, and it's worth thinking about before you start.
+
+Most builders I've talked to use a simple key-value mapping (service name to inbox address) stored alongside the agent's memory or config. Nothing fancy. It works.
+
+## 3. Coordinator agent with email delegation
+
+This is where multi-agent patterns start to show up. You have a coordinator (sometimes called an orchestrator or router) that receives all inbound email and delegates to specialized sub-agents based on content.
+
+A practical example from [Speakeasy's architecture guide](https://www.speakeasy.com/mcp/using-mcp/ai-agents/architecture-patterns): an AI onboarding assistant receives a signup notification, then delegates tasks to sub-agents that schedule a welcome email, set up a product tour, check engagement after three days, and escalate to a human if there's no response after a week.
+
+The coordinator pattern works well when you have distinct workflows triggered by different types of email. The coordinator doesn't need to understand every domain. It just needs to classify the inbound message and route it.
+
+The tradeoff here is the extra model call. Every inbound email passes through the coordinator before reaching the agent that actually handles it. That adds latency and token cost. For high-volume email processing, this overhead matters. For a system handling 50 emails a day, it's negligible.
+
+One design decision that trips people up: should the sub-agents reply from the coordinator's inbox, or from their own? I'd argue for their own. It keeps reply chains clean and makes debugging much easier. When something goes wrong, you can trace which agent sent what without digging through a shared outbox.
+
+## 4. Parallel agents with isolated inboxes
+
+No coordinator. Each agent operates independently with its own inbox. They don't share email, and they don't delegate to each other. This is common in systems where multiple agents handle different business functions: one for sales outreach, one for support, one for billing.
+
+The advantage is simplicity of communication boundaries. No routing logic, no shared state, no risk of one agent reading another agent's emails. Each agent is a self-contained unit with its own address.
+
+The disadvantage is that cross-functional workflows get harder. If a customer sends a billing question to the support inbox, the support agent either handles it (poorly, since it's not its domain) or needs a mechanism to forward it to the billing agent. That forwarding mechanism is, in effect, a lightweight coordinator. You've just moved the routing problem from inbound to inter-agent communication.
+
+This pattern works best when the boundaries between agents are truly clean. If your agents rarely need to collaborate on the same email thread, parallel isolation keeps things simple.
+
+## 5. Ephemeral inboxes for one-time workflows
+
+Some agent tasks only need email for a few minutes. Signing up for a service, receiving a verification code, confirming an account, then moving on. The inbox has no long-term value.
+
+In this pattern, the agent creates a disposable inbox at the start of a workflow and discards it when the workflow completes. No accumulation of old messages. No inbox sprawl. No cleanup jobs.
+
+This works well for:
+
+- Automated account creation flows
+- Testing and QA (spin up an inbox, send a test email, verify delivery, tear down)
+- Privacy-sensitive workflows where you don't want a persistent address
+
+The key requirement is fast inbox provisioning. If creating an inbox takes 30 seconds and involves DNS propagation, this pattern falls apart. The inbox needs to be available in under a second, ready to receive immediately. [LobsterMail](https://lobstermail.ai) is one option that handles this, provisioning inboxes instantly through an SDK call so agents can self-serve without waiting on infrastructure.
+
+## Choosing the right pattern
+
+The right pattern depends on two things: how many distinct email workflows your agent handles, and whether those workflows need to share context.
+
+If you have one workflow, use pattern 1. If you have multiple independent workflows, use pattern 2 or 4. If inbound email needs to be classified and routed, use pattern 3. If workflows are short-lived and disposable, use pattern 5.
+
+Most real systems end up combining patterns. A coordinator (pattern 3) might delegate to sub-agents that each use ephemeral inboxes (pattern 5) for one-time tasks while maintaining persistent inboxes (pattern 2) for ongoing communication. The patterns aren't mutually exclusive.
+
+What matters more than picking the "right" architecture is making the email layer programmable. If your agent can create, read, and send from inboxes through code, you can refactor between patterns without rewriting your infrastructure. If your agent's email is hardcoded to a single Gmail account with OAuth tokens, changing patterns means starting over.
+
+Build the email layer so your agent controls it. The architecture will evolve from there.
+
+<FAQ>
+  <FAQItem question="What are agent email architecture patterns?">
+    They're design approaches for how AI agents provision, receive, and send email. Different patterns suit different use cases, from single-inbox polling to multi-agent coordination with delegated inboxes.
+  </FAQItem>
+  <FAQItem question="Can an AI agent have its own email address?">
+    Yes. Services like LobsterMail let agents self-provision email addresses through an SDK, without human signup or OAuth configuration.
+  </FAQItem>
+  <FAQItem question="What's the simplest way to give an agent email?">
+    One agent, one inbox. The agent polls for new messages and sends replies from the same address. It works for single-purpose agents and is easy to implement.
+  </FAQItem>
+  <FAQItem question="Should each agent have its own inbox or share one?">
+    Separate inboxes per agent (or per workflow) are usually better. They provide isolation, cleaner filtering, and limit damage if one address gets flagged as spam.
+  </FAQItem>
+  <FAQItem question="What is the coordinator pattern in multi-agent email?">
+    A coordinator agent receives all inbound email, classifies it, and routes it to the appropriate sub-agent. It adds a model call per message but centralizes routing logic.
+  </FAQItem>
+  <FAQItem question="How do ephemeral inboxes work for agents?">
+    The agent creates a disposable inbox for a short-lived task (like receiving a verification code), uses it, then discards it. This avoids inbox sprawl and works well for one-time workflows.
+  </FAQItem>
+  <FAQItem question="What's the difference between persistent and ephemeral agent inboxes?">
+    Persistent inboxes stay active for ongoing communication (support, sales). Ephemeral inboxes are created for a single task and deleted afterward. Most systems use both.
+  </FAQItem>
+  <FAQItem question="How fast does inbox provisioning need to be for agents?">
+    For ephemeral workflows, sub-second provisioning is ideal. If creating an inbox takes minutes due to DNS propagation, disposable inbox patterns become impractical.
+  </FAQItem>
+  <FAQItem question="Can multiple agents share the same email inbox?">
+    Technically yes, but it creates problems with context isolation and debugging. It's cleaner for each agent to own its own inbox and forward messages when cross-agent collaboration is needed.
+  </FAQItem>
+  <FAQItem question="How do I handle email routing between multiple agents?">
+    Use a coordinator agent that classifies inbound messages and delegates to specialized sub-agents, or use separate inboxes per agent with inter-agent forwarding for edge cases.
+  </FAQItem>
+  <FAQItem question="Do agents need to handle spam and email security?">
+    Yes. Agents are vulnerable to prompt injection through email content. Any email architecture should include filtering and injection risk scoring on inbound messages.
+  </FAQItem>
+  <FAQItem question="Can I combine multiple agent email patterns in one system?">
+    Absolutely. A coordinator might route to sub-agents that each use ephemeral inboxes for one-time tasks and persistent inboxes for ongoing threads. The patterns are composable.
+  </FAQItem>
+</FAQ>
