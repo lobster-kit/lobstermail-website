@@ -1,0 +1,214 @@
+---
+title: >-
+  email api versioning and backward compatibility: what agent sdk developers
+  actually need to know
+description: >-
+  How email API version changes break agent workflows differently than
+  traditional clients, and practical strategies to keep your SDK compatible.
+date: '2026-03-09'
+author: Ian Bussières
+tags:
+  - infrastructure
+  - email
+  - guides
+  - security
+image: >-
+  /blog/email-api-versioning-and-backward-compatibility-what-agent-sdk-developers-actually-need-to-know.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — email api
+  versioning backward compatibility agent sdk
+publish_at: '2026-03-09T07:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-09T18:02:32.210Z'
+---
+A traditional REST client hits a deprecated API endpoint, a developer notices the warning in logs next Tuesday, and they update the code before the sunset date. Annoying but manageable.
+
+An autonomous agent hits a deprecated email API endpoint at 3 AM on a Saturday while trying to extract a verification code from a signup flow. Nobody's watching the logs. The agent retries, gets the same error, and the entire workflow stalls. The user wakes up to a dead pipeline and no obvious explanation.
+
+This is the core tension with email API versioning when agents are your consumers instead of humans. The feedback loop is longer, the failure modes are silent, and the stakes per-message are higher than a typical CRUD operation. A missed verification email isn't a UI inconvenience. It's a blocked workflow.
+
+I've been thinking about this problem a lot as we build LobsterMail's SDK, and the patterns that work for general API versioning need real adaptation when your primary consumer is an AI agent.
+
+## API versioning vs. backward compatibility
+
+These two concepts get conflated constantly, so let's separate them before going further.
+
+API versioning is the practice of maintaining multiple versions of an API simultaneously, giving consumers time to migrate. Backward compatibility is the design discipline of evolving an API so existing clients don't break, ideally without needing a new version at all.
+
+| Dimension | API versioning | Backward compatibility |
+|---|---|---|
+| Definition | Running multiple API versions in parallel | Evolving one version without breaking existing callers |
+| Primary goal | Allow breaking changes with a migration window | Avoid breaking changes entirely |
+| When used | Major feature overhauls, schema redesigns | Adding optional fields, new endpoints, expanded enums |
+| Impact on existing clients | Requires migration before sunset | No client changes needed |
+| Common techniques | URL path (`/v1/`, `/v2/`), header-based, query param | Additive-only changes, optional parameters, default values |
+| SDK implications | SDK must target a specific version or negotiate at runtime | SDK continues working without updates |
+
+In a perfect world, you'd never need versioning because every change would be backward compatible. In practice, email APIs accumulate enough complexity (authentication headers, deliverability metadata, bounce classification schemas) that breaking changes are inevitable.
+
+## Why email APIs break agents differently
+
+General API versioning guides assume a human developer will read the deprecation notice, update the client library, test, and deploy. That assumption falls apart with agent SDKs for a few specific reasons.
+
+**Agents don't read changelogs.** When an email API adds a required `X-Sender-Verification` header in v2, a human developer sees the migration guide and adds it. An agent using the SDK just starts getting 400 errors. The SDK itself needs to handle version negotiation, or at minimum surface the problem in a way that's actionable without human intervention.
+
+**Email-specific side effects are invisible.** Switching from v1 to v2 of an email API might change how DKIM signatures are constructed, how bounce codes are classified, or how rate limits are calculated. Your messages still send. They just land in spam 40% more often, or your bounce handling misclassifies a temporary failure as permanent. These aren't errors. They're silent degradations that only show up in deliverability metrics days later.
+
+**Agent workflows are stateful across multiple API calls.** An agent might create an inbox, wait for a verification email, extract a code, and reply, all in one workflow. If the inbox creation endpoint is v2 but the receive endpoint is still v1, schema mismatches between the two can produce subtle bugs. Traditional API clients rarely chain calls across version boundaries this tightly.
+
+This is one reason we designed LobsterMail's SDK to handle [agent self-signup: why the agent should create its own inbox](/blog/agent-self-signup-explained) as a single atomic operation. The fewer version-sensitive touchpoints in a workflow, the less surface area for compatibility breaks.
+
+## Practical strategies for agent SDK versioning
+
+After watching how agents actually interact with email APIs (ours and others), here are the patterns that hold up.
+
+### Pin the SDK to a known-good API version
+
+The SDK should declare which API version it targets and send that version in every request, either as a URL path prefix or a version header. Don't let the server decide. If your SDK says "I speak v1," the server should respond in v1 format even if v3 is the latest.
+
+```typescript
+// SDK sends version header with every request
+const response = await fetch('https://api.example.com/inboxes', {
+  headers: {
+    'X-API-Version': '2024-09-15',
+    'Authorization': `Bearer ${token}`
+  }
+});
+Date-based versioning (like Stripe's approach) works better than integer versioning for email APIs because it communicates *when* the contract was established, not just *which number* it is.
+
+### Build a compatibility facade inside the SDK
+
+When the underlying API bumps a version, the SDK shouldn't immediately expose that change to every consumer. Instead, add a translation layer that maps the new API response format back to the schema the SDK has always exposed.
+
+```typescript
+// Internal SDK adapter
+function normalizeBounceResponse(raw: unknown, apiVersion: string) {
+  if (apiVersion >= '2025-03-01') {
+    // v2 returns { classification: 'hard', reason: '550 5.1.1' }
+    return { type: raw.classification, code: raw.reason };
+  }
+  // v1 returns { bounce_type: 'hard', smtp_code: '550 5.1.1' }
+  return { type: raw.bounce_type, code: raw.smtp_code };
+}
+This facade pattern absorbs API churn so the agent's logic never needs to change. The SDK maintainer handles the mapping. The agent keeps working.
+
+### Surface deprecation warnings without interrupting workflows
+
+Agents can't read stderr. But the developers who configure agents can check structured logs. When the API returns a `Deprecation: true` header or a `Sunset` header (per RFC 8594), the SDK should capture that and expose it through a structured event or callback.
+
+```typescript
+lm.on('deprecation', (warning) => {
+  // { endpoint: '/v1/send', sunset: '2026-06-30', successor: '/v2/send' }
+  logger.warn('Email API deprecation notice', warning);
+});
+```
+
+Don't throw errors for deprecation warnings. Don't print to console. Emit a structured event that monitoring tools can pick up. The agent's workflow continues uninterrupted, but the operations team gets a signal.
+
+### Test with contract tests, not just integration tests
+
+Integration tests verify that your SDK works against the current API. Contract tests verify that the API still honors the schema your SDK expects. These are different, and the second one catches version drift before production.
+
+Consumer-driven contract testing (using tools like Pact) is particularly useful here. Your SDK defines the contract it expects: "When I POST to `/inboxes` with this body, I expect a response with these fields." If the API provider changes that response shape, the contract test fails before any agent is affected.
+
+For email APIs specifically, test these contracts:
+- Inbox creation response schema
+- Email receive response (headers, body, metadata)
+- Bounce/delivery event webhook payloads
+- Error response format and status codes
+
+### Version your webhook payloads separately
+
+This is the one most teams miss. Your send API might be on v2, but your webhook payloads (delivery notifications, bounce events, open tracking) are a separate contract. Agents that react to inbound email events asynchronously need stable webhook schemas just as much as stable send APIs.
+
+Include a `version` field in every webhook payload. Let consumers specify which webhook schema version they want when registering their endpoint. And never remove fields from a webhook payload without a major version bump.
+
+## What semantic versioning means for an email SDK
+
+Semver applies naturally to email SDKs, but the definitions shift slightly:
+
+**Major (3.0.0):** The SDK exposes a new API version that changes response schemas, removes methods, or alters default behavior. Agents using the old major version will need code changes.
+
+**Minor (2.1.0):** New methods or optional parameters. Maybe the SDK now supports a new email API feature (like reaction tracking) but nothing existing breaks. Agents can upgrade without changes.
+
+**Patch (2.0.1):** Bug fixes, internal compatibility facade updates, or mapping adjustments for a non-breaking API server change. Agents should always be able to apply patches safely.
+
+The key discipline: if you're updating your SDK's internal compatibility facade to handle a server-side API change but the SDK's public interface stays identical, that's a patch. If you're adding a new optional parameter, that's a minor. If you're changing the shape of what `inbox.receive()` returns, that's a major. No exceptions.
+
+## Monitoring for version drift in production
+
+Even with pinned versions and contract tests, agents can silently drift onto deprecated API versions. Set up monitoring for these signals:
+
+- **Deprecation headers in API responses.** If your SDK isn't checking for `Deprecation: true` or `Sunset` headers, add that check.
+- **Increasing error rates on specific endpoints.** A sudden spike in 400s or 404s on an endpoint that was working yesterday often means a version sunset.
+- **Deliverability metric changes without code changes.** If open rates or bounce classifications shift and you haven't changed anything, the API provider may have changed something under your pinned version (which is a violation of the versioning contract, but it happens).
+- **SDK version distribution across your agent fleet.** If you're running multiple agents, know which SDK version each one uses. A dashboard showing "12 agents on SDK 2.1.0, 3 agents still on 1.4.2" prevents surprises.
+
+## A reasonable sunset window
+
+How long should a deprecated email API version stay alive? For agent workflows, I'd argue the minimum is 6 months from the first deprecation signal to the actual shutdown. Three months is standard for general APIs, but agents have longer update cycles. Some agents are deployed and not touched for weeks. Some are embedded in workflows that require careful testing before any dependency update.
+
+At LobsterMail, we treat API stability as a core feature. When your consumers are autonomous agents that might be mid-workflow when a version changes, "move fast and break things" is the wrong philosophy. The agent should be able to trust that its email infrastructure won't shift underneath it.
+
+If you're evaluating email infrastructure for your agents, start with the free tier at [LobsterMail](/) and see how the SDK handles versioning in practice. The SDK pins to a stable API version by default, surfaces deprecation warnings through structured events, and maintains backward compatibility across minor releases.
+
+<FAQ>
+  <FAQItem question="What makes email API versioning different from versioning a general-purpose REST API?">
+    Email APIs carry side effects that go beyond request/response correctness. A version change can alter DKIM signing behavior, bounce classification logic, or rate limit calculations in ways that affect deliverability without producing errors. General REST APIs rarely have this kind of invisible downstream impact.
+  </FAQItem>
+
+  <FAQItem question="How should an agent SDK detect and adapt to an email API version change at runtime?">
+    The SDK should pin to a specific API version via request headers and check response headers for `Deprecation` and `Sunset` signals (RFC 8594). When detected, it should emit a structured event for monitoring tools rather than throwing errors that interrupt the agent's workflow.
+  </FAQItem>
+
+  <FAQItem question="What is a compatibility facade and how does it help agent SDKs?">
+    A compatibility facade is an internal translation layer in the SDK that maps different API response formats to a single stable schema. When the server changes its response shape in v2, the facade translates it back to the format the SDK has always exposed, so agent code doesn't need to change.
+  </FAQItem>
+
+  <FAQItem question="Should email API versions use URL path, request header, or query parameter?">
+    Date-based versioning via request headers (like `X-API-Version: 2025-03-01`) works best for email APIs. It avoids URL proliferation, communicates when the contract was established, and lets the server respond in the format the client expects without URL changes.
+  </FAQItem>
+
+  <FAQItem question="What is the difference between backward compatibility and forward compatibility?">
+    Backward compatibility means new API versions can still serve old clients correctly. Forward compatibility means old API versions can handle requests from newer clients. For email SDKs, backward compatibility is the primary concern since agents may run older SDK versions for extended periods.
+  </FAQItem>
+
+  <FAQItem question="How do you deprecate an API version without breaking agent workflows?">
+    Start with deprecation headers in responses at least 6 months before shutdown. Provide a structured migration guide. Ensure the SDK surfaces warnings through events, not errors. Monitor which agents are still using the deprecated version and communicate directly with those teams before the sunset date.
+  </FAQItem>
+
+  <FAQItem question="Can semantic versioning be applied to an email API SDK?">
+    Yes. Major versions indicate breaking changes to the SDK's public interface. Minor versions add new features or optional parameters without breaking existing code. Patch versions fix bugs or update internal compatibility facades. The rule: if agent code needs changes to upgrade, it's a major version bump.
+  </FAQItem>
+
+  <FAQItem question="How do you test that an agent SDK still works after an email API minor version bump?">
+    Use consumer-driven contract tests (tools like Pact) to verify the API still returns the schema your SDK expects. Combine with integration tests that run real send/receive workflows against a staging environment. Contract tests catch schema drift; integration tests catch behavioral changes.
+  </FAQItem>
+
+  <FAQItem question="How do optional vs. required parameter changes affect backward compatibility?">
+    Adding optional parameters is backward compatible since existing clients that don't send them continue working. Making a previously optional parameter required is a breaking change. Adding a new required parameter (like an authentication header) requires a major version bump and a migration window.
+  </FAQItem>
+
+  <FAQItem question="What monitoring signals indicate an agent is using a deprecated email API version?">
+    Watch for `Deprecation: true` response headers, increasing error rates on previously stable endpoints, shifts in deliverability metrics without code changes, and SDK version distribution across your agent fleet. A dashboard tracking these signals catches drift before it causes workflow failures.
+  </FAQItem>
+
+  <FAQItem question="How do you handle backward compatibility for email webhook event schemas?">
+    Version webhook payloads separately from the send API. Include a `version` field in every payload, let consumers specify which schema version they want when registering endpoints, and never remove fields without a major version bump. Agents reacting to email events asynchronously need stable webhook contracts.
+  </FAQItem>
+
+  <FAQItem question="What role do feature flags play in rolling out a new email API version?">
+    Feature flags let you expose a new API version to a subset of SDK consumers before a full rollout. Start with internal agents, expand to beta users, then general availability. This catches compatibility issues with real workloads before they affect every consumer simultaneously.
+  </FAQItem>
+
+  <FAQItem question="How should an SDK surface deprecation warnings without interrupting automated workflows?">
+    Emit structured events (not console warnings or thrown errors) that monitoring and logging tools can capture. Something like `sdk.on('deprecation', callback)` lets the operations team set up alerts while the agent's workflow continues running without interruption.
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail handle API versioning automatically?">
+    The LobsterMail SDK pins to a stable API version by default and maintains backward compatibility across minor releases. Deprecation warnings are surfaced through structured events. You can start with the [free tier](/) to see how it works in practice.
+  </FAQItem>
+</FAQ>
