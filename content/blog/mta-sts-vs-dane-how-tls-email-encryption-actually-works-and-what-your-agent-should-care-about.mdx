@@ -1,0 +1,163 @@
+---
+title: >-
+  MTA-STS vs DANE: how TLS email encryption actually works (and what your agent
+  should care about)
+description: >-
+  MTA-STS and DANE both protect email in transit with TLS encryption. Here's how
+  they differ, which one matters for your agent, and why you probably don't need
+  to configure either.
+date: '2026-03-09'
+author: Ian Bussières
+tags:
+  - email
+  - security
+  - infrastructure
+  - guides
+image: >-
+  /blog/mta-sts-vs-dane-how-tls-email-encryption-actually-works-and-what-your-agent-should-care-about.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — MTA-STS DANE TLS
+  email encryption agent
+publish_at: '2026-03-09T14:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-09T16:51:28.696Z'
+---
+Your agent sends an email. Between your mail server and the recipient's, that message crosses the open internet. Without TLS encryption, anyone sitting on the network path can read it, modify it, or silently drop it.
+
+Most SMTP servers *support* TLS. The problem is that support and enforcement are different things. A man-in-the-middle attacker can strip the TLS negotiation out of an SMTP handshake (called a downgrade attack), and both servers will happily fall back to plaintext. Neither side notices. Your agent's email just traveled across the wire in cleartext.
+
+MTA-STS and DANE exist to fix this. Both force TLS encryption on email in transit. Both prevent downgrade attacks. But they work in fundamentally different ways, they have different deployment requirements, and they're supported by different providers. If you're building agent infrastructure that sends email, understanding the distinction matters.
+
+## MTA-STS vs DANE: the key differences
+
+| Feature | MTA-STS | DANE |
+|---|---|---|
+| DNSSEC required | No | Yes |
+| Certificate validation | Standard CA (Certificate Authority) | TLSA DNS records (pins certificates via DNSSEC) |
+| Policy delivery | HTTPS (`mta-sts.domain.com/.well-known/`) | DNS (TLSA records) |
+| Gmail support | Yes (Gmail pioneered it) | No (Gmail does not support DANE) |
+| Microsoft 365 support | Yes | Yes (added 2022) |
+| Deployment complexity | Low to moderate | High (requires DNSSEC across the chain) |
+| MITM protection | Strong (CA-based) | Stronger (removes CA trust dependency) |
+| Adoption rate | Growing fast | Slower, concentrated in Europe |
+
+Both solve the same core problem: making TLS mandatory instead of optional. The difference is *how* they establish trust.
+
+## How MTA-STS works
+
+MTA-STS (Mail Transfer Agent Strict Transport Security) lets a receiving domain publish a policy that says: "Only deliver email to me over TLS, and only to these specific MX hosts." The sending mail server fetches this policy over HTTPS before delivering.
+
+The flow looks like this:
+
+1. The sending server checks DNS for a `_mta-sts.example.com` TXT record. If it exists, the domain supports MTA-STS.
+2. The server fetches the full policy from `https://mta-sts.example.com/.well-known/mta-sts.txt`.
+3. The policy lists the valid MX hostnames and a mode (`enforce`, `testing`, or `none`).
+4. In `enforce` mode, the server will only deliver over TLS to a listed MX host with a valid certificate. If TLS fails, the message is *not delivered*. No fallback to plaintext.
+
+The clever part: the policy itself is fetched over HTTPS, which has its own certificate validation. This creates a trust chain that doesn't depend on DNS being secure. It does depend on the CA system, which is a trade-off we'll get to.
+
+MTA-STS also supports a `testing` mode where failures are reported but mail still delivers. This is useful during rollout, but running in testing mode long-term gives you monitoring without protection. It's a seatbelt that's unbuckled.
+
+## How DANE works
+
+DANE (DNS-based Authentication of Named Entities) takes a different approach. Instead of trusting Certificate Authorities, it publishes the expected TLS certificate (or its public key) directly in DNS using TLSA records. The sending server looks up the TLSA record, connects to the mail server, and verifies that the presented certificate matches what DNS says it should be.
+
+The critical requirement: DANE depends entirely on DNSSEC. Without DNSSEC, an attacker could spoof the TLSA records and point the sending server to a fake certificate. DNSSEC cryptographically signs every DNS response in the chain, making spoofing impossible (or at least computationally impractical).
+
+This gives DANE a security advantage over MTA-STS. It removes the Certificate Authority from the trust equation entirely. No rogue CA can issue a fraudulent certificate for your domain and have it accepted, because the sending server validates against the TLSA record, not the CA hierarchy.
+
+The trade-off is operational complexity. DNSSEC requires signing your DNS zone, maintaining key rollovers, and ensuring every link in the delegation chain supports it. If your registrar, your DNS host, or any parent zone breaks the DNSSEC chain, your DANE records become unverifiable and mail delivery can fail. For organizations without dedicated DNS infrastructure teams, this is a real barrier.
+
+## Why most organizations deploy MTA-STS first
+
+Adoption numbers tell the story. Google, which handles a massive share of global email, supports MTA-STS but not DANE. If your agent sends email to Gmail users (it almost certainly does), MTA-STS is what protects those messages in transit.
+
+European government and academic networks tend to favor DANE, partly because DNSSEC adoption is higher in countries like the Netherlands and Germany. The Dutch government's `internet.nl` standards require DANE for compliant mail servers. But globally, MTA-STS has broader reach because it doesn't require the entire DNS chain to support DNSSEC.
+
+You can deploy both on the same domain. They're not mutually exclusive. A sending server that supports DANE will use the TLSA records; one that only supports MTA-STS will use the HTTPS policy. In practice, organizations in 2026 often deploy MTA-STS first for compatibility, then add DANE for enhanced security where their infrastructure supports DNSSEC.
+
+## What TLS-RPT adds to the picture
+
+Neither MTA-STS nor DANE tells you when things go wrong unless you set up reporting. TLS-RPT (TLS Reporting) is the feedback mechanism. You publish a `_smtp._tls.example.com` TXT record specifying where sending servers should send aggregate reports about TLS failures.
+
+These reports include data on failed TLS negotiations, certificate mismatches, and policy fetch errors. For an automated email infrastructure, TLS-RPT data is what lets you detect misconfigurations before they cause widespread delivery failures. Without it, you're flying blind: mail might be silently falling back to plaintext, and you'd have no way to know.
+
+## What this means for agent email infrastructure
+
+If you're an AI agent sending email, you probably aren't configuring MTA-STS policies or signing DNS zones with DNSSEC yourself. And honestly, you shouldn't have to.
+
+The sending side of the equation (your agent's outbound email) depends on your mail transfer agent respecting the recipient's MTA-STS and DANE policies. If the recipient domain publishes an MTA-STS policy in `enforce` mode, your MTA needs to honor it: connect over TLS, validate the certificate, deliver only to listed MX hosts.
+
+This is infrastructure-level work. It's the kind of thing that should be handled by whatever email service your agent uses, not something you bolt on per-recipient. An agent-first email platform handles policy detection, TLS negotiation, and delivery fallback decisions without requiring your agent to understand SMTP at all. We wrote about the broader security picture in [is your OpenClaw agent's email secure? probably not](/blog/openclaw-agent-email-security), which covers authentication layers like SPF, DKIM, and DMARC that complement TLS encryption.
+
+On the receiving side, if your agent uses a [custom domain](/blog/custom-domains-agent-email), the domain's MTA-STS and DANE configuration determines how well-protected inbound email is. Publishing an MTA-STS policy in `enforce` mode means that compliant senders won't deliver to your agent's inbox without TLS. That's a meaningful security improvement for agents processing sensitive content like verification codes, financial notifications, or customer replies.
+
+LobsterMail handles TLS enforcement on both sides. Outbound email respects recipient MTA-STS and DANE policies automatically. Inbound email to `@lobstermail.ai` addresses is protected by our published MTA-STS policy. If you bring a custom domain, we walk you through publishing the right DNS records so your agent's inbound mail gets the same protection.
+
+## The practical recommendation
+
+If you're building on top of managed email infrastructure (which, if you're reading this, you probably are or should be), here's what actually matters:
+
+1. **For sending:** Make sure your email provider respects recipient MTA-STS and DANE policies. Ask them. If they don't, your agent's outbound email is vulnerable to downgrade attacks regardless of what the recipient domain has configured.
+2. **For receiving on a custom domain:** Publish an MTA-STS policy in `enforce` mode. It takes one DNS TXT record and a small HTTPS-hosted policy file. This is the highest-impact, lowest-effort security improvement for inbound email.
+3. **For reporting:** Add a TLS-RPT record. The reports will show you if any senders are failing TLS negotiation to your domain, which usually indicates a misconfiguration somewhere in the chain.
+4. **Skip DANE unless you already run DNSSEC.** DANE is technically stronger, but the operational overhead of DNSSEC isn't worth it for most teams. If you're already in a DNSSEC environment (common in European government and academic networks), add DANE for the extra layer.
+
+Your agent shouldn't need to think about any of this. That's the point of using infrastructure that handles transport security at the platform level. The fewer manual DNS records and policy files your agent (or you) need to manage, the less surface area for misconfiguration.
+
+<FAQ>
+  <FAQItem question="What is MTA-STS and how does it prevent email downgrade attacks?">
+    MTA-STS (Mail Transfer Agent Strict Transport Security) lets a domain publish a policy requiring TLS encryption for inbound email. Sending servers fetch this policy over HTTPS and refuse to deliver in plaintext if the policy is set to `enforce` mode. This prevents attackers from stripping TLS out of the SMTP handshake.
+  </FAQItem>
+
+  <FAQItem question="What is DANE and how does it differ from traditional certificate authority validation?">
+    DANE publishes the expected TLS certificate or public key directly in DNS using TLSA records, secured by DNSSEC. Instead of trusting a Certificate Authority to vouch for the server's identity, the sending server validates the certificate against the DNS record. This removes the CA from the trust chain entirely.
+  </FAQItem>
+
+  <FAQItem question="Do MTA-STS and DANE solve the same problem?">
+    Yes, both prevent TLS downgrade attacks and enforce encrypted email delivery. They differ in mechanism: MTA-STS uses HTTPS-based policy distribution and CA validation, while DANE uses DNSSEC-secured TLSA records. You can deploy both on the same domain for layered protection.
+  </FAQItem>
+
+  <FAQItem question="Does MTA-STS require DNSSEC to function?">
+    No. MTA-STS relies on HTTPS for policy delivery, so it works without DNSSEC. This is one of the main reasons it has broader adoption than DANE, which requires a fully signed DNSSEC chain.
+  </FAQItem>
+
+  <FAQItem question="Is DANE more secure than MTA-STS?">
+    In theory, yes. DANE removes the Certificate Authority from the trust model, which eliminates the risk of a rogue CA issuing a fraudulent certificate. In practice, DANE's security advantage only holds if your DNSSEC chain is properly maintained. A broken DNSSEC chain can cause delivery failures.
+  </FAQItem>
+
+  <FAQItem question="Why doesn't Gmail support DANE?">
+    Google has not publicly explained why, but the likely reason is that DNSSEC adoption remains inconsistent globally. Google instead championed MTA-STS, which doesn't depend on DNSSEC and is easier to deploy at scale. Gmail fully supports MTA-STS in both `testing` and `enforce` modes.
+  </FAQItem>
+
+  <FAQItem question="What is TLS-RPT and why does it matter?">
+    TLS-RPT (TLS Reporting) is a DNS-based mechanism that tells sending servers where to send aggregate reports about TLS negotiation failures. Without TLS-RPT, you have no visibility into whether senders are failing to establish encrypted connections to your domain.
+  </FAQItem>
+
+  <FAQItem question="What happens to email when MTA-STS is set to enforce mode and TLS fails?">
+    The sending server will not deliver the message. It stays in the sending queue and may be retried, but it will not fall back to plaintext delivery. This protects confidentiality but means misconfigurations can cause legitimate email to bounce.
+  </FAQItem>
+
+  <FAQItem question="Can an automated email agent enforce MTA-STS policies without manual DNS configuration per recipient?">
+    Yes. The sending infrastructure (the MTA) handles MTA-STS policy lookups automatically for each recipient domain. Your agent doesn't need to know which domains use MTA-STS. A well-built email platform like LobsterMail does this at the infrastructure level for every outbound message.
+  </FAQItem>
+
+  <FAQItem question="What are the risks of running MTA-STS in testing mode long-term?">
+    Testing mode reports TLS failures but still allows plaintext delivery. Running in testing mode indefinitely means you get reports about potential attacks but don't actually block them. It's useful during initial rollout, but switching to `enforce` mode is necessary for real protection.
+  </FAQItem>
+
+  <FAQItem question="Can I deploy both MTA-STS and DANE on the same domain?">
+    Yes. They're complementary. Sending servers that support DANE will use TLSA records for validation, while those that only support MTA-STS will use the HTTPS policy. Deploying both gives you the widest coverage across different sending infrastructure.
+  </FAQItem>
+
+  <FAQItem question="How long does an updated MTA-STS policy take to propagate?">
+    MTA-STS policies include a `max_age` field (in seconds) that tells sending servers how long to cache the policy. When you update the policy file, you also need to update the `_mta-sts` DNS TXT record's `id` value. Sending servers will re-fetch the policy when the cached version expires or when they detect a new `id`.
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail handle MTA-STS and DANE for agent email?">
+    Yes. LobsterMail's outbound infrastructure automatically respects recipient MTA-STS and DANE policies. Inbound email to `@lobstermail.ai` addresses is protected by our MTA-STS policy. For [custom domains](/blog/custom-domains-agent-email), we guide you through publishing the right DNS records.
+  </FAQItem>
+</FAQ>
