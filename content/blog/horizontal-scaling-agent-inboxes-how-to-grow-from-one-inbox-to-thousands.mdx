@@ -1,0 +1,165 @@
+---
+title: 'horizontal scaling agent inboxes: how to grow from one inbox to thousands'
+description: >-
+  How horizontal scaling works for agent inboxes, when to use it over vertical
+  scaling, and how to architect stateless agents that fan out across many
+  inboxes without losing messages.
+date: '2026-03-09'
+author: Ian Bussières
+tags:
+  - infrastructure
+  - email
+  - guides
+  - automation
+image: >-
+  /blog/horizontal-scaling-agent-inboxes-how-to-grow-from-one-inbox-to-thousands.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — horizontal
+  scaling agent inboxes
+publish_at: '2026-03-09T10:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-09T16:51:28.693Z'
+---
+You started with one agent and one inbox. It worked fine. Then you added five agents, then twenty, and now you're staring at a spreadsheet of inbox assignments wondering why half your agents are stepping on each other's replies.
+
+This is the moment most teams discover that their inbox architecture doesn't scale sideways. It scales up (bigger server, more memory, faster polling) until it doesn't. Horizontal scaling for agent inboxes is a different approach: instead of making one thing bigger, you spread the work across many independent units. For AI agents that self-provision their own email, this distinction matters more than it does for traditional web apps.
+
+## Horizontal scaling vs vertical scaling for agent inboxes
+
+The core difference is direction. Vertical scaling means giving a single agent (or a single inbox) more resources. Horizontal scaling means adding more agents and more inboxes, distributing the load across them.
+
+Here's how the two approaches compare when applied specifically to agent inbox infrastructure:
+
+| | Horizontal scaling | Vertical scaling |
+|---|---|---|
+| **Definition** | Add more agent instances, each with its own inbox(es) | Give a single agent instance more resources (CPU, memory, faster polling) |
+| **Best for** | High-volume workflows, multi-tenant systems, burst traffic | Low-volume agents with complex per-message logic |
+| **Pros** | Fault-tolerant, no single point of failure, near-linear throughput growth | Simpler architecture, no coordination overhead |
+| **Cons** | Requires stateless design, message routing complexity | Hard ceiling on throughput, single point of failure |
+| **Inbox model** | Each instance owns dedicated inboxes or claims messages from a shared queue | One inbox, one agent, one process |
+
+If your agent handles fewer than a hundred emails per day, vertical scaling is probably fine. You don't need to architect for problems you don't have. But once you're [running 50 agent inboxes](/blog/running-50-agent-inboxes) or more, horizontal scaling becomes less of an optimization and more of a requirement.
+
+## Why agent inboxes are different from traditional email servers
+
+Traditional email scaling is about storage and throughput: how many mailboxes can the server hold, how fast can it process inbound SMTP connections. The server itself is passive. It receives mail, stores it, and waits for a client to fetch it.
+
+Agent inboxes flip this model. The inbox isn't just storage. It's the trigger point for autonomous behavior. When an email arrives, the agent reads it, decides what to do, and acts. That means scaling agent inboxes isn't just about handling more mail. It's about handling more *decisions* per second.
+
+This creates two problems that traditional email infrastructure never had to solve:
+
+**Problem one: duplicate processing.** If two agent instances poll the same inbox, they might both grab the same email and both reply to it. The customer gets two identical responses. Or worse, two contradictory ones. Traditional IMAP handles this with flags and locks, but agents operating at speed need something more deliberate.
+
+**Problem two: conversation continuity.** Email threads depend on `In-Reply-To` and `References` headers. If instance A handles the first message in a thread and instance B handles the follow-up, instance B has no context. It doesn't know what instance A said. The reply might contradict the previous message or repeat information the customer already received.
+
+## Stateless vs stateful inbox design
+
+Your ability to scale horizontally depends almost entirely on whether your agents are stateless or stateful.
+
+A **stateful agent** keeps conversation context in local memory. It remembers what it said last, what the customer asked, and what step of the workflow it's on. This works beautifully for a single instance. It falls apart the moment you add a second one, because the second instance doesn't share that memory.
+
+A **stateless agent** stores all context externally: in a database, a shared cache, or embedded in the email thread itself. Any instance can pick up any message and reconstruct the full conversation from the external store. This is harder to build initially, but it's the only architecture that scales horizontally without coordination nightmares.
+
+If you're building agents that need to scale, design them stateless from day one. Retrofitting statefulness out of an agent that assumes local memory is painful and error-prone.
+
+## Inbox sharding strategies
+
+Once your agents are stateless, you need a strategy for distributing inboxes across instances. There are three common patterns:
+
+**One inbox per instance.** The simplest model. Each agent instance creates and owns its own inbox. No sharing, no contention, no duplicate processing. The downside is that you need a routing layer to direct inbound email to the right inbox. For agents that [create their own inboxes on signup](/blog/agent-self-signup-explained), this happens naturally: the agent provisions a fresh address and hands it to whatever service it's interacting with.
+
+**Shared inbox with claim-based processing.** Multiple instances watch a single inbox, but each message is "claimed" by one instance before processing. This works like a job queue. The upside is simpler routing (one address for everything). The downside is that you need a reliable claim mechanism to prevent duplicates. A message broker like Redis or SQS sitting between the inbox and the agents handles this well.
+
+**Topic-based sharding.** Inbound mail is routed to different inboxes based on content, sender, or subject. Support emails go to one pool of agents, verification codes go to another, notifications go to a third. Each pool scales independently. This is the most operationally complex approach, but it lets you allocate resources where they're actually needed instead of scaling everything uniformly.
+
+For most teams, starting with one inbox per instance and moving to topic-based sharding as volume grows is the right progression. Don't over-architect early.
+
+## How to handle reply threading across instances
+
+The `In-Reply-To` header is what keeps email threads coherent. When your agent replies to a message, the reply needs to reference the `Message-ID` of the original. If a different instance handles the next inbound message in that thread, it needs to know what was already said.
+
+Two approaches work:
+
+**Store outbound messages externally.** Every time an agent instance sends a reply, it logs the full message (including headers) to a shared database. When any instance receives a follow-up, it queries the database for the thread history before responding. This adds a database lookup per inbound message, but it guarantees continuity.
+
+**Use the inbox as the source of truth.** Instead of a separate database, have the agent re-read its own inbox to reconstruct the thread. LobsterMail's `receive()` method returns the full thread if messages are in the same conversation. This is simpler but slower for long threads.
+
+## Scaling triggers and observability
+
+You need to know when to add capacity. The three metrics that matter most for horizontal scaling of agent inboxes:
+
+**Inbox queue depth.** How many unread messages are sitting in each inbox? If this number trends upward over time, your agents can't keep up with inbound volume. Add instances.
+
+**Response latency.** How long between an email arriving and the agent sending a reply? If this exceeds your SLA (or your customers' patience), you need more processing capacity.
+
+**Error rate on sends.** A spike in 4xx or 5xx errors when sending outbound email often means you're hitting rate limits. This is where horizontal scaling helps directly: spreading sends across more inboxes means each inbox stays within its rate limits. If you're choosing between [webhooks and polling](/blog/webhooks-vs-polling-email) for inbound delivery, webhooks give you better real-time observability since you can measure delivery-to-processing latency without polling intervals muddying the numbers.
+
+Set up alerts on all three. Autoscaling based on queue depth is the most reliable trigger, because it directly measures whether your agents are keeping up.
+
+## How LobsterMail's architecture supports horizontal scaling
+
+LobsterMail was built for agents that provision their own infrastructure. That design decision has a side effect: it makes horizontal scaling straightforward.
+
+When an agent calls `LobsterMail.create()` followed by `createSmartInbox()`, it gets a dedicated inbox with no shared state and no coordination with other instances. Spin up ten instances, and each one creates its own inbox. No configuration, no DNS changes, no shared credentials. The free tier gives you an inbox with 1,000 emails per month. The Builder tier at $9/month gets you up to 10 inboxes with higher send limits.
+
+Because inboxes are created programmatically, your orchestration layer (Kubernetes, ECS, a simple process manager) can treat inbox provisioning as part of the startup sequence. Instance boots, creates inbox, starts processing. Instance shuts down, inbox goes idle. No human touches anything.
+
+This is the difference between email infrastructure that was designed for humans logging into webmail and infrastructure designed for agents that scale on their own. The agent doesn't need to ask for permission or wait for provisioning. It hatches its own inbox and starts working.
+
+## When vertical scaling is the better choice
+
+Not every workload needs horizontal scaling. If your agent does heavy per-message processing (running an LLM on every inbound email, performing multi-step reasoning, calling external APIs), the bottleneck might be compute per message rather than messages per second. In that case, giving your single instance a faster machine or more memory will help more than adding instances that all hit the same LLM API rate limit.
+
+Vertical scaling is also simpler to reason about. One agent, one inbox, one process. No duplicate processing, no coordination, no external state store. If you can solve your throughput problem by upgrading hardware, do that first. Move to horizontal scaling when you hit the ceiling of what a single instance can handle, or when you need fault tolerance that a single process can't provide.
+
+The practical threshold, in my experience, is somewhere around 500 inbound messages per hour per agent. Below that, a single well-tuned instance handles things fine. Above that, you start seeing queue buildup and response latency drift, and that's when horizontal scaling pays for itself.
+
+---
+
+<FAQ>
+  <FAQItem question="What does horizontal scaling mean for agent inboxes specifically?">
+    It means adding more agent instances, each with its own inbox or set of inboxes, to distribute email processing load. Instead of one agent handling all inbound mail, multiple agents work in parallel across separate inboxes.
+  </FAQItem>
+  <FAQItem question="How is scaling an agent inbox different from scaling a traditional email server?">
+    Traditional email scaling focuses on storage and SMTP throughput. Agent inbox scaling also involves decision-making capacity, because each inbound email triggers autonomous behavior. You're scaling compute and reasoning, not just mailbox storage.
+  </FAQItem>
+  <FAQItem question="Can two agent instances read from the same inbox without duplicating replies?">
+    Yes, but only with a claim-based processing mechanism. One instance must "claim" each message before processing it. Without this, both instances will read the same email and potentially send duplicate replies. A message queue between the inbox and the agents solves this.
+  </FAQItem>
+  <FAQItem question="What is inbox sharding and how does it work for agents?">
+    Inbox sharding assigns different inboxes to different agent instances or groups. Each shard operates independently. Common strategies include one inbox per instance, topic-based routing (support vs. notifications), or hash-based assignment by sender.
+  </FAQItem>
+  <FAQItem question="Does horizontal scaling of agent inboxes require stateless agent design?">
+    In practice, yes. Stateful agents that keep conversation context in local memory can't hand off threads to other instances. Stateless agents that store context externally (database, cache, or the email thread itself) can be scaled horizontally without losing continuity.
+  </FAQItem>
+  <FAQItem question="How do horizontally scaled agents handle reply threading and In-Reply-To headers?">
+    Either store all outbound messages in a shared database so any instance can reconstruct the thread, or have each instance re-read the inbox to get thread history. Both approaches preserve `In-Reply-To` and `References` headers for proper threading.
+  </FAQItem>
+  <FAQItem question="What triggers should automatically spin up more agent inbox capacity?">
+    Monitor inbox queue depth (unread messages trending upward), response latency (time from email arrival to agent reply), and outbound error rates. Queue depth is the most reliable autoscaling trigger because it directly measures whether agents are keeping up.
+  </FAQItem>
+  <FAQItem question="How does horizontal scaling affect email deliverability and sender reputation?">
+    Spreading sends across more inboxes keeps each individual inbox within rate limits, which protects sender reputation. However, if all inboxes share a domain, the domain reputation is still shared. Using a service like LobsterMail that manages domain reputation centrally helps here.
+  </FAQItem>
+  <FAQItem question="What is the minimum infrastructure needed to horizontally scale agent inboxes?">
+    At minimum: two or more agent instances, each with their own inbox (LobsterMail's free tier works for testing), and an external store for shared state (even a simple SQLite database on shared storage). No load balancers or message brokers required at small scale.
+  </FAQItem>
+  <FAQItem question="When should you choose vertical scaling over horizontal scaling for agent inboxes?">
+    When your bottleneck is per-message processing cost (LLM inference, complex reasoning) rather than message volume. If a single agent handles fewer than 500 emails per hour and you just need it to process each one faster, upgrade the hardware before adding instances.
+  </FAQItem>
+  <FAQItem question="What observability metrics matter most for horizontally scaled agent inboxes?">
+    Track inbox queue depth, message processing latency, outbound send error rate, and claim contention rate (if using shared inboxes). Alert on queue depth trending upward and latency exceeding your target SLA.
+  </FAQItem>
+  <FAQItem question="How does LobsterMail support horizontal scaling natively?">
+    Each agent instance can call `LobsterMail.create()` and `createSmartInbox()` to provision its own inbox programmatically. No DNS changes, no shared credentials, no human approval. The [free tier](/) includes an inbox with 1,000 emails/month, and the Builder tier at $9/month supports up to 10 inboxes.
+  </FAQItem>
+  <FAQItem question="What causes duplicate messages when horizontally scaling agents?">
+    Two instances polling the same inbox and both reading the same unprocessed email before either marks it as handled. The fix is either dedicated inboxes per instance (no sharing) or a claim-based processing pattern with atomic locks.
+  </FAQItem>
+  <FAQItem question="How do you test whether your agent inbox architecture is horizontally scalable?">
+    Run two instances of your agent pointed at the same workload. If you get duplicate replies or lost context in threads, your architecture isn't ready. Fix those issues with dedicated inboxes or external state, then test again with progressively more instances.
+  </FAQItem>
+</FAQ>
