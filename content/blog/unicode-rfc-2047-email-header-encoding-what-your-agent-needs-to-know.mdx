@@ -1,0 +1,201 @@
+---
+title: 'Unicode RFC 2047 email header encoding: what your agent needs to know'
+description: >-
+  How RFC 2047 encodes non-ASCII characters in email headers, why it matters for
+  agents sending internationally, and when to use it vs SMTPUTF8.
+date: '2026-03-09'
+author: Ian Bussières
+tags:
+  - email
+  - infrastructure
+  - guides
+  - security
+image: /blog/unicode-rfc-2047-email-header-encoding-what-your-agent-needs-to-know.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — Unicode RFC 2047
+  email header encoding agent
+publish_at: '2026-03-09T07:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-09T16:51:28.700Z'
+---
+Your agent sends an email to a contact in Tokyo. The display name is 田中太郎. The subject line includes an emoji. The recipient's mail client renders both as a garbled mess of question marks and equals signs.
+
+The problem isn't your agent's logic. It's how the email headers were encoded (or weren't). Email headers are limited to 7-bit ASCII by default. Every non-ASCII character, whether it's Japanese kanji, an accented French name, or a thumbs-up emoji, needs to be explicitly encoded before it hits the wire. The standard that governs this encoding has been around since 1996: RFC 2047.
+
+If your agent generates outbound email programmatically, understanding RFC 2047 is the difference between professional-looking messages and headers that look like line noise. And if your agent *receives* email from international senders, it needs to decode these headers correctly to extract names, subjects, and metadata without corruption.
+
+## How RFC 2047 email header encoding works
+
+RFC 2047 defines a way to represent non-ASCII text inside email header fields that are otherwise restricted to US-ASCII. It wraps encoded text in a specific syntax called an "encoded-word."
+
+Here's how the encoding process works:
+
+1. Identify non-ASCII characters in the header field value
+2. Choose a character set (almost always UTF-8 today)
+3. Select an encoding type: B (Base64) or Q (Quoted-Printable)
+4. Wrap the result in `=?charset?encoding?encoded-text?=` syntax
+5. Fold long encoded-words at whitespace boundaries per RFC 2822
+
+A real example: the display name "François" in a From header becomes:
+
+From: =?UTF-8?Q?Fran=C3=A7ois?= <francois@example.com>
+The `=?UTF-8?Q?` prefix tells the receiving client: "this is UTF-8, encoded with Quoted-Printable." The `?=` suffix closes the encoded-word. The mail client decodes it back to "François" for display.
+
+When you see `=?UTF-8?B?` in a header, that's Base64 encoding instead of Quoted-Printable. Base64 is more compact for text that's mostly non-ASCII (like a fully Japanese subject line), while Q-encoding works better for text that's mostly ASCII with a few special characters sprinkled in.
+
+## Q-encoding vs B-encoding: when to use which
+
+The choice between Q and B encoding isn't cosmetic. It affects header length, readability in raw form, and how efficiently your agent packs information into the 75-character-per-line limit.
+
+**Q-encoding (Quoted-Printable)** represents each non-ASCII byte as `=XX` where XX is the hex value. ASCII letters, digits, and a few safe characters pass through unchanged. This makes Q-encoded text partially human-readable in raw headers:
+
+```
+Subject: =?UTF-8?Q?Meeting_with_Fran=C3=A7ois_at_3pm?=
+```
+
+You can still read "Meeting with" and "at 3pm" without decoding.
+
+**B-encoding (Base64)** converts the entire string to Base64. Nothing is human-readable in raw form, but it's more space-efficient when most characters are non-ASCII:
+
+```
+Subject: =?UTF-8?B?55Sw5Lit5aSq6YOO44GV44KT44Go44Gu5Lya6K2w?=
+```
+
+A practical rule for agents: if more than 30% of the text is non-ASCII, use B-encoding. Otherwise, Q-encoding keeps raw headers more debuggable. Most email libraries make this choice automatically, but if your agent constructs headers manually, this heuristic avoids bloated headers that exceed line-length limits.
+
+## Which header fields accept encoded-words
+
+Not every header field can contain RFC 2047 encoded-words. The standard permits them in "unstructured" fields and in the display-name portion of address fields. Here's the breakdown:
+
+| Header field | Encoded-words allowed? | Notes |
+|---|---|---|
+| Subject | Yes | Most common use case |
+| From (display name) | Yes | Only the name part, not the address |
+| To (display name) | Yes | Same as From |
+| Reply-To (display name) | Yes | Same as From |
+| Comments | Yes | Unstructured field |
+| Content-Description | Yes | Unstructured field |
+| From (email address) | No | Must be pure ASCII or use SMTPUTF8 |
+| Message-ID | No | Structured field |
+| Date | No | Structured field |
+| Received | No | Structured field |
+
+The critical mistake agents make: trying to encode an actual email address with RFC 2047. The spec explicitly forbids this. If your agent needs to send from an address containing non-ASCII characters (like 用户@example.com), RFC 2047 won't help. You need SMTPUTF8, which is a different protocol extension entirely.
+
+## RFC 2047 vs SMTPUTF8: the modern reality
+
+RFC 2047 has been the workhorse of internationalized email headers for three decades. But it's a workaround, not a real solution. It encodes non-ASCII text into ASCII-safe wrappers, which means every intermediary must decode and re-encode correctly. Things break when they don't.
+
+SMTPUTF8 (defined in RFC 6531 and RFC 6532) takes a different approach: it allows raw UTF-8 directly in headers and envelope addresses. No encoding gymnastics. No `=?charset?encoding?text?=` wrappers. Just plain UTF-8.
+
+The catch? Both the sending and receiving servers must advertise SMTPUTF8 support. If the receiving server doesn't support it, your message gets rejected. Gmail, Outlook, and Yahoo support SMTPUTF8. Many corporate mail servers and smaller providers still don't.
+
+For an autonomous agent, this creates a runtime decision tree:
+
+1. Check if the recipient's MX server advertises SMTPUTF8 (via EHLO response)
+2. If yes, send headers as raw UTF-8
+3. If no, fall back to RFC 2047 encoding for header values
+4. If the *address itself* contains non-ASCII and the server doesn't support SMTPUTF8, the message cannot be sent to that address at all
+
+This is exactly the kind of per-message infrastructure decision that agents shouldn't need to make manually. When you use LobsterMail's SDK, header encoding is handled at the infrastructure layer. Your agent passes Unicode strings for subject lines and display names, and the outbound pipeline applies the correct encoding based on what the receiving server supports. No charset decisions, no encoding-type selection, no line-folding math.
+
+## Common encoding failures and how to avoid them
+
+Real-world RFC 2047 failures tend to cluster around a few patterns:
+
+**Encoded-words exceeding 75 characters.** The spec limits each encoded-word to 75 characters including the `=?...?=` wrapper. Agents that encode a long subject line as a single encoded-word will produce non-compliant headers. The fix: split into multiple encoded-words separated by folding whitespace.
+
+**Missing whitespace between encoded-words.** When two encoded-words appear adjacent with only folding whitespace between them, compliant decoders treat them as a single string. But if you accidentally insert visible characters between encoded-words, the decoder treats the gap as literal text. This produces garbled output like `=?UTF-8?Q?Hello?= =?UTF-8?Q?_World?=` decoding correctly vs `=?UTF-8?Q?Hello?=X=?UTF-8?Q?World?=` producing "HelloXWorld".
+
+**Mixed charsets in a single header.** Technically, RFC 2047 allows different encoded-words in the same header to use different charsets. In practice, this confuses many email clients. Stick to UTF-8 everywhere.
+
+**Encoding text that doesn't need it.** Pure ASCII text should never be wrapped in encoded-word syntax. Some overzealous libraries encode "Hello World" as `=?UTF-8?Q?Hello_World?=`. This is technically valid but wastes header space and has been known to trigger spam filters that flag unnecessary encoding as suspicious.
+
+**Forgetting to encode display names with special characters.** A From header like `From: José García <jose@example.com>` without RFC 2047 encoding will cause problems. The accented characters in the display name aren't valid in raw ASCII headers. Your agent should encode any display name containing characters outside the ASCII printable range.
+
+## Decoding incoming RFC 2047 headers
+
+When your agent receives email, the headers may contain RFC 2047 encoded-words that need to be decoded before processing. An agent that extracts the sender's name from a From header or parses a subject line for keywords must handle this correctly.
+
+The decoding algorithm is straightforward:
+
+1. Scan the header value for `=?` markers
+2. Parse each encoded-word: extract charset, encoding type, and encoded text
+3. Decode the text (Base64 or Quoted-Printable)
+4. Convert from the declared charset to your agent's internal string format (usually UTF-8)
+5. Replace the encoded-word in the header with the decoded text
+
+Most programming languages have libraries that handle this. In Node.js, the `libmime` package provides `decodeWords()`. In Python, `email.header.decode_header()` does it. If your agent processes email through LobsterMail's SDK, incoming headers are already decoded to Unicode strings before your agent sees them.
+
+The real danger for agents isn't the decoding itself. It's assuming headers are already decoded when they aren't. An agent doing keyword matching on a subject line will miss `=?UTF-8?B?5LyB55S75pu46K2w?=` if it's searching for the decoded Japanese text. Always decode first, then process.
+
+## What this means for agents in production
+
+Email internationalization isn't a niche concern. Over half of the world's internet users don't use Latin-script languages as their primary writing system. An agent that handles English-only headers correctly but mangles everything else is an agent with a geographic ceiling.
+
+The [agent communication stack](/blog/agent-communication-stack) is expanding beyond English-first assumptions. Agents that communicate across borders need to handle RFC 2047 encoding on outbound messages and decoding on inbound messages as a baseline capability.
+
+If you're building on LobsterMail, this complexity lives in the infrastructure layer. Your agent writes `subject: "会議の議題"` and the SDK handles encoding negotiation, line folding, and charset selection. On the receiving side, `inbox.receive()` returns decoded Unicode strings. No `=?UTF-8?B?` artifacts to parse.
+
+For agents that need to handle email headers directly, test your encoding with round-trip validation: encode a string, decode the result, and verify it matches the original. Do this with Latin-extended characters, CJK text, Arabic (right-to-left), and emoji. If any of those four fail, your encoding pipeline has a gap.
+
+<FAQ>
+  <FAQItem question="What exactly is an RFC 2047 encoded-word and what does the =?charset?encoding?text?= syntax mean?">
+    An RFC 2047 encoded-word is a way to represent non-ASCII characters inside email headers that are limited to 7-bit ASCII. The syntax `=?charset?encoding?text?=` declares the character set (like UTF-8), the encoding method (B for Base64 or Q for Quoted-Printable), and the encoded payload. Mail clients decode this back to readable Unicode for display.
+  </FAQItem>
+
+  <FAQItem question="Which email header fields can contain RFC 2047 encoded-words?">
+    Encoded-words are allowed in unstructured fields like Subject and Comments, and in the display-name portion of address fields like From, To, and Reply-To. They are NOT allowed in structured fields like Message-ID, Date, or in the actual email address portion of address fields.
+  </FAQItem>
+
+  <FAQItem question="Can an email agent encode the From or To address display name with RFC 2047?">
+    Yes. The display name (the human-readable part before the angle-bracketed email address) can and should be RFC 2047 encoded when it contains non-ASCII characters. For example, `=?UTF-8?Q?Fran=C3=A7ois?= <francois@example.com>` is correct.
+  </FAQItem>
+
+  <FAQItem question="What is the maximum length of an encoded-word in an email header?">
+    Each encoded-word must not exceed 75 characters, including the `=?charset?encoding?` prefix and `?=` suffix. If your encoded text is longer, split it into multiple encoded-words separated by folding whitespace (CRLF + space).
+  </FAQItem>
+
+  <FAQItem question="What is the difference between Q-encoding and B-encoding in RFC 2047?">
+    Q-encoding (Quoted-Printable) represents non-ASCII bytes as `=XX` hex pairs while leaving ASCII characters readable. B-encoding uses Base64, which is more compact for text that's mostly non-ASCII. Use Q for mostly-ASCII text with a few special characters, and B for CJK, Arabic, or other non-Latin scripts.
+  </FAQItem>
+
+  <FAQItem question="Does SMTPUTF8 make RFC 2047 obsolete for modern email agents?">
+    Not yet. SMTPUTF8 allows raw UTF-8 in headers and addresses, which is cleaner than RFC 2047. But it requires both sending and receiving servers to support it. Major providers like Gmail and Outlook do, but many corporate and smaller servers don't. Agents need RFC 2047 as a fallback for at least the next several years.
+  </FAQItem>
+
+  <FAQItem question="How do I know if a receiving mail server supports RFC 6532 internationalized headers?">
+    Connect to the recipient's MX server and issue an EHLO command. If the server responds with `SMTPUTF8` in its capability list, it supports internationalized headers per RFC 6531/6532. If not, you must use RFC 2047 encoding for non-ASCII header content.
+  </FAQItem>
+
+  <FAQItem question="What happens to RFC 2047 encoded headers when passed through a mailing list or forwarder?">
+    Intermediaries should preserve encoded-words, but some re-encode, re-fold, or strip them incorrectly. This can produce double-encoded text or broken character sequences. It's a known fragility of RFC 2047 that SMTPUTF8 was designed to solve.
+  </FAQItem>
+
+  <FAQItem question="Why do some encoded-words appear garbled in certain email clients even when technically valid?">
+    Some older or less-compliant email clients fail to decode RFC 2047 properly, especially with mixed charsets, unusual character sets (like ISO-2022-JP), or encoded-words that span multiple folded lines. Sticking to UTF-8 and keeping encoded-words within the 75-character limit minimizes these issues.
+  </FAQItem>
+
+  <FAQItem question="Can a single header field contain multiple encoded-words with different charsets?">
+    Technically yes, the spec allows it. In practice, mixing charsets in a single header confuses many email clients and should be avoided. Use UTF-8 consistently across all encoded-words in a header.
+  </FAQItem>
+
+  <FAQItem question="What RFC 2047 encoding mistakes most commonly cause deliverability failures?">
+    The top offenders are: encoded-words exceeding 75 characters, encoding pure ASCII text unnecessarily (which can trigger spam filters), missing whitespace between adjacent encoded-words, and using RFC 2047 syntax on email addresses instead of display names.
+  </FAQItem>
+
+  <FAQItem question="How does LobsterMail handle RFC 2047 encoding for agents?">
+    LobsterMail's SDK accepts plain Unicode strings for subjects, display names, and other header values. The infrastructure layer automatically applies RFC 2047 or SMTPUTF8 encoding based on what the receiving server supports. Incoming emails are decoded to Unicode before your agent processes them.
+  </FAQItem>
+
+  <FAQItem question="Is RFC 2047 encoding required for emoji in email subject lines?">
+    Yes. Emoji are Unicode characters outside the ASCII range, so they must be encoded in email headers. Most emoji will use B-encoding (Base64) since they're multi-byte UTF-8 sequences. A subject like "Meeting tomorrow 👍" needs the thumbs-up emoji encoded even though the rest is pure ASCII.
+  </FAQItem>
+
+  <FAQItem question="How should an agent decode incoming RFC 2047 headers before processing them?">
+    Use a library like `libmime` (Node.js) or `email.header.decode_header` (Python) to scan for `=?...?=` patterns, decode the payload, and convert to your internal string format. Always decode headers before doing text matching, keyword extraction, or language detection. In LobsterMail, incoming headers arrive pre-decoded.
+  </FAQItem>
+</FAQ>
