@@ -100,6 +100,7 @@ for (const email of recentEmails) {
   const safeContent = email.safeBodyForLLM();
   // Feed into agent context as structured episodic memory
 }
+```
 This is selective memory loading. Instead of dumping every email into daily Markdown and hoping retrieval finds the right one, your agent queries its inbox directly when it needs email context. The inbox handles threading, deduplication, retention, and metadata. OpenClaw's memory handles everything else.
 
 The `safeBodyForLLM()` method matters here. When you load email history into an LLM context window, every message is a potential prompt injection vector. LobsterMail's scanner flags risky content before it reaches the model. No memory plugin does this because they don't understand what email-specific attacks look like.

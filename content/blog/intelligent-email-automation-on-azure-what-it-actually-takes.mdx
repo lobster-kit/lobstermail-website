@@ -103,6 +103,7 @@ const lm = await LobsterMail.create();
 const inbox = await lm.createSmartInbox({ name: 'Support Agent' });
 
 const emails = await inbox.receive();
+```
 No domain verification. No Managed Identity configuration. No Logic App triggers. The agent hatches its own inbox and starts working. Security scanning for prompt injection is built in, so your agent can read untrusted email without the risk of executing injected instructions.
 
 I'm not saying LobsterMail replaces Azure for every email use case. If you're building a full enterprise communication platform with Teams integration, calendar invites, and SharePoint attachments, you want the Microsoft stack. But if your agent needs email as a capability (not as an entire platform), the total cost of ownership comparison isn't close.

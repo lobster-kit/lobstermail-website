@@ -84,6 +84,7 @@ import { LobsterMail } from '@lobsterkit/lobstermail';
 const lm = await LobsterMail.create();
 const inbox = await lm.createSmartInbox({ name: 'support-triage' });
 const emails = await inbox.receive();
+```
 No domain verification. No Managed Identity configuration. No Logic Apps. The agent signs itself up, gets a working email address, and starts processing mail. Incoming emails include injection risk scoring out of the box, so the agent knows when a message is trying to manipulate it.
 
 This isn't a replacement for Azure across the board. If you're building enterprise email workflows that need to integrate with Exchange, SharePoint, and Teams, Azure's ecosystem makes sense. But if your goal is giving an AI agent autonomous email capability, the DIY Azure pipeline introduces friction that an agent-first platform removes entirely.

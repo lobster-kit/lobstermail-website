@@ -82,6 +82,7 @@ transport.close(); // agent must remember to do this
 // API approach: stateless, one call
 const inbox = await lm.createSmartInbox({ name: 'My Agent' });
 await inbox.send({ to, subject, text });
+```
 The API approach also gives you event-driven feedback. When an email bounces, you get a webhook callback or can poll a status endpoint. Your agent doesn't need to parse bounce notification emails (which are themselves emails, arriving asynchronously, in inconsistent formats across providers). It just checks a structured response.
 
 For agents that need to *receive* email too, the gap widens further. SMTP is a sending protocol. Receiving requires IMAP or POP3, which are entirely separate protocols with their own connection management headaches. An email API typically handles both directions through the same interface.

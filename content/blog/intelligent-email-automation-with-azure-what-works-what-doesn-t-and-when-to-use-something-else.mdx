@@ -101,6 +101,7 @@ for (const email of emails) {
   // Your agent processes the email here
   console.log(email.subject, email.preview);
 }
+```
 That's the entire setup. No six-service architecture. No domain verification. No warming up a sending reputation.
 
 The trade-off is control. Azure gives you full control over every layer, at the cost of complexity. Agent-first platforms give you simplicity, at the cost of some configurability. The right choice depends on whether you're building email infrastructure or building something that happens to need email.

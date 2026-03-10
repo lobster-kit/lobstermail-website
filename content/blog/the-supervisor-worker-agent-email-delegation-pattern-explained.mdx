@@ -88,6 +88,7 @@ const inbox = await lm.createSmartInbox({ name: 'Support Worker' });
 **Injection protection.** This one is specific to AI agents. When your email worker receives a reply, that reply content gets fed back to the supervisor (or to the worker's own LLM). A malicious reply containing prompt injection can hijack the agent's behavior. Your email infrastructure should scan incoming content and flag injection risk before the LLM ever sees it.
 
 **Multi-inbox isolation.** If you're [running 50 agent inboxes](/blog/running-50-agent-inboxes), each worker (or each tenant) needs its own isolated inbox. Shared inboxes create a security and deliverability mess. One worker's spam complaints shouldn't tank deliverability for all the others.
+```
 
 ## Picking a framework for email delegation
 

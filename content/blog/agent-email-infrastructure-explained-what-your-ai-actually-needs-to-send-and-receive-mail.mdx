@@ -109,6 +109,7 @@ const inbox = await lm.createSmartInbox({ name: 'signup-bot' });
 const emails = await inbox.receive();
 const verification = emails.find(e => e.subject.includes('Verify'));
 console.log(verification.preview); // "Your code is 847291"
+```
 The agent never touched a browser. No OAuth dance. No DNS records. It just asked for an inbox and got one.
 
 ## Security: the part most people skip

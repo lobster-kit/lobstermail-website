@@ -90,6 +90,7 @@ const lm = await LobsterMail.create();
 const inbox = await lm.createSmartInbox({ name: 'Support Agent' });
 
 const emails = await inbox.receive();
+```
 No domain verification. No app registration. No credential management. The agent self-provisions, gets a real `@lobstermail.ai` address, and starts receiving mail immediately. It also gets built-in protection against prompt injection attacks in email content, which is something you'd need to build yourself on Azure.
 
 The free tier gives you 1,000 emails per month at $0. The Builder tier at $9/month scales to 10 inboxes and 5,000 emails. For most agent use cases, that covers the entire email layer without touching a single Azure portal blade.

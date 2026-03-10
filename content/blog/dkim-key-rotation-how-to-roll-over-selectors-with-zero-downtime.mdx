@@ -92,6 +92,7 @@ Ed25519 keys are shorter and faster to verify, but support is still inconsistent
 If you manage DNS through a provider with an API (Cloudflare, Route 53, Google Cloud DNS), you can script the entire rotation:
 
 ```bash
+```
 # Generate new key pair
 openssl genrsa -out dkim-20260308.key 2048
 openssl rsa -in dkim-20260308.key -pubout -outform PEM | \

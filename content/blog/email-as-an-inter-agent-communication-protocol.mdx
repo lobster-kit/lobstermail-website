@@ -85,6 +85,7 @@ Your agent can send a JSON task envelope in the email body, with a human-readabl
   "reply_to": "finance-agent@lobstermail.ai",
   "callback_format": "json"
 }
+```
 The email subject could be `Task: Invoice review for Acme Corp ($14,200)`. A human who intercepts it can read it. An agent who receives it can parse it. That dual readability is something no HTTP-based protocol offers.
 
 For [multi-agent workflows where agents need to coordinate across systems](/blog/multi-agent-email-coordination), email envelopes like this give you a message format that's both machine-parseable and human-auditable.
