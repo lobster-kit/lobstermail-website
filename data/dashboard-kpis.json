@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-10T13:15:03.875Z",
+  "generated_at": "2026-03-10T19:15:05.766Z",
   "kpis": {
     "mrr_usd": 0,
     "paid_accounts": 2,
@@ -388,7 +388,7 @@
   },
   "pipeline": {
     "drafts": 368,
-    "approved": 356,
+    "approved": 6,
     "published": 333
   },
   "content": {
@@ -404,7 +404,7 @@
     }
   },
   "agents": {
-    "agent_2_last_run": "2026-03-10T13:03:15.459Z",
+    "agent_2_last_run": "2026-03-10T18:07:38.728Z",
     "agent_3_last_run": "2026-03-10T07:03:55.576Z",
     "agent_6_last_run": "2026-03-10T10:00:14.438Z"
   },
