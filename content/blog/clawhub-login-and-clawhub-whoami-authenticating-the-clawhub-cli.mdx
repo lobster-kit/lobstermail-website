@@ -130,7 +130,7 @@ For agents that need to operate autonomously (no human to type `clawhub login` a
 
 This is actually one of the places where agent-first infrastructure matters. Tools built for humans assume someone is sitting at a keyboard, ready to click "Authorize" in a browser popup. Agents don't have keyboards. They need token-based auth, headless flows, and environment variables.
 
-The same principle applies to email. If your agent needs to send or receive email as part of a skill (signing up for a service, receiving verification codes, communicating with users), it hits the same wall: most email providers require human signup. [LobsterMail](/blog/what-is-lobstermail) solves that by letting agents self-provision inboxes without human intervention, similar to how `clawhub login --token` lets agents authenticate without a browser.
+The same principle applies to email. If your agent needs to send or receive email as part of a skill (signing up for a service, receiving verification codes, communicating with users), it hits the same wall: most email providers require human signup. [LobsterMail](/blog/what-is-agent-email) solves that by letting agents self-provision inboxes without human intervention, similar to how `clawhub login --token` lets agents authenticate without a browser.
 
 ## Troubleshooting common authentication failures
 

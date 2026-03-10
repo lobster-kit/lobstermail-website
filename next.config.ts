@@ -28,6 +28,12 @@ const nextConfig: NextConfig = {
         destination: "https://lobstermail.ai/:path*",
         permanent: true,
       },
+      // /guides/:slug → /docs/:slug (API content uses /guides/ paths)
+      {
+        source: "/guides/:slug",
+        destination: "/docs/:slug",
+        permanent: true,
+      },
       ...fileRedirects,
     ];
   },

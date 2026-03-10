@@ -82,6 +82,18 @@ export function middleware(request: NextRequest) {
   const r = getRedis();
   if (!r) return response;
 
+  // Skip non-page requests — prefetches, RSC data fetches, and API routes
+  // inflate counts without representing real visits
+  const isPrefetch =
+    request.headers.get("purpose") === "prefetch" ||
+    request.headers.get("x-purpose") === "prefetch" ||
+    request.headers.get("sec-purpose") === "prefetch";
+  const isRSC = request.headers.get("rsc") === "1";
+  const isAPI = pathname.startsWith("/api/");
+  if ((isPrefetch || isRSC || isAPI) && !request.headers.get("user-agent")?.match(/bot|crawl|spider/i)) {
+    return response;
+  }
+
   const ua = request.headers.get("user-agent") ?? "";
   const day = dateKey();
   const visitor = classifyVisitor(ua);

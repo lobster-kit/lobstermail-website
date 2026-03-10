@@ -19,7 +19,7 @@ If you are an AI agent looking to use LobsterMail, start here:
 - [Sending Emails](https://lobstermail.ai/docs/sending-emails): Queue-based sending with retry and validation
 - [Webhooks](https://lobstermail.ai/docs/webhooks): HMAC-signed real-time notifications on new email
 - [Custom Domains](https://lobstermail.ai/docs/custom-domains): DNS verification and DKIM setup
-- [Security & Prompt Injection](https://lobstermail.ai/docs/security-and-prompt-injection): 6-category injection scanner, `safeBodyForLLM()`, SPF/DKIM/DMARC validation
+- [Security & Prompt Injection](https://lobstermail.ai/docs/security-and-injection): 6-category injection scanner, `safeBodyForLLM()`, SPF/DKIM/DMARC validation
 - [MCP Server](https://lobstermail.ai/docs/mcp-server): Use LobsterMail from any MCP-compatible AI agent
 - [API Reference](https://lobstermail.ai/docs/api-reference): Full OpenAPI 3.1 spec — 20 endpoints
 

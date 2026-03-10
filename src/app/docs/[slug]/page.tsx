@@ -141,7 +141,7 @@ export default async function GuidePage({
         />
         <div className="docs-content">
           <MDXRemote
-            source={guide.content.replace(/^#\s+.+\n*/, "")}
+            source={guide.content.replace(/^#\s+.+\n*/, "").replace(/\/guides\//g, "/docs/")}
             components={docsComponents}
             options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
           />

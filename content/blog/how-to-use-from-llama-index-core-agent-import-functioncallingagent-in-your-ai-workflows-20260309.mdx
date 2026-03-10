@@ -226,7 +226,7 @@ agent = FunctionCallingAgent.from_tools(
 
 The agent picks the right tool based on the query. "What was the revenue in Q3?" goes to vector search. "Give me an overview of the annual report" goes to the summary tool. This is the core of agentic RAG, and `FunctionCallingAgent` handles the routing reliably because the LLM's function calling API is better at tool selection than free-form text reasoning.
 
-Start with `FunctionCallingAgent` for structured, tool-heavy workflows. Switch to `ReActAgent` only if you need compatibility with models that lack function calling support. And if your agent needs email, don't build the plumbing yourself. Let it [hatch its own inbox](/blog/what-is-lobstermail).
+Start with `FunctionCallingAgent` for structured, tool-heavy workflows. Switch to `ReActAgent` only if you need compatibility with models that lack function calling support. And if your agent needs email, don't build the plumbing yourself. Let it [hatch its own inbox](/blog/agent-self-signup-explained).
 
 <FAQ>
   <FAQItem question="What is the difference between FunctionCallingAgent and FunctionCallingAgentWorker?">
