@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { CodeSnippet } from "./CodeSnippet";
+import { CredibilityPill } from "./CredibilityPill";
 import { FadeIn } from "./FadeIn";
 
 export function Hero() {
@@ -29,6 +30,10 @@ export function Hero() {
             <p className="max-w-md text-base leading-relaxed text-secondary sm:text-lg">
               No API keys. No human signup. Your agent pinches its own email.
             </p>
+          </FadeIn>
+
+          <FadeIn delay={0.24}>
+            <CredibilityPill />
           </FadeIn>
         </div>
 
