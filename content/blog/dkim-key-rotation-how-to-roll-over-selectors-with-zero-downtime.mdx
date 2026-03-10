@@ -92,7 +92,6 @@ Ed25519 keys are shorter and faster to verify, but support is still inconsistent
 If you manage DNS through a provider with an API (Cloudflare, Route 53, Google Cloud DNS), you can script the entire rotation:
 
 ```bash
-```
 # Generate new key pair
 openssl genrsa -out dkim-20260308.key 2048
 openssl rsa -in dkim-20260308.key -pubout -outform PEM | \
@@ -108,6 +107,8 @@ curl -X POST "https://api.cloudflare.com/client/v4/zones/{zone_id}/dns_records" 
     "content": "v=DKIM1; k=rsa; p=YOUR_PUBLIC_KEY_HERE",
     "ttl": 300
   }'
+```
+
 The key benefit of API-driven rotation: you can build a cron job that rotates keys on a schedule (quarterly is a good cadence), monitors DMARC reports for old-selector traffic, and retires selectors automatically once they're clear. No human intervention, no forgotten keys sitting around for years.
 
 For platforms that send email on behalf of multiple customers (like agent infrastructure), coordinating rotation across dozens of sending domains becomes manageable only with automation. You can stagger rollouts, run health checks against each domain's DMARC data, and roll back instantly if something breaks.
