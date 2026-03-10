@@ -28,6 +28,14 @@
     "remotion": "^4.0.429",
     "shiki": "^3.22.0"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "protobufjs",
+      "unrs-resolver"
+    ]
+  },
   "devDependencies": {
     "@google/genai": "^1.42.0",
     "@tailwindcss/postcss": "^4",
