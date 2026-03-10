@@ -90,7 +90,6 @@ const inbox = await lm.createSmartInbox({ name: 'Support Worker' });
 **Multi-inbox isolation.** If you're [running 50 agent inboxes](/blog/running-50-agent-inboxes), each worker (or each tenant) needs its own isolated inbox. Shared inboxes create a security and deliverability mess. One worker's spam complaints shouldn't tank deliverability for all the others.
 
 ## Picking a framework for email delegation
-```
 
 LangGraph is the most popular choice right now for supervisor-worker architectures. It models agents as nodes in a graph with explicit edges for routing. The email worker becomes a tool that the supervisor node can call. The upside: you get built-in state management, checkpointing, and human-in-the-loop hooks. The downside: the learning curve is real, and debugging graph execution requires the LangSmith dashboard.
 

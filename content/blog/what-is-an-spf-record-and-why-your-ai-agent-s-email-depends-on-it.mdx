@@ -35,8 +35,6 @@ Here's what a basic SPF record looks like:
 
 ```dns
 v=spf1 include:_spf.google.com include:sendgrid.net -all
-```
-
 Breaking that down:
 
 - `v=spf1` declares the SPF version.
@@ -84,8 +82,6 @@ Combine them into a single TXT record. Each provider will give you a specific `i
 
 ```dns
 v=spf1 include:_spf.google.com include:amazonses.com include:sendgrid.net ~all
-```
-
 Use `~all` (softfail) during testing and switch to `-all` (hardfail) once you've confirmed everything works. The difference: softfail marks unauthorized senders as suspicious, hardfail tells receiving servers to reject them.
 
 ### Step 3: publish it in DNS

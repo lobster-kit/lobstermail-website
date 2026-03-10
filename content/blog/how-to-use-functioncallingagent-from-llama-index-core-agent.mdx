@@ -27,8 +27,6 @@ If you've been building with LlamaIndex, you've probably seen this import floati
 
 ```python
 from llama_index.core.agent import FunctionCallingAgent
-```
-
 It looks simple enough. But the docs split responsibilities across `FunctionCallingAgent`, `FunctionCallingAgentWorker`, and `AgentRunner`, and most tutorials skip the parts that matter when you're wiring an agent to do real things in the world. Things like sending emails, calling external APIs, or reacting to incoming messages.
 
 Here's what FunctionCallingAgent actually is, how to set it up, and how to extend it with tools that do more than query a vector index.
@@ -71,8 +69,6 @@ agent = FunctionCallingAgent.from_tools(
 
 response = agent.chat("What's the weather in Montreal?")
 print(response)
-```
-
 The agent receives your message, the LLM decides to call `get_weather` with `city="Montreal"`, and the result flows back into the conversation. No prompt engineering for tool selection. No regex parsing.
 
 ## FunctionCallingAgent vs FunctionCallingAgentWorker

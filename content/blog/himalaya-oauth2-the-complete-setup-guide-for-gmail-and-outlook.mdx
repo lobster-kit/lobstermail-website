@@ -82,14 +82,10 @@ message.send.backend.auth.refresh-token.keyring = "gmail-oauth2-refresh-token"
 message.send.backend.auth.auth-url = "https://accounts.google.com/o/oauth2/v2/auth"
 message.send.backend.auth.token-url = "https://oauth2.googleapis.com/token"
 message.send.backend.auth.scope = "https://mail.google.com/"
-```
-
 Before running Himalaya, store your client secret in the system keyring:
 
 ```bash
 secret-tool store --label="gmail-oauth2-client-secret" service himalaya account gmail-oauth2-client-secret
-```
-
 Then run `himalaya envelope list` (or any command that triggers a connection). Himalaya will open your browser, ask you to sign in to Google, and store the resulting tokens in your keyring automatically.
 
 ## Outlook OAuth2 setup

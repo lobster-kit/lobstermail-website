@@ -44,8 +44,6 @@ You need three packages: LlamaIndex core, an LLM integration, and an email clien
 ```bash
 pip install llama-index llama-index-llms-openai
 npm install @lobsterkit/lobstermail
-```
-
 We'll write the agent in Python and call a small Node helper for the email operations. If you prefer a pure Python setup, you can hit the LobsterMail REST API directly with `httpx`. The patterns are identical.
 
 ## Defining email tools the LLM can actually use
@@ -97,8 +95,6 @@ async def check_inbox(limit: int = 5) -> str:
 
 send_tool = FunctionTool.from_defaults(async_fn=send_email)
 inbox_tool = FunctionTool.from_defaults(async_fn=check_inbox)
-```
-
 Notice we're wrapping the LobsterMail SDK calls through a Node subprocess. The `email_helper.js` file is short:
 
 ```javascript

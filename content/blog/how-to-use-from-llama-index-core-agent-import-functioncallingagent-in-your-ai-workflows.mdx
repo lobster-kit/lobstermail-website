@@ -30,8 +30,6 @@ You've seen the import line in every tutorial:
 
 ```python
 from llama_index.core.agent import FunctionCallingAgent
-```
-
 You paste it in. You get an error. Or it works, but the agent calls the wrong tool. Or it calls the right tool with garbage arguments. And now you're three hours into a Stack Overflow thread about `FunctionCallingAgentWorker` vs `FunctionCallingAgent` wondering if you picked the wrong abstraction entirely.
 
 This guide walks through how `FunctionCallingAgent` actually works in LlamaIndex, when to use it (and when not to), and how to wire real tools into it, including tools that send email, hit APIs, and do useful things beyond returning a string.
@@ -74,8 +72,6 @@ agent = FunctionCallingAgent.from_tools(
 
 response = agent.chat("What's the weather in Montreal?")
 print(response)
-```
-
 The `verbose=True` flag prints each step of the agent's reasoning, which tools it's calling, and what arguments it passes. Keep it on during development.
 
 ## FunctionCallingAgent vs FunctionCallingAgentWorker

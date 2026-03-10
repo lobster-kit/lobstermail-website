@@ -46,8 +46,6 @@ The `clawhub login` command supports two authentication methods, and which one y
 
 ```bash
 clawhub login
-```
-
 This opens your default browser and walks you through an OAuth consent screen. You approve access, the CLI receives a token, and it stores that token locally. This is the simplest path if you're working on your own machine and have a browser available.
 
 After the flow completes, the CLI saves your credentials to a local config file (typically `~/.config/clawhub/auth.json`, though the exact path varies by OS). Every subsequent command reads from this file, so you don't need to re-authenticate until the token expires or you explicitly log out.
@@ -56,8 +54,6 @@ After the flow completes, the CLI saves your credentials to a local config file 
 
 ```bash
 clawhub login --token <token>
-```
-
 This skips the browser entirely. You paste in an API token, and the CLI stores it the same way. This is the method you want for CI/CD pipelines, Docker containers, remote servers, or any environment without a display.
 
 Where do you get the token? From your ClawHub account settings page. Generate a new API token there, copy it, and pass it to the CLI. One thing worth noting: the docs don't currently explain token scopes or expiry in detail. If your token stops working after a while, generating a fresh one is the fastest fix.

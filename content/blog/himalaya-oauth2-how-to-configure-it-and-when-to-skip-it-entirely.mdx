@@ -83,8 +83,6 @@ message.send.backend.auth.refresh-token.keyring = "gmail-oauth2-refresh-token"
 message.send.backend.auth.auth-url = "https://accounts.google.com/o/oauth2/v2/auth"
 message.send.backend.auth.token-url = "https://oauth2.googleapis.com/token"
 message.send.backend.auth.scopes = ["https://mail.google.com/"]
-```
-
 Notice that both IMAP and SMTP share the same OAuth2 credentials but need their own config blocks. The scope `https://mail.google.com/` covers both reading and sending. You'll also need to store the client secret in your system keyring under the name `gmail-oauth2-client-secret` before running Himalaya.
 
 The first time you run any Himalaya command, it'll open your default browser, ask you to log into Google, and grant permissions. Himalaya captures the redirect, stores the access and refresh tokens in the keyring, and you're set.
@@ -108,8 +106,6 @@ backend.auth.auth-url = "https://login.microsoftonline.com/common/oauth2/v2.0/au
 backend.auth.token-url = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
 backend.auth.pkce = true
 backend.auth.scopes = ["https://outlook.office.com/IMAP.AccessAsUser.All"]
-```
-
 With PKCE enabled, you don't need a client secret for public clients, which is a nice security improvement. Microsoft's IMAP scope is `https://outlook.office.com/IMAP.AccessAsUser.All` for reading, and you'll need `https://outlook.office.com/SMTP.Send` for outbound mail.
 
 ## XOAUTH2 vs OAUTHBEARER

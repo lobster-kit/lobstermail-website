@@ -106,8 +106,6 @@ async function handleTimeout(conversation) {
   // Third timeout: escalate to human
   await escalateToHuman(conversation);
 }
-```
-
 Notice the conversation context travels with each step. When the human finally picks this up, they can see the full thread, every retry, and the reason for escalation. That context preservation is the difference between a useful handoff and a confusing one.
 
 ## False positives will burn you

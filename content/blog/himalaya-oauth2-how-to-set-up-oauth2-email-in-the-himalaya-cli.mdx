@@ -49,8 +49,6 @@ To install with OAuth2 enabled:
 
 ```bash
 cargo install himalaya --features oauth2
-```
-
 If you're using Nix, the `himalaya` package in nixpkgs includes OAuth2 by default. For Homebrew and other package managers, check whether the formula enables the feature. If it doesn't, building from source with Cargo is the reliable path.
 
 ## Gmail OAuth2 configuration
@@ -93,8 +91,6 @@ message.send.backend.auth.refresh-token.keyring = "gmail-oauth2-refresh-token"
 message.send.backend.auth.auth-url = "https://accounts.google.com/o/oauth2/v2/auth"
 message.send.backend.auth.token-url = "https://oauth2.googleapis.com/token"
 message.send.backend.auth.scopes = ["https://mail.google.com/"]
-```
-
 The `xoauth2` method is what Gmail expects. There's also an `oauthbearer` option in Himalaya, but Gmail doesn't support it. Use `xoauth2` for Google accounts.
 
 The scope `https://mail.google.com/` grants full mailbox access for both IMAP reads and SMTP sends. Google does offer narrower scopes, but Himalaya needs this one to work with both backends.

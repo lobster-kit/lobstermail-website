@@ -51,8 +51,6 @@ The tradeoff: `FunctionAgent` requires an LLM that supports function calling nat
 ```bash
 pip install llama-index llama-index-llms-openai
 npm install @lobsterkit/lobstermail
-```
-
 We're using Python for the LlamaIndex agent and the LobsterMail Node SDK for email operations. If your agent runs in Python end-to-end, you can call the LobsterMail REST API directly. I'll show both approaches.
 
 For the LLM, we'll start with OpenAI since it has the widest function calling support in LlamaIndex. Swapping to Anthropic or Mistral later is a one-line change.
@@ -66,8 +64,6 @@ def send_email(to: str, subject: str, body: str) -> str:
     """Send an email."""
     print(f"Sending to {to}: {subject}")
     return "Email sent successfully"
-```
-
 That function does nothing. Your agent thinks it sent an email, but the recipient never gets one. In production, this kind of gap causes silent failures that are nearly impossible to debug.
 
 Instead, we need tools that talk to real email infrastructure. Here's a `send_email` tool backed by the LobsterMail API:

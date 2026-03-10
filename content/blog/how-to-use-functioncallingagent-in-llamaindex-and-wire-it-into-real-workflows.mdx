@@ -45,8 +45,6 @@ The import line that causes the most confusion:
 
 ```python
 from llama_index.core.agent import FunctionCallingAgent
-```
-
 This works in LlamaIndex v0.10+ (the post-refactor versions where `llama_index.core` became the base package). If you're on an older version where the top-level `llama_index` package still bundles everything, the import path is different and you should upgrade.
 
 There's also `FunctionCallingAgentWorker`, which is the lower-level class. The relationship between them trips people up, so here's the short version:
@@ -64,8 +62,6 @@ agent = FunctionCallingAgent.from_tools(
     verbose=True,
 )
 response = agent.chat("What's the status of order #4521?")
-```
-
 Or, if you need the worker pattern:
 
 ```python

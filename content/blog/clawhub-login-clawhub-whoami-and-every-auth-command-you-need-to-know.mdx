@@ -61,8 +61,6 @@ clawhub login
 # → Opening browser to https://clawhub.openclaw.ai/auth...
 # → Waiting for callback...
 # → Authenticated as @your-handle
-```
-
 After this, every subsequent ClawHub command includes that stored token automatically. You don't need to pass it again.
 
 ## Token-based auth for headless environments
@@ -71,8 +69,6 @@ The browser flow breaks in three common scenarios: remote servers without a disp
 
 ```bash
 clawhub login --token lm_sk_live_abc123...
-```
-
 Where do you get the token? From the OpenClaw dashboard at `https://clawhub.openclaw.ai/settings/tokens`. Generate a new token there, copy it, and paste it into the command above.
 
 The CLI stores it in the same credentials file. From that point forward, `clawhub install`, `clawhub search`, and everything else works identically to the browser flow.

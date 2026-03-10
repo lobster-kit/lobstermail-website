@@ -76,16 +76,12 @@ message.send.backend.auth.refresh-token.keyring = "gmail-oauth2-refresh-token"
 message.send.backend.auth.auth-url = "https://accounts.google.com/o/oauth2/v2/auth"
 message.send.backend.auth.token-url = "https://oauth2.googleapis.com/token"
 message.send.backend.auth.scopes = ["https://mail.google.com/"]
-```
-
 The scope `https://mail.google.com/` grants full read/write access. Google doesn't offer granular IMAP-only scopes the way Outlook does, so this is what you're working with.
 
 Store the client secret in the keyring before your first run:
 
 ```bash
 secret-tool store --label="Gmail OAuth2 Client Secret" service gmail-oauth2-client-secret
-```
-
 Then run any Himalaya command. It will open a browser tab, prompt you to authorize, and store the access and refresh tokens in your keyring.
 
 ## Outlook OAuth2 configuration

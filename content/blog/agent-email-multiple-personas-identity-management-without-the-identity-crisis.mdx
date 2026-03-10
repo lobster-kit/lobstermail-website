@@ -73,8 +73,6 @@ The tradeoff used to be cost and complexity. Setting up five mailboxes meant fiv
 const support = await lm.createSmartInbox({ name: 'Help Desk' });
 const outreach = await lm.createSmartInbox({ name: 'Alex from Sales' });
 const ops = await lm.createSmartInbox({ name: 'Ops Digest' });
-```
-
 Three personas, three isolated inboxes, three independent reputations. No DNS configuration per persona. DKIM and SPF are handled at the platform level. If you need these personas on your own domain, you can set up [custom domains for agent email](/blog/custom-domains-agent-email) once and create as many personas as you need under it.
 
 ## The deliverability gap nobody writes about

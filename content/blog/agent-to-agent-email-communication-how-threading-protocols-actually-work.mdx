@@ -44,10 +44,9 @@ The catch is that email wasn't designed for machines. It was designed for people
 
 Email threading relies on three headers defined in RFC 5322 and refined in RFC 2822:
 
-`Message-ID: <unique-id@sender-domain.com>`
-`In-Reply-To: <message-id-of-parent@sender-domain.com>`
-`References: <first-message-id> <second-message-id> <parent-message-id>`
-
+Message-ID: <unique-id@sender-domain.com>
+In-Reply-To: <message-id-of-parent@sender-domain.com>
+References: <first-message-id> <second-message-id> <parent-message-id>
 **Message-ID** is a globally unique identifier assigned to every email. Think of it as the primary key.
 
 **In-Reply-To** contains the Message-ID of the email you're replying to. It points to the immediate parent in the thread.

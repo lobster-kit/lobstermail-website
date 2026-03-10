@@ -54,8 +54,6 @@ Install the dependencies. We're using OpenAI here, but swap in `llama-index-llms
 ```bash
 pip install llama-index-core llama-index-llms-openai
 npm install @lobsterkit/lobstermail
-```
-
 Wait, why npm? Because your agent's email tools will call a small Node sidecar (or you can use the LobsterMail REST API directly from Python). I'll show both approaches.
 
 ## Defining real email tools
@@ -67,8 +65,6 @@ def send_email(to: str, subject: str, body: str) -> str:
     """Send an email."""
     print(f"Sending to {to}: {subject}")
     return "Email sent successfully"
-```
-
 That's a lie. Nothing was sent. Let's replace it with a function that hits a real email API:
 
 ```python

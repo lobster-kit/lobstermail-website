@@ -75,8 +75,6 @@ agent = FunctionCallingAgent.from_tools(
 # Run it
 response = agent.chat("What's the weather in Montreal? If it's sunny, notify me.")
 print(response)
-```
-
 The `verbose=True` flag is worth keeping on during development. It prints each tool call the agent makes, including the arguments and return values. When something breaks (and it will), this is how you figure out what happened.
 
 ## Which LLMs work with FunctionCallingAgent
@@ -130,8 +128,6 @@ inbox_tool = FunctionTool.from_defaults(
     name="check_inbox",
     description="Check an email inbox and return recent messages with subjects and senders.",
 )
-```
-
 ### What happens when a tool raises an exception
 
 If a tool function throws an exception during execution, `FunctionCallingAgent` catches it and feeds the error message back to the LLM as the tool's output. The agent then decides what to do: it might try a different tool, retry with different arguments, or tell the user it failed.

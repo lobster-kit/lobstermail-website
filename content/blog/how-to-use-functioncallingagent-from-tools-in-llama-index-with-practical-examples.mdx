@@ -70,8 +70,6 @@ agent = FunctionCallingAgent.from_tools(
 
 response = agent.chat("What's the weather in Montreal?")
 print(response)
-```
-
 That's it. The agent receives the question, the LLM decides to call `get_weather` with `city="Montreal"`, gets the result back, and formulates a response. The `verbose=True` flag prints each tool call so you can see exactly what's happening.
 
 ## Which LLMs work with FunctionCallingAgent
@@ -163,8 +161,6 @@ agent = FunctionCallingAgent.from_tools(
 )
 
 response = agent.chat("Send a summary of today's tasks to sam@example.com")
-```
-
 The agent decides when to call `send_email` based on the conversation. You don't need to wire up routing logic. The LLM handles tool selection.
 
 <Callout type="tip">

@@ -44,8 +44,6 @@ This is the default. Run:
 
 ```bash
 clawhub login
-```
-
 The CLI opens your default browser to an OAuth consent screen. You approve access, the browser redirects back, and the CLI stores your session token locally. It's the simplest option when you're sitting at a computer and can interact with a browser window.
 
 The stored token persists between terminal sessions. You don't need to re-authenticate every time you open a new shell. The CLI reads the cached credentials automatically until they expire or you explicitly log out.
@@ -58,8 +56,6 @@ If you can't open a browser (or don't want to), pass a token directly:
 
 ```bash
 clawhub login --token <your-api-token>
-```
-
 This skips the browser entirely. You generate an API token from your ClawHub account settings, then pass it as an argument. The CLI validates the token against the OpenClaw API and caches it the same way the browser flow would.
 
 This is the right choice for CI/CD pipelines, remote servers, and any situation where interactive login isn't possible. A few things to keep in mind:

@@ -46,8 +46,6 @@ You need three packages. `llama-index-core` gives you the agent framework. `llam
 ```bash
 pip install llama-index-core llama-index-llms-openai
 npm install @lobsterkit/lobstermail
-```
-
 For the bridge between your Python agent and the LobsterMail Node SDK, we'll use a thin subprocess wrapper. If you'd rather stay pure Python, LobsterMail also exposes a REST API you can call with `httpx` directly.
 
 ```python
@@ -57,7 +55,6 @@ from llama_index.llms.openai import OpenAI
 import httpx
 import asyncio
 ## Defining real email tools
-```
 
 Here's where most tutorials fall apart. They define something like `def send_email(to, body): print(f"Sending to {to}")` and move on. That's a toy. Let's build tools that hit actual infrastructure.
 

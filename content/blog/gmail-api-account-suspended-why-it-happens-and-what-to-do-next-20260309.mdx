@@ -121,8 +121,6 @@ import { LobsterMail } from '@lobsterkit/lobstermail';
 const lm = await LobsterMail.create();
 const inbox = await lm.createSmartInbox({ name: 'My Agent' });
 // inbox.address → my-agent@lobstermail.ai
-```
-
 That's the entire setup. No API keys to configure, no consent screens, no quota anxiety.
 
 If your Gmail API account just got suspended and you're re-evaluating your architecture, it might be worth asking whether you were ever using the right tool in the first place.

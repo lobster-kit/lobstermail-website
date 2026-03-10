@@ -73,8 +73,6 @@ lm = asyncio.run(LobsterMail.create())
 inbox = asyncio.run(lm.create_smart_inbox(name="sales-agent"))
 
 print(f"Agent inbox ready: {inbox.address}")
-```
-
 That gives your agent a real `@lobstermail.ai` address. No API keys to configure, no DNS records to set up.
 
 ## Defining email tools the LLM can call

@@ -106,8 +106,6 @@ const inbox = await lm.createSmartInbox({ name: 'signup-bot' });
 // Agent signs up for service using inbox.address
 const emails = await inbox.receive({ timeout: 30000 });
 const code = extractVerificationCode(emails[0].body);
-```
-
 Three lines. The agent gets a typed response it can work with immediately. No connection management, no protocol switching, no credential juggling.
 
 ## Picking the right approach

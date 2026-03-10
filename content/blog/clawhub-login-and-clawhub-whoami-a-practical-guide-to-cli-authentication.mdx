@@ -47,8 +47,6 @@ The default `clawhub login` command opens your system browser and walks you thro
 
 ```bash
 clawhub login
-```
-
 After the browser redirects back, you should see a confirmation message in your terminal. From that point, every `clawhub` command uses the stored token automatically.
 
 This is the right choice when you're working on your own machine, installing skills interactively, or setting things up for the first time. It's the fastest path from zero to authenticated.
@@ -61,8 +59,6 @@ If you can't open a browser (or don't want to), pass a token directly:
 
 ```bash
 clawhub login --token <your-api-token>
-```
-
 This stores the token in the same local credential file as the browser flow. Every subsequent command uses it, same as before.
 
 Where do you get the token? Generate one from your ClawHub account settings in the web dashboard. You can create multiple tokens with different labels so you know which one is used where. This matters when you're running agents across several environments and need to revoke access to one without breaking the others.

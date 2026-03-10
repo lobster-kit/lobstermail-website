@@ -58,8 +58,6 @@ def send_email(to: str, subject: str, body: str) -> str:
     """Send an email to the specified address."""
     print(f"Sending to {to}: {subject}")
     return "Email sent successfully"
-```
-
 That's a lie. No email was sent. Your agent thinks it completed a task, but nothing happened. In production, this kind of silent failure is worse than an error, because nobody notices until a customer asks why they never got a reply.
 
 Here's what a real email tool looks like, using LobsterMail as the backend:
@@ -94,8 +92,6 @@ def check_inbox(inbox_id: str) -> str:
         f"From: {e['from']}, Subject: {e['subject']}, Preview: {e['preview']}"
         for e in emails[:5]
     )
-```
-
 The difference is obvious. One function moves electrons. The other moves text around in memory.
 
 ## Wiring tools into FunctionAgent

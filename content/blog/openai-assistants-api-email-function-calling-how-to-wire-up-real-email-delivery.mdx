@@ -80,8 +80,6 @@ When you create the assistant, you pass a `tools` array with your function schem
     "required": ["to", "subject", "body"]
   }
 }
-```
-
 Keep the descriptions clear. The model uses them to decide when and how to call the function. Vague descriptions produce vague arguments.
 
 You can add multiple tools to a single assistant. If your agent needs to read emails too, define a `read_inbox` function alongside `send_email`. The model will pick the right one based on the user's message.
@@ -133,8 +131,6 @@ if (run.status === "requires_action") {
     tool_outputs: outputs,
   });
 }
-```
-
 The `requires_action` status is the handoff point. The model has decided it wants to send an email. It's extracted the recipient, subject, and body from the conversation. Now it's waiting for you to do the actual sending and report back.
 
 That `sendEmailViaYourAPI` function is where the real decisions happen.

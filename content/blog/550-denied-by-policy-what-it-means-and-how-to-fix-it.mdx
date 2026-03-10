@@ -67,8 +67,6 @@ Run a quick check:
 
 ```bash
 dig TXT yourdomain.com | grep spf
-```
-
 You should see something like `v=spf1 include:_spf.google.com ~all`. If your email provider or sending service isn't listed in the `include` directives, add it. If you're using a shared sending service, make sure their SPF record is included in yours.
 
 One common mistake: exceeding the 10-DNS-lookup limit. SPF records that chain too many `include` statements will fail validation silently. Use an SPF flattening tool if you're close to the limit.
@@ -81,8 +79,6 @@ Check your DKIM record:
 
 ```bash
 dig TXT selector._domainkey.yourdomain.com
-```
-
 Replace `selector` with your actual DKIM selector (your email provider will tell you what it is). If the record doesn't exist or returns empty, your DKIM isn't set up properly.
 
 ### 3. Review your DMARC policy
