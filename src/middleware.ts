@@ -86,16 +86,21 @@ export function middleware(request: NextRequest) {
   const day = dateKey();
   const visitor = classifyVisitor(ua);
 
-  // Pipeline all increments into a single HTTP round-trip
+  // Pipeline all writes into a single HTTP round-trip
   const pipe = r.pipeline();
 
-  pipe.incr(`v:${day}:total`);
-  pipe.expire(`v:${day}:total`, TTL);
+  // Unique visitor IP (from Vercel's x-forwarded-for or x-real-ip)
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    request.headers.get("x-real-ip") ??
+    "unknown";
 
   if (visitor.type === "human") {
-    pipe.incr(`v:${day}:human`);
+    // HyperLogLog — counts unique IPs, not requests (~0.8% error, tiny memory)
+    pipe.pfadd(`v:${day}:human`, ip);
     pipe.expire(`v:${day}:human`, TTL);
   } else if (visitor.type === "llm_bot") {
+    // Bots: keep request counts (we care about volume, not unique IPs)
     pipe.incr(`v:${day}:bot_total`);
     pipe.expire(`v:${day}:bot_total`, TTL);
     pipe.incr(`v:${day}:bot:${visitor.bot}`);

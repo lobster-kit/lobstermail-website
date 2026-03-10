@@ -29,8 +29,6 @@ export function LaunchBanner() {
     }
 
     fetchSpots();
-    const interval = setInterval(fetchSpots, 60_000);
-    return () => clearInterval(interval);
   }, []);
 
   // Count-down animation when spots first load

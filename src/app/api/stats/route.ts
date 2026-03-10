@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-export const revalidate = 60; // cache for 60 seconds
+export const revalidate = 3600; // cache for 1 hour — KPIs only change once per day
 
 export async function GET() {
   const token = process.env.LOBSTERMAIL_API_KEY;
@@ -11,7 +11,7 @@ export async function GET() {
   try {
     const res = await fetch("https://api.lobstermail.ai/v1/admin/kpis", {
       headers: { Authorization: `Bearer ${token}` },
-      next: { revalidate: 60 },
+      next: { revalidate: 3600 },
     });
 
     if (!res.ok) {
