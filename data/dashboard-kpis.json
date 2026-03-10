@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-10T01:15:06.048Z",
+  "generated_at": "2026-03-10T07:15:02.941Z",
   "kpis": {
     "mrr_usd": 0,
     "paid_accounts": 2,
@@ -8,13 +8,13 @@
     "npm_installs_7d": 3,
     "seo_clicks_7d": 48,
     "seo_impressions_7d": 4534,
-    "seo_avg_position": 6.3,
+    "seo_avg_position": 0,
     "total_emails_sent": 0,
     "total_emails_received": 0,
     "total_inboxes": 0,
-    "daily_visitors": 2180,
-    "daily_visitors_human": 1904,
-    "daily_visitors_bot": 58,
+    "daily_visitors": 7613,
+    "daily_visitors_human": 7122,
+    "daily_visitors_bot": 350,
     "github_stars": 0,
     "x_followers": 2,
     "clawhub_skill_installs": 0
@@ -27,14 +27,14 @@
     "github_stars": 0,
     "x_followers": 2,
     "clawhub_skill_installs": 0,
-    "openclaw_github_stars": 289631,
+    "openclaw_github_stars": 292039,
     "openclaw_npm_daily": null,
-    "openclaw_twitter_followers": 434517
+    "openclaw_twitter_followers": 435924
   },
   "market": {
-    "openclaw_github_stars": 289631,
+    "openclaw_github_stars": 292039,
     "openclaw_npm_daily": 0,
-    "openclaw_twitter_followers": 434517
+    "openclaw_twitter_followers": 435924
   },
   "sparklines": {
     "mrr_usd": [
@@ -88,6 +88,10 @@
       },
       {
         "date": "2026-03-09",
+        "value": 0
+      },
+      {
+        "date": "2026-03-10",
         "value": 0
       }
     ],
@@ -143,6 +147,10 @@
       {
         "date": "2026-03-09",
         "value": 2
+      },
+      {
+        "date": "2026-03-10",
+        "value": 2
       }
     ],
     "seo_clicks": [
@@ -196,6 +204,10 @@
       },
       {
         "date": "2026-03-09",
+        "value": 0
+      },
+      {
+        "date": "2026-03-10",
         "value": 0
       }
     ],
@@ -251,6 +263,10 @@
       {
         "date": "2026-03-09",
         "value": 0
+      },
+      {
+        "date": "2026-03-10",
+        "value": 0
       }
     ],
     "daily_visitors": [
@@ -305,6 +321,10 @@
       {
         "date": "2026-03-09",
         "value": 2180
+      },
+      {
+        "date": "2026-03-10",
+        "value": 7613
       }
     ],
     "total_accounts": [
@@ -359,12 +379,16 @@
       {
         "date": "2026-03-09",
         "value": 0
+      },
+      {
+        "date": "2026-03-10",
+        "value": 0
       }
     ]
   },
   "pipeline": {
-    "drafts": 366,
-    "approved": 6,
+    "drafts": 16,
+    "approved": 352,
     "published": 333
   },
   "content": {
@@ -381,8 +405,8 @@
   },
   "agents": {
     "agent_2_last_run": "2026-03-06T09:08:28.242Z",
-    "agent_3_last_run": "2026-03-09T20:56:02.553Z",
-    "agent_6_last_run": "2026-03-09T22:00:45.695Z"
+    "agent_3_last_run": "2026-03-10T07:03:55.576Z",
+    "agent_6_last_run": "2026-03-10T04:00:09.500Z"
   },
-  "latest_date": "2026-03-09"
+  "latest_date": "2026-03-10"
 }
