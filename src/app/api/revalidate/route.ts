@@ -7,9 +7,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid secret" }, { status: 401 });
   }
 
-  revalidateTag("skill");
-  revalidateTag("guides");
-  revalidateTag("openapi");
+  revalidateTag("skill", "default");
+  revalidateTag("guides", "default");
+  revalidateTag("openapi", "default");
 
   return NextResponse.json({ revalidated: true, now: Date.now() });
 }
