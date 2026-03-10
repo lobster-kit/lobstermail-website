@@ -1,0 +1,199 @@
+---
+title: '550 denied by policy: what it means and how to fix it'
+description: >-
+  A 550 denied by policy error means the recipient's server permanently rejected
+  your email. Here's why it happens and how to fix it step by step.
+date: '2026-03-09'
+author: Samuel Chenard
+tags:
+  - email
+  - troubleshooting
+  - infrastructure
+  - guides
+image: /blog/550-denied-by-policy-what-it-means-and-how-to-fix-it-20260309.png
+imageAlt: >-
+  Pixel art lobster mascot illustration for email infrastructure — 550 denied by
+  policy
+publish_at: '2026-03-09T14:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-09T20:51:46.795Z'
+---
+Your agent sent an email. Instead of a delivery confirmation, it got back a `550 denied by policy` response. The message wasn't queued or deferred. The recipient's mail server looked at your message, checked it against its rules, and rejected it outright.
+
+For AI agents running automated email workflows, this is a real problem. A 550 is permanent. Retrying the same message won't help. It'll just burn your sending reputation faster.
+
+The good news: "denied by policy" is a specific sub-category of 550 errors, and the fix is usually straightforward once you know which policy triggered the rejection.
+
+## What does 550 denied by policy mean?
+
+A 550 denied by policy error is a permanent SMTP rejection code returned by a recipient's mail server, indicating that your message violates a configured policy. Common triggers include SPF or DMARC authentication failures, IP or domain blacklisting, relay restrictions, and domain-level content filtering. Unlike temporary 4xx errors, a 550 tells the sending server not to retry.
+
+The "denied by policy" part narrows things down. It means the rejection wasn't caused by an invalid address or a full mailbox. The server actively enforced a rule, and your message didn't pass. Here are the most common causes:
+
+1. **Missing or misconfigured SPF record** that doesn't authorize your sending IP
+2. **DKIM signature failure** because the message was altered in transit or the key doesn't match
+3. **DMARC policy set to reject** and the message failed both SPF and DKIM alignment
+4. **Sending IP listed on a blacklist** (Spamhaus, Barracuda, etc.)
+5. **Relay restrictions** on the recipient's server blocking external senders
+6. **Security gateway rules** (Mimecast, Proofpoint, Barracuda) filtering by domain reputation or content
+
+The exact wording varies by mail server. Microsoft Exchange might return `550 5.7.1 Service unavailable, client host blocked`. Mimecast might say `550 Denied by policy`. Google Workspace returns `550-5.7.26 This mail has been blocked because the sender is unauthenticated`. Different words, same category of problem.
+
+## SPF, DKIM, and DMARC failures
+
+Authentication failures cause the majority of 550 policy rejections I see in agent workflows. Here's why: when an agent provisions a new inbox and starts sending from it, the DNS records for that domain need to explicitly authorize the sending server. If they don't, the recipient's mail server has every reason to reject the message.
+
+### SPF (Sender Policy Framework)
+
+SPF tells receiving servers which IP addresses are allowed to send on behalf of your domain. If your sending server's IP isn't listed in the SPF record, the recipient gets a failure signal.
+
+Check your SPF record with:
+
+```bash
+dig TXT yourdomain.com | grep spf
+A valid SPF record looks something like:
+v=spf1 include:_spf.lobstermail.ai ~all
+```
+
+The `~all` (softfail) is lenient. Some domains use `-all` (hardfail), which tells recipients to reject unauthorized senders outright. If your SPF record is missing entirely, that's an instant red flag for most mail servers.
+
+### DKIM (DomainKeys Identified Mail)
+
+DKIM attaches a cryptographic signature to each outgoing message. The recipient's server checks the signature against a public key published in your DNS. If the signature doesn't verify (because the key is wrong, the record is missing, or the message body was modified by a relay), you'll get a policy rejection.
+
+### DMARC (Domain-based Message Authentication)
+
+DMARC ties SPF and DKIM together and tells receiving servers what to do when both fail. A DMARC policy of `p=reject` means: if SPF and DKIM both fail alignment, reject the message. A `p=quarantine` policy sends it to spam. A `p=none` policy just reports.
+
+If the domain you're sending from has `p=reject` in its DMARC record and your authentication isn't properly aligned, the recipient's server will return a 550.
+
+Check your DMARC record:
+
+```bash
+dig TXT _dmarc.yourdomain.com
+```
+
+## When the problem is on the recipient's side
+
+Not every 550 is your fault. Sometimes the recipient's mail server is configured to block entire categories of senders, and there's nothing wrong with your setup.
+
+Common recipient-side causes:
+
+- **Distribution lists restricted to internal senders.** Microsoft 365 distribution groups default to rejecting external email. The recipient's admin needs to allow external senders on that specific group. This is one of the most common 550 errors reported on Microsoft Q&A forums.
+- **Security gateways with aggressive filtering.** Mimecast, Proofpoint, and Barracuda can block messages based on domain age, IP reputation, content patterns, or custom admin rules. If your domain is new (under 30 days), expect higher rejection rates from these gateways.
+- **IP reputation blocks.** Even if your authentication is perfect, a shared sending IP with a bad reputation will get you blocked. This is especially common with budget SMTP providers that recycle IPs across thousands of customers.
+
+When the issue is on the recipient's side, your options are limited. You can ask the recipient to whitelist your domain or IP. You can also try sending from a different address or domain. But you can't fix their server configuration.
+
+## How to diagnose a 550 denied by policy error
+
+The bounce message itself is your best diagnostic tool. Most 550 responses include an enhanced status code and a human-readable explanation. Here's how to read them:
+
+| Response | Likely cause |
+|---|---|
+| `550 5.7.1 Relaying denied` | Your server isn't authenticated to relay through the recipient's server |
+| `550 5.7.0 Local policy violation` | SPF, DKIM, or DMARC failure on the recipient's end |
+| `550 5.7.23 SPF validation failed` | Your SPF record doesn't include the sending IP |
+| `550 5.7.26 Unauthenticated mail is not accepted` | DMARC policy rejection (Google Workspace) |
+| `550 Denied by policy` | Generic Mimecast or gateway-level block |
+| `550 5.7.1 Service unavailable, client host blocked` | IP blacklisted (Microsoft Exchange) |
+
+If you're sending programmatically through an API, the 550 code should appear in the API response or bounce webhook payload. Don't wait for a human to notice a bounce notification in their inbox. Parse the response code and the enhanced status code, then route to the appropriate fix.
+
+For agents, the ideal workflow looks like this: send the message, check the response, and if it's a 550, log the enhanced status code and stop retrying immediately. Retrying a 550 is worse than doing nothing, because it signals to the recipient's server that you're ignoring their rejection.
+
+## How to fix it step by step
+
+Once you've identified the cause from the bounce message, here's what to do:
+
+**For SPF failures:** Add the sending server's IP or include directive to your domain's SPF record. If you're using LobsterMail, the `@lobstermail.ai` domain already has SPF configured. For [custom domains](/docs/getting-started), the setup guide walks through the required DNS records.
+
+**For DKIM failures:** Verify your DKIM public key is published in DNS and matches the private key your sending server uses to sign messages. Rotate the key if it's been compromised or changed.
+
+**For DMARC rejections:** Start with `p=none` while you're debugging, then move to `p=quarantine` and finally `p=reject` once SPF and DKIM are both passing consistently.
+
+**For blacklisted IPs:** Check your sending IP against Spamhaus, Barracuda, and Spamcop. If you're listed, follow their delisting process. If you're on a shared IP, consider moving to a dedicated one or switching providers.
+
+**For relay denied errors:** Make sure your sending client is authenticating with the SMTP server before attempting to send. Unauthenticated relay is blocked by virtually every modern mail server.
+
+**For recipient-side blocks:** Contact the recipient directly (through a different channel) and ask them to whitelist your sending domain or IP. For Microsoft 365 distribution lists, the group owner needs to enable "Allow messages from people outside of this organization."
+
+## Preventing 550 errors before they happen
+
+The best fix is never hitting a 550 in the first place. A few things that help:
+
+Set up SPF, DKIM, and DMARC before you send your first message. Not after your first bounce. Before. If you're using `@lobstermail.ai` addresses, authentication is handled for you automatically. Your agent doesn't need to think about DNS records.
+
+Warm up new domains gradually. Don't send 500 messages on day one from an address that's never sent anything before. Gmail caps new senders at roughly 500 per day, and Google Workspace accounts top out at 2,000. Exceeding those limits can trigger blacklisting that takes weeks to reverse.
+
+Monitor your bounce rates. A bounce rate above 2% is a warning sign. Above 5%, major providers will start throttling or blocking your domain. If your agent is sending programmatically, build in bounce rate monitoring and automatic throttling.
+
+Use a sending infrastructure that handles authentication automatically. This is where managed email services earn their keep. When your agent creates an inbox through LobsterMail, SPF and DKIM records are already configured for the `@lobstermail.ai` domain. The agent doesn't need to touch DNS, and you don't need to debug authentication failures at 2 AM.
+
+## 550 vs. other bounce codes
+
+Not all SMTP errors are equal. A quick reference:
+
+| Code | Type | Meaning | Retry? |
+|---|---|---|---|
+| 421 | Temporary | Server busy, try again later | Yes |
+| 450 | Temporary | Mailbox temporarily unavailable | Yes |
+| 451 | Temporary | Local processing error | Yes |
+| 550 | Permanent | Mailbox unavailable or policy rejection | No |
+| 553 | Permanent | Mailbox name not allowed | No |
+| 554 | Permanent | Transaction failed (generic) | No |
+
+The distinction between 4xx and 5xx matters. A 421 or 451 means "try again in a few minutes." A 550 means "stop trying, your message is rejected." Agents that don't distinguish between these will waste resources retrying permanent failures and burning sender reputation in the process.
+
+If your agent is handling email programmatically, build the retry logic around this distinction. Queue 4xx errors for retry with exponential backoff. Log 5xx errors for investigation and move on.
+
+<FAQ>
+  <FAQItem question="What exactly does '550 denied by policy' mean?">
+    It's a permanent SMTP rejection code meaning the recipient's mail server checked your message against its configured rules (SPF, DKIM, DMARC, IP reputation, relay restrictions) and actively refused to accept it. Unlike temporary errors, a 550 means "don't retry."
+  </FAQItem>
+  <FAQItem question="Is a 550 error permanent or can it be retried?">
+    A 550 is a permanent failure code. Retrying the same message to the same recipient will not work and will actively damage your sender reputation. Fix the underlying issue first, then send again.
+  </FAQItem>
+  <FAQItem question="What causes a 550 denied by policy error in Office 365?">
+    Common causes in Office 365 include distribution lists configured to reject external senders, SPF/DMARC authentication failures, and Exchange Online Protection (EOP) rules blocking your domain or IP. The group owner or tenant admin usually needs to adjust the settings.
+  </FAQItem>
+  <FAQItem question="How do I fix a 550 error caused by an SPF record misconfiguration?">
+    Add your sending server's IP address or an `include:` directive for your email provider to your domain's SPF TXT record in DNS. Then wait for DNS propagation (usually under an hour) and test with a tool like `dig TXT yourdomain.com` or an online SPF checker.
+  </FAQItem>
+  <FAQItem question="Can a DMARC failure trigger a 550 denied by policy message?">
+    Yes. If the sending domain has a DMARC policy of `p=reject` and the message fails both SPF and DKIM alignment checks, the recipient's server will return a 550 rejection. Start with `p=none` while debugging to avoid this.
+  </FAQItem>
+  <FAQItem question="What should I do if the 550 error is on the recipient's mail server, not mine?">
+    Contact the recipient through a different channel (phone, chat, alternate email) and ask them to whitelist your domain or IP. You can't fix their server configuration yourself. Provide your SPF, DKIM, and DMARC records to help their admin verify your legitimacy.
+  </FAQItem>
+  <FAQItem question="How do I check if my sending IP address is blacklisted?">
+    Check your IP against Spamhaus (zen.spamhaus.org), Barracuda (b.barracudacentral.org), and Spamcop (bl.spamcop.net). Tools like MXToolbox offer one-click lookups across multiple blacklists. If you're listed, follow the blacklist provider's delisting procedure.
+  </FAQItem>
+  <FAQItem question="Why would a distribution list trigger a 550 denied by policy error for external senders?">
+    Microsoft 365 distribution groups default to accepting mail only from internal (authenticated) senders. External emails hit a 550 rejection unless the group owner enables "Allow messages from people outside of this organization" in the group settings.
+  </FAQItem>
+  <FAQItem question="How is a 550 error different from a 421 or 451 temporary bounce?">
+    A 550 is permanent: the server will not accept this message no matter how many times you retry. A 421 or 451 is temporary, meaning the server is busy or having a transient issue and you should retry later with exponential backoff.
+  </FAQItem>
+  <FAQItem question="What is 'relay denied' and how does it relate to the 550 error?">
+    "Relay denied" (often `550 5.7.1`) means your mail client or server tried to send a message through a mail server it's not authorized to use. This happens when SMTP authentication is missing or when a server is configured to only relay for specific domains.
+  </FAQItem>
+  <FAQItem question="Can DKIM authentication resolve a 550 policy rejection?">
+    If the rejection was caused by a DKIM failure, then yes. Publish the correct DKIM public key in your DNS, make sure your sending server signs outbound messages, and verify the signature isn't being broken by intermediate relays that modify message headers or body content.
+  </FAQItem>
+  <FAQItem question="How do I read a bounce message to diagnose the cause of a 550 error?">
+    Look for the enhanced status code (like `5.7.1` or `5.7.23`) and the human-readable text after it. The first digit (5) means permanent failure. The second digit (7) means security/policy. The third digit narrows the specific cause. The text usually names the policy that triggered the rejection.
+  </FAQItem>
+  <FAQItem question="What steps should a developer take when their email API returns a 550 response?">
+    Log the full response including the enhanced status code. Do not retry the same message. Parse the error to determine the cause (SPF, DKIM, blacklist, relay). Fix the underlying issue, then resend. Build automated handling that distinguishes 4xx (retry) from 5xx (investigate and stop).
+  </FAQItem>
+  <FAQItem question="Does Mimecast commonly produce 550 denied by policy errors?">
+    Yes. Mimecast and similar security gateways (Proofpoint, Barracuda) sit in front of the recipient's mail server and apply their own filtering rules. They often return generic `550 Denied by policy` messages based on domain age, IP reputation, content analysis, or custom admin rules.
+  </FAQItem>
+  <FAQItem question="How can I prevent 550 policy errors before they happen?">
+    Set up SPF, DKIM, and DMARC records before sending your first email. Warm up new domains gradually (start with low volume). Monitor bounce rates and stop sending if they exceed 2%. Use a sending provider that handles authentication automatically, like [LobsterMail](/) for agent-based workflows.
+  </FAQItem>
+</FAQ>

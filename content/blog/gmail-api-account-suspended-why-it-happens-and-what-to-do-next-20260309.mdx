@@ -1,0 +1,165 @@
+---
+title: 'gmail api account suspended: why it happens and what to do next'
+description: >-
+  Google can suspend your account for Gmail API usage that triggers abuse
+  detection. Here's why it happens, how to recover, and safer alternatives for
+  automated email.
+date: '2026-03-09'
+author: Samuel Chenard
+tags:
+  - email
+  - troubleshooting
+  - infrastructure
+  - guides
+image: >-
+  /blog/gmail-api-account-suspended-why-it-happens-and-what-to-do-next-20260309.png
+imageAlt: >-
+  Pixel art lobster integrating with an email API — "account suspended" "gmail
+  api"
+publish_at: '2026-03-09T10:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-09T20:51:46.877Z'
+---
+You're testing a new feature. Maybe it's a signup flow that sends confirmation emails, or an AI agent that reads receipts from a shared inbox. Everything works fine for a week. Then one morning you open your console and see it: **account suspended for abuse**.
+
+No warning. No grace period. No email telling you what you did wrong. Just a locked account and a form to fill out that may or may not get reviewed by a human at Google.
+
+This happens more often than you'd think. Developers on Reddit, Stack Overflow, and Google's own support forums report getting suspended while doing things that seem completely reasonable: polling for new messages, sending transactional emails, running Google Apps Script automations. The frustrating part isn't the suspension itself. It's that Google rarely tells you *which* policy you violated.
+
+Let's break down why Gmail API accounts get suspended, what the actual limits are, and what your options look like after it happens.
+
+## Why Gmail API accounts get suspended
+
+Google's abuse detection for the Gmail API isn't a simple rate limiter. It's a behavioral system that evaluates patterns across multiple signals. Here are the most common triggers:
+
+1. **Exceeding daily sending quotas.** Free Gmail accounts cap at around 500 emails per day. Google Workspace accounts allow up to 2,000. Go over either limit and you'll hit errors first, then a potential suspension.
+2. **Unusual sending patterns.** Sending 5 emails a day for a month, then suddenly sending 400 in an hour, looks like a compromised account to Google's systems.
+3. **High bounce rates.** Sending to invalid or non-existent addresses signals spam behavior. Even a modest batch with 20% bounces can trigger review.
+4. **OAuth scope misuse.** Requesting broad scopes (like full Gmail access) when you only need read-only, or using a single OAuth token across many users in ways that look like credential sharing.
+5. **Automated polling that's too aggressive.** Calling `users.messages.list` every few seconds across multiple accounts will burn through your quota and flag your project.
+6. **Bulk sending to unverified recipients.** Gmail API is not a bulk email service. Google explicitly warns against using it for marketing blasts or cold outreach.
+7. **Running automations through Google Apps Script.** Apps Script shares quota with Gmail API in some configurations. A script that loops through hundreds of messages can push you over limits you didn't know existed.
+
+The root problem is that Gmail API was built for individual productivity apps, not for programmatic email at scale. Google optimized it for someone building a mail client or a CRM integration that sends a handful of messages per user. If your use case looks different from that, you're swimming against the current.
+
+## Suspended vs. rate-limited: how to tell the difference
+
+These two things feel similar but require very different responses.
+
+**Rate limiting** means Google is temporarily throttling your requests. You'll see `429 Too Many Requests` or `403 rateLimitExceeded` errors. Your account still works. Back off, wait a few minutes (or hours for daily limits), and you're fine.
+
+**Account suspension** means Google has disabled your account entirely. You can't send or receive email. You can't authenticate. The suspension page will say something about "unusual activity" or "Terms of Service violation." This doesn't resolve on its own.
+
+If you're getting 429 errors, don't panic. That's normal API behavior. If you're seeing a suspension notice when you try to log in or authenticate, that's the real problem.
+
+## How to recover a suspended Gmail API account
+
+Recovery is possible but not guaranteed. Here's the process:
+
+First, go to Google's [account recovery page](https://accounts.google.com/signin/recovery) and follow the steps to verify your identity. If the suspension is automated (most are), identity verification alone sometimes restores access within 24 to 48 hours.
+
+If that doesn't work, submit an appeal through the form Google links from the suspension page. Be specific about what your application does, what API calls it makes, and what volume it operates at. Generic appeals get generic rejections.
+
+For Google Workspace accounts, your domain admin can contact Google Workspace support directly. This is faster than the consumer appeal process, but still expect a few days.
+
+One thing to know: even if your account is restored, a second suspension is much more likely. Google's systems remember. If the same pattern repeats, the next suspension may be permanent.
+
+## The actual Gmail API limits (and the hidden ones)
+
+Google publishes some quotas clearly. Others are less obvious.
+
+| Limit | Free Gmail | Google Workspace |
+|---|---|---|
+| Emails sent per day | ~500 | ~2,000 |
+| Recipients per message | 500 | 2,000 |
+| API calls per day (per user) | 250 quota units/sec | 250 quota units/sec |
+| Messages received per day | Undisclosed | Undisclosed |
+| Attachment size | 25 MB | 25 MB |
+
+The "undisclosed" entries matter. Google doesn't publish receive-side limits, but developers report suspensions after pulling large volumes of messages through the API. There's also an unpublished daily bandwidth limit that factors in attachment sizes.
+
+Google Apps Script adds another layer of confusion. A script calling `GmailApp.sendEmail()` counts against your Gmail sending quota, but the Apps Script execution quota is separate. You can hit the Apps Script limit (which triggers a different error) or the Gmail limit (which risks suspension). Running both simultaneously compounds the risk.
+
+## How Gmail API compares to SMTP for sending
+
+Some developers use Gmail's SMTP server (`smtp.gmail.com`) instead of the API, thinking it avoids these issues. It doesn't. SMTP and API share the same per-user sending quotas. The suspension risk is identical. In fact, SMTP can be worse because it's easier to accidentally send without proper rate limiting.
+
+The API at least gives you structured error responses. With SMTP, you might get a generic `421` or `550` and have to guess what went wrong.
+
+Neither approach is designed for what most developers actually need: reliable programmatic email that doesn't depend on a personal Google account staying in good standing.
+
+## Testing Gmail API without getting suspended
+
+If you're still committed to Gmail API, here are practical steps to reduce your risk:
+
+**Use a dedicated test account.** Never test against your primary Gmail. Create a throwaway account specifically for development. If it gets suspended, you lose nothing.
+
+**Stay well under the limits.** Don't test at 80% of quota. Test at 10%. Save high-volume testing for a staging environment that uses a different email provider entirely.
+
+**Implement exponential backoff.** When you get a 429, don't retry immediately. Double your wait time with each retry. Google's own documentation recommends this, and their abuse detection systems look favorably on clients that back off properly.
+
+**Monitor your quota usage.** The Google Cloud Console shows your API usage in real time under "APIs & Services > Dashboard." Check it regularly during development sprints.
+
+**Separate read and write workloads.** If your app both reads and sends email, use different service accounts or different OAuth tokens. A suspension on the sending side won't lock you out of reading.
+
+## When Gmail API isn't the right tool
+
+Gmail API works well for what it was designed for: individual user email access in apps where a human authorized their account. A mail client. A CRM that sends follow-ups on behalf of a specific person. A notification system that sends a few dozen emails per day from a user's own address.
+
+It's not the right tool for AI agents that need to self-provision inboxes, for automation systems that send hundreds of messages daily, or for any use case where a suspended account means your entire pipeline stops.
+
+For agents specifically, the problem runs deeper than quotas. Gmail API requires OAuth consent from a human user. An autonomous agent can't complete that flow on its own. You end up building workarounds (storing refresh tokens, handling re-auth, managing token rotation) that add complexity without solving the fundamental issue: the agent doesn't own the inbox.
+
+LobsterMail takes a different approach. Your agent creates its own inbox with a single SDK call. No OAuth, no human in the loop, no shared quotas with a personal Google account. The free tier includes 1,000 emails per month, and there's no suspension risk from normal usage because the infrastructure was built for programmatic access from the start.
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create();
+const inbox = await lm.createSmartInbox({ name: 'My Agent' });
+// inbox.address → my-agent@lobstermail.ai
+That's the entire setup. No API keys to configure, no consent screens, no quota anxiety.
+
+If your Gmail API account just got suspended and you're re-evaluating your architecture, it might be worth asking whether you were ever using the right tool in the first place.
+
+<FAQ>
+  <FAQItem question="What causes a Gmail API account to be suspended for abuse?">
+    Common triggers include exceeding daily sending quotas, unusual sending patterns (like sudden spikes in volume), high bounce rates, aggressive automated polling, and using Gmail API for bulk email. Google's abuse detection evaluates behavioral patterns, not just raw numbers.
+  </FAQItem>
+  <FAQItem question="How do I know if my Gmail API access is suspended or just rate-limited?">
+    Rate limiting returns `429 Too Many Requests` or `403 rateLimitExceeded` errors, and resolves on its own after you back off. A suspension locks your entire account and shows a notice about unusual activity or Terms of Service violations when you try to log in.
+  </FAQItem>
+  <FAQItem question="Can I recover a Gmail API account that was suspended?">
+    Yes, but it's not guaranteed. Start with Google's account recovery page to verify your identity. If that doesn't work, submit an appeal with specific details about your application. Workspace accounts can contact Google support directly. Expect 24 hours to several days for resolution.
+  </FAQItem>
+  <FAQItem question="What is the daily sending limit for Gmail API?">
+    Free Gmail accounts can send roughly 500 emails per day. Google Workspace accounts allow up to 2,000. These limits are shared between API and SMTP access, and exceeding them can trigger suspension, not just temporary throttling.
+  </FAQItem>
+  <FAQItem question="Can I use Gmail API to send bulk emails?">
+    Google explicitly discourages this. Gmail API is designed for individual user email access, not bulk sending. Using it for marketing blasts, cold outreach, or high-volume transactional email violates Google's Terms of Service and is a common cause of suspension.
+  </FAQItem>
+  <FAQItem question="Does Google Apps Script count against Gmail API quotas?">
+    Yes. Calls to `GmailApp.sendEmail()` in Apps Script count against your Gmail sending quota. Apps Script also has its own separate execution quotas. Running both API and Apps Script simultaneously increases your risk of hitting limits.
+  </FAQItem>
+  <FAQItem question="How do I safely test Gmail API integrations without risking suspension?">
+    Use a dedicated test account (never your primary Gmail), stay well under quota limits during testing, implement exponential backoff on retries, and monitor your usage in the Google Cloud Console. Consider using a different email provider entirely for high-volume staging tests.
+  </FAQItem>
+  <FAQItem question="Is Gmail API free to use?">
+    Gmail API itself is free, but it's subject to quota limits. Free Gmail accounts have lower limits than Google Workspace accounts (which cost $6+/user/month). The "free" access comes with significant restrictions that make it impractical for most programmatic use cases.
+  </FAQItem>
+  <FAQItem question="Can an AI agent use Gmail API without triggering abuse detection?">
+    It's risky. Gmail API requires OAuth consent from a human user, which agents can't complete autonomously. Even with stored tokens, agents that send or read email at high frequency often trigger abuse detection. Agent-first email services like [LobsterMail](/) are built specifically for this use case.
+  </FAQItem>
+  <FAQItem question="How does Outlook REST API handle abuse compared to Gmail API?">
+    Outlook's API has similar suspension risks. Developers on Stack Overflow report account suspensions from Microsoft during testing, sometimes with even less warning than Google provides. The root issue is the same: consumer email APIs aren't designed for programmatic automation.
+  </FAQItem>
+  <FAQItem question="What are better alternatives to Gmail API for automated email sending?">
+    For transactional email, services like SendGrid, Postmark, or Amazon SES offer higher limits and clearer policies. For AI agents that need their own inboxes, [LobsterMail](/docs/getting-started) provides agent-first email infrastructure where the agent self-provisions its address without OAuth or human signup.
+  </FAQItem>
+  <FAQItem question="How do I appeal a Google account suspension?">
+    Use the appeal form linked from your suspension notice. Include your application's name, what API calls it makes, typical volume, and why the usage is legitimate. Be specific. Generic appeals are often rejected without human review. Workspace admins have a faster support channel.
+  </FAQItem>
+</FAQ>

@@ -33,8 +33,7 @@ Those headers are `Message-ID`, `In-Reply-To`, and `References`. Getting them ri
 
 Every email ever sent (assuming the sending server isn't broken) gets a `Message-ID` header. It looks something like this:
 
-`Message-ID: <abc123@mail.example.com>`
-
+Message-ID: <abc123@mail.example.com>
 That identifier is globally unique. No two emails should ever share the same `Message-ID`. It's assigned by the sending mail server at the moment of dispatch, and it never changes. Think of it as a fingerprint for that specific message.
 
 When you reply to an email, your mail client is supposed to do two things:

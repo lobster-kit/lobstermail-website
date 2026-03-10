@@ -41,8 +41,7 @@ Here's how the encoding process works:
 
 A real example: the display name "François" in a From header becomes:
 
-`From: =?UTF-8?Q?Fran=C3=A7ois?= <francois@example.com>`
-
+From: =?UTF-8?Q?Fran=C3=A7ois?= <francois@example.com>
 The `=?UTF-8?Q?` prefix tells the receiving client: "this is UTF-8, encoded with Quoted-Printable." The `?=` suffix closes the encoded-word. The mail client decodes it back to "François" for display.
 
 When you see `=?UTF-8?B?` in a header, that's Base64 encoding instead of Quoted-Printable. Base64 is more compact for text that's mostly non-ASCII (like a fully Japanese subject line), while Q-encoding works better for text that's mostly ASCII with a few special characters sprinkled in.
