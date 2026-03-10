@@ -82,6 +82,8 @@ message.send.backend.auth.refresh-token.keyring = "gmail-oauth2-refresh-token"
 message.send.backend.auth.auth-url = "https://accounts.google.com/o/oauth2/v2/auth"
 message.send.backend.auth.token-url = "https://oauth2.googleapis.com/token"
 message.send.backend.auth.scopes = ["https://mail.google.com/"]
+```
+
 The `https://mail.google.com/` scope grants full IMAP and SMTP access. Google offers narrower scopes, but Himalaya needs read and send permissions to function as a full email client.
 
 ## How to configure Himalaya OAuth2 for Outlook
@@ -124,6 +126,8 @@ message.send.backend.auth.auth-url = "https://login.microsoftonline.com/common/o
 message.send.backend.auth.token-url = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
 message.send.backend.auth.pkce = true
 message.send.backend.auth.scopes = ["https://outlook.office.com/SMTP.Send"]
+```
+
 The big difference: Outlook requires PKCE and uses separate scopes for IMAP and SMTP. Gmail bundles both under one scope and doesn't require PKCE.
 
 ## OAuth2 provider comparison at a glance

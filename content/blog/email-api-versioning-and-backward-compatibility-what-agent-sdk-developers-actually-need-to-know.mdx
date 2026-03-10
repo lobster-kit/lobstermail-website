@@ -77,6 +77,8 @@ const response = await fetch('https://api.example.com/inboxes', {
     'Authorization': `Bearer ${token}`
   }
 });
+```
+
 Date-based versioning (like Stripe's approach) works better than integer versioning for email APIs because it communicates *when* the contract was established, not just *which number* it is.
 
 ### Build a compatibility facade inside the SDK
@@ -93,6 +95,8 @@ function normalizeBounceResponse(raw: unknown, apiVersion: string) {
   // v1 returns { bounce_type: 'hard', smtp_code: '550 5.1.1' }
   return { type: raw.bounce_type, code: raw.smtp_code };
 }
+```
+
 This facade pattern absorbs API churn so the agent's logic never needs to change. The SDK maintainer handles the mapping. The agent keeps working.
 
 ### Surface deprecation warnings without interrupting workflows

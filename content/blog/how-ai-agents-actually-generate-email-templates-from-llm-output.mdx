@@ -48,6 +48,7 @@ Most guides start here, and for good reason. A well-structured prompt template i
 
 ```typescript
 const prompt = `Write a welcome email for a new user.
+```
 
 Recipient: ${user.name}
 Company: ${user.company}
@@ -88,6 +89,8 @@ const response = await llm.chat({
     }
   }
 });
+```
+
 When the LLM returns malformed content anyway (it happens, since schema enforcement isn't bulletproof), your fallback should retry once with a stricter prompt, then fall back to a static template with the dynamic fields filled in. Never send a broken email just because the LLM had a bad inference.
 
 ## What happens after the LLM writes the email

@@ -79,10 +79,14 @@ message.send.backend.auth.refresh-token.keyring = "gmail-oauth2-refresh-token"
 message.send.backend.auth.auth-url = "https://accounts.google.com/o/oauth2/v2/auth"
 message.send.backend.auth.token-url = "https://oauth2.googleapis.com/token"
 message.send.backend.auth.scope = "https://mail.google.com/"
+```
+
 The scope `https://mail.google.com/` grants full IMAP and SMTP access. You need to store your client secret in the keyring entry named `gmail-oauth2-client-secret` before the first run. On Linux with `secret-tool`:
 
 ```bash
 secret-tool store --label="gmail-oauth2-client-secret" account gmail-oauth2-client-secret
+```
+
 The access and refresh tokens get populated automatically after you complete the browser authorization.
 
 ## Outlook OAuth2 configuration

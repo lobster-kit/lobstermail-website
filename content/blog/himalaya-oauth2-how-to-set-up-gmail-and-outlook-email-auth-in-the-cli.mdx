@@ -83,6 +83,8 @@ message.send.backend.auth.refresh-token.keyring = "gmail-oauth2-refresh-token"
 message.send.backend.auth.auth-url = "https://accounts.google.com/o/oauth2/v2/auth"
 message.send.backend.auth.token-url = "https://oauth2.googleapis.com/token"
 message.send.backend.auth.scope = "https://mail.google.com/"
+```
+
 Yes, you repeat the OAuth2 block for both IMAP and SMTP. Both use the same tokens, but Himalaya needs the auth config specified in each backend section. The `https://mail.google.com/` scope covers both IMAP and SMTP access.
 
 ### Outlook OAuth2 config
@@ -119,6 +121,8 @@ message.send.backend.auth.auth-url = "https://login.microsoftonline.com/common/o
 message.send.backend.auth.token-url = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
 message.send.backend.auth.pkce = true
 message.send.backend.auth.scope = "https://outlook.office.com/SMTP.Send"
+```
+
 Two things to notice. First, PKCE is enabled (`backend.auth.pkce = true`). Microsoft requires it for public clients, and even for confidential clients it's a good practice. Second, the scopes differ between IMAP and SMTP: `IMAP.AccessAsUser.All` for reading mail, `SMTP.Send` for sending.
 
 ### xoauth2 vs oauth2 auth types

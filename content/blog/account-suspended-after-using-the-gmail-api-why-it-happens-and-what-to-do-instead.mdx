@@ -110,6 +110,8 @@ import { LobsterMail } from '@lobsterkit/lobstermail';
 const lm = await LobsterMail.create();
 const inbox = await lm.createSmartInbox({ name: 'My Agent' });
 // No OAuth, no Google account, no suspension risk
+```
+
 This isn't about Gmail being a bad product. Gmail is excellent at what it was built for. But using it as email infrastructure for AI agents is like using a sports car to haul lumber. It'll technically work until it doesn't, and the failure mode is catastrophic (your entire Google account locked with no timeline for recovery).
 
 ## What to do right now if your account is suspended

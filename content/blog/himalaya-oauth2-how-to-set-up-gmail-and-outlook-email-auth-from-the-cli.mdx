@@ -83,6 +83,8 @@ message.send.backend.auth.refresh-token.keyring = "gmail-oauth2-refresh-token"
 message.send.backend.auth.auth-url = "https://accounts.google.com/o/oauth2/v2/auth"
 message.send.backend.auth.token-url = "https://oauth2.googleapis.com/token"
 message.send.backend.auth.scope = "https://mail.google.com/"
+```
+
 The scope `https://mail.google.com/` grants full IMAP and SMTP access. Google doesn't offer narrower scopes for IMAP, so this is what you need.
 
 ### Store the secret in your keyring
@@ -91,6 +93,8 @@ On Linux with `secret-tool`:
 
 ```bash
 secret-tool store --label="gmail-oauth2-client-secret" service gmail-oauth2-client-secret
+```
+
 It will prompt for the value. Paste your client secret. On macOS, Himalaya uses Keychain automatically. On Windows, it uses Credential Manager.
 
 ### Authorize
@@ -202,12 +206,15 @@ himalaya envelope list --account gmail
 
 # Send a test email
 himalaya template send --account gmail <<EOF
+```
+
 From: you@gmail.com
 To: you@gmail.com
 Subject: Himalaya OAuth2 test
 
 It works.
 EOF
+```
 ```
 
 If `envelope list` returns results without opening a browser, your refresh token is working. If it opens the browser again, your tokens may have expired (check Google's 7-day expiry for "Testing" apps).

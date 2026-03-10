@@ -82,6 +82,8 @@ await inbox.send({
          but haven't pulled your first report yet. Here's a
          30-second walkthrough...`
 });
+```
+
 The agent [provisions its own inbox](/blog/agent-self-signup-explained) without human intervention, composes emails based on live behavioral data, and sends from a dedicated address that builds its own sender reputation.
 
 This matters for a reason most SaaS teams overlook: [deliverability](/blog/email-deliverability-ai-agents). When you're firing dozens of behavioral trigger emails per hour across your trial cohort, sender reputation becomes infrastructure. High-frequency sends from a shared marketing domain can tank your inbox placement. An agent with its own dedicated sending identity isolates that risk.

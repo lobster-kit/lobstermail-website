@@ -77,6 +77,8 @@ agent = FunctionCallingAgent.from_tools(
 # Step 5: Chat
 response = agent.chat("What is 42 times 17, then add 5 to the result?")
 print(response)
+```
+
 The `verbose=True` flag prints each tool call and its result to stdout, which is essential during development. You'll see exactly which function the model chose, what arguments it passed, and what came back.
 
 ## Defining custom tools that actually work
@@ -96,6 +98,8 @@ def search_emails(query: str, max_results: int = 10) -> list[dict]:
     Use this when the user asks to find or look up specific emails."""
     # your email search logic here
     return results
+```
+
 That docstring tells the model exactly when to reach for this tool and what shape the output takes.
 
 ## Wiring up email tools for agentic workflows

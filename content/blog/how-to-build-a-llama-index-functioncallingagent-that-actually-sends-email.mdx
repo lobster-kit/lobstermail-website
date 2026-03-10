@@ -56,6 +56,8 @@ Most tutorials define tools like this:
 def send_email(to: str, subject: str, body: str) -> str:
     """Send an email to the specified recipient."""
     return f"Email sent to {to} with subject: {subject}"
+```
+
 That function does nothing. It's fine for learning the tool-calling pattern, but it won't survive contact with production. Here's a version that actually delivers mail, using LobsterMail as the transport layer so the agent provisions its own inbox without you hardcoding SMTP credentials:
 
 ```python
@@ -89,6 +91,8 @@ def receive_emails(inbox: str) -> str:
         capture_output=True, text=True
     )
     return result.stdout
+```
+
 Or if you're working in a TypeScript stack, the SDK handles this more directly:
 
 ```typescript

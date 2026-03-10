@@ -78,6 +78,8 @@ await inbox.send({
 });
 
 const replies = await inbox.receive();
+```
+
 No SMTP config. No IMAP polling. No credential management. The agent handles it.
 
 ## The deliverability question
@@ -111,6 +113,8 @@ for (const name of agents) {
   const inbox = await lm.createSmartInbox({ name });
   console.log(`${name}: ${inbox.address}`);
 }
+```
+
 Each agent gets a unique `@lobstermail.ai` address with its own sending history, its own inbox, and its own analytics. Scale to 50 agents? Same code, slightly longer loop.
 
 With SMTP, you'd need to provision 50 email accounts, manage 50 sets of credentials, and build routing logic to ensure each agent uses the correct identity. It's possible, but it's plumbing work that has nothing to do with what the agents are actually trying to accomplish.

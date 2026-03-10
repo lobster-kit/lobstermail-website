@@ -58,6 +58,8 @@ await fetch('https://api.emailprovider.com/v1/send', {
     html: receiptHtml,
   }),
 });
+```
+
 If the request succeeds but the response never reaches your agent, the agent retries with the same key. The API sees the key already exists, skips sending, and returns the cached response from the first attempt. No duplicate email. No wasted quota.
 
 If your agent sends the same key with a *different* request body, most APIs will reject it with a 422 or 409 error. The key is bound to the original payload. This is intentional; it prevents accidentally mapping two different operations to the same deduplication slot.
@@ -106,6 +108,8 @@ async function sendEmailIdempotent(key: string, payload: EmailPayload) {
 
   return response;
 }
+```
+
 This is a minimal in-memory version. For production, swap the Map for Redis or a database table with a unique constraint on the key column. The TTL matters: too short and you miss retries that come in late; too long and you're storing keys forever. For transactional emails like OTP codes and receipts, 24 hours is reasonable. For marketing sends, you can drop to 1-2 hours since the retry window is shorter.
 
 ## Key format: UUID, hash, or something else?

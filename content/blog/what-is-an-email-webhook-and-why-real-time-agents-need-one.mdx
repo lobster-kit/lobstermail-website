@@ -47,6 +47,8 @@ Here's what that looks like in practice:
     "preview": "Looks good, but can we adjust the timeline..."
   }
 }
+```
+
 Your agent receives this, parses it, and takes action. Maybe it drafts a reply. Maybe it updates a CRM record. Maybe it escalates to a human. The point is it happens within milliseconds of the email landing, not whenever the next polling cycle comes around.
 
 ## Polling vs. webhooks: the real cost
@@ -89,6 +91,8 @@ function verifyWebhook(body: string, signature: string, secret: string): boolean
     .digest('hex');
   return expected === signature;
 }
+```
+
 Skip this step and you're building on sand. Any agent that takes action based on email content (sending replies, accessing databases, triggering workflows) needs to verify that the email actually arrived.
 
 ## Handling failures gracefully

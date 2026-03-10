@@ -86,6 +86,8 @@ class EmailSender(Component):
             server.login("user", "password")
             server.send_message(msg)
         return "Sent"
+```
+
 This gives you full control. It also gives you full responsibility for SMTP configuration, credential management, TLS, bounce handling, deliverability, and everything else email infrastructure involves. You're building email plumbing inside a tool that was supposed to eliminate plumbing.
 
 ## The missing piece: inbound email for Langflow agents
@@ -111,6 +113,8 @@ await inbox.send({
   subject: 'Your report is ready',
   body: 'See attached analysis...'
 });
+```
+
 The difference from the Composio or SendGrid approaches: your flow gets a dedicated `@lobstermail.ai` address that belongs to the agent. It doesn't share a human mailbox. It doesn't need OAuth tokens that expire. And the [LangChain integration pattern](/blog/langchain-email-integration) works the same way in a Langflow custom component; wrap the SDK methods and expose them as inputs and outputs.
 
 ## Choosing the right approach

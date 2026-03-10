@@ -61,6 +61,8 @@ def send_email(to: str, subject: str, body: str) -> str:
     return "Email sent successfully!"
 
 send_tool = FunctionTool.from_defaults(fn=send_email)
+```
+
 This teaches you nothing about what happens when the email actually needs to reach someone. Here's a version that works with a real email backend:
 
 ```python
@@ -100,6 +102,8 @@ def read_inbox() -> str:
 
 send_tool = FunctionTool.from_defaults(fn=send_email)
 read_tool = FunctionTool.from_defaults(fn=read_inbox)
+```
+
 The `send_email` function hits a real API. Emails actually leave the server. The `read_inbox` function pulls real messages. No mocks, no stubs.
 
 If you're using LobsterMail's SDK directly (Node.js), the agent can even provision its own inbox without you hardcoding anything:

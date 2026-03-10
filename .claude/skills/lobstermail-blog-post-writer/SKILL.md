@@ -288,6 +288,8 @@ FAQ rules:
 
 All standard markdown works: headings (`##`, `###`, `####`), bold, italic, links (external links open in new tab automatically), lists, code blocks with language syntax, inline code, tables, blockquotes, horizontal rules (`---`).
 
+**CRITICAL: Every code fence must be closed.** Every opening ` ```language ` MUST have a matching closing ` ``` ` on its own line after the code. Never let prose continue inside an unclosed code fence — this breaks MDX rendering and causes FAQ components to display as raw text.
+
 ### Internal links
 
 - Blog posts: `[link text](/blog/other-slug)`

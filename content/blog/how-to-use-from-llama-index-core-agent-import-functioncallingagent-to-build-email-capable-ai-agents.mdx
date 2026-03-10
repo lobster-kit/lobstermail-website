@@ -30,6 +30,8 @@ If you've been building agents with LlamaIndex, you've probably seen this import
 
 ```python
 from llama_index.core.agent import FunctionCallingAgent
+```
+
 It looks simple enough. But the documentation is scattered across discussion threads, half-finished Medium posts, and Stack Overflow questions where the accepted answer is "just use OpenAI's agent instead." That's not helpful when you're trying to wire up real tools (like sending email, querying databases, or calling external APIs) and need the agent to pick the right one on its own.
 
 Here's what actually matters: `FunctionCallingAgent` is LlamaIndex's way of letting an LLM use native function calling (the structured tool-use feature built into GPT-4, Claude, Gemini, and others) to select and invoke tools. It's different from ReAct-style agents that reason in text. It's faster, more predictable, and easier to debug.
@@ -64,6 +66,8 @@ agent = FunctionCallingAgent.from_tools(
 
 response = agent.chat("What is 7 times 83?")
 print(response)
+```
+
 That's the skeleton. The interesting part is what you put inside the tools.
 
 ## FunctionCallingAgent vs. FunctionCallingAgentWorker

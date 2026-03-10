@@ -26,6 +26,8 @@ You've seen the import line in every tutorial:
 
 ```python
 from llama_index.core.agent import FunctionCallingAgent
+```
+
 You paste it in, define a couple of tools, wire up an LLM, and suddenly your script can call functions based on natural language. It works. But most tutorials stop at "query a document index" and never show you how to build agents that actually *do* things: send emails, hit APIs, process multi-step workflows.
 
 This guide covers the full path. We'll start with what `FunctionCallingAgent` actually is, walk through setup step by step, and then build something more interesting than another PDF Q&A bot.
@@ -78,6 +80,8 @@ agent = FunctionCallingAgent.from_tools(
 
 response = agent.chat("What is 23 * 47 + 5?")
 print(response)
+```
+
 The `verbose=True` flag prints each tool call as it happens, which is invaluable for debugging. You'll see the LLM pick `multiply(23, 47)`, get 1081, then call `add(1081, 5)`, and return 1086.
 
 ## FunctionCallingAgent vs. FunctionCallingAgentWorker + AgentRunner

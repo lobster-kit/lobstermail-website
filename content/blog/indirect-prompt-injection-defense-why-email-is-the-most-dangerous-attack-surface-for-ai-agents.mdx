@@ -85,6 +85,8 @@ if (email.isInjectionRisk) {
   console.warn('Injection risk detected:', email.security.flags);
   return; // Skip or quarantine
 }
+```
+
 The `security.flags` array identifies what was found: `prompt_injection`, `phishing_url`, `spoofed_sender`, or `social_engineering`. SPF, DKIM, and DMARC results are available too. This isn't a silver bullet, but it's the first filter, and it runs before your agent's LLM processes a single token.
 
 ### Layer 2: separate data from instructions
@@ -97,6 +99,8 @@ The `safeBodyForLLM()` method wraps email content in boundary markers designed t
 const safeContent = email.safeBodyForLLM();
 // Returns content wrapped in [EMAIL_CONTENT_START] / [EMAIL_CONTENT_END]
 // with untrusted sections further isolated
+```
+
 This isn't foolproof. A sophisticated attacker can include "END" markers in their payload. But combined with a well-written system prompt that instructs the model to treat content within these boundaries as data only, it significantly raises the bar.
 
 ### Layer 3: minimize what the agent can do

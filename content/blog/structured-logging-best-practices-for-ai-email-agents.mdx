@@ -66,6 +66,8 @@ Every log entry your agent emits should contain these fields at minimum:
   "duration_ms": 342,
   "metadata": {}
 }
+```
+
 A few notes on specific fields:
 
 **`correlation_id`** ties together every step the agent takes for a single email thread. When an email arrives, generate a correlation ID and pass it through classification, drafting, sending, and any follow-up. This is the single most useful field for debugging. When something goes wrong, you query by `correlation_id` and get the full story in order.
@@ -91,6 +93,8 @@ function hashEmail(email: string): string {
 
 // In your log entry:
 // recipient_hash: hashEmail("jane.doe@company.com") → "a1b2c3d4e5f6"
+```
+
 Hash the email address. Hash the sender name. Never log the raw subject line if it might contain personal data. For debugging, the hash gives you a consistent identifier you can correlate across events without storing the actual address.
 
 This matters for GDPR compliance specifically. Article 30 requires records of processing activities, but those records shouldn't contain more personal data than necessary. If your logs are subpoenaed or breached, hashed fields limit the exposure.

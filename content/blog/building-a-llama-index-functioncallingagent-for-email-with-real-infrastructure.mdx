@@ -67,6 +67,8 @@ agent = FunctionAgent(
 )
 
 response = await agent.run("Check my inbox for new messages")
+```
+
 That's the skeleton. Now let's make the tools do something real.
 
 ## Defining email tools that actually work
@@ -78,6 +80,8 @@ def send_email(to: str, subject: str, body: str) -> str:
     """Send an email to the specified address."""
     print(f"Sending to {to}: {subject}")
     return "Email sent successfully"
+```
+
 This teaches you nothing about what happens when your agent tries to send 50 follow-up emails and half of them bounce. Or when the receiving server returns a 550 because your sending domain has no SPF record. Or when your agent needs to read a verification code from an incoming email to complete a signup flow.
 
 Real email tools need real infrastructure behind them. Here's what that looks like using LobsterMail's SDK, where the agent provisions its own inbox without any human configuration:

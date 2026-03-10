@@ -61,6 +61,8 @@ class EmailTool(Tool):
     def forward(self, to: str, subject: str, body: str) -> str:
         # Your email-sending logic here
         return f"Email sent to {to}"
+```
+
 The agent reads `name` and `description` to decide when to call your tool. Be specific in the description. Vague descriptions lead to the agent invoking it at weird times or not at all.
 
 ## Wiring up the email backend
@@ -94,6 +96,8 @@ class EmailTool(Tool):
             self.inbox = self.lm.create_smart_inbox_sync(name="hf-agent")
         self.inbox.send_sync(to=to, subject=subject, body=body)
         return f"Email sent to {to} from {self.inbox.address}"
+```
+
 The agent gets its own `@lobstermail.ai` address. No human account creation, no OAuth dance, no SMTP credentials in your environment variables. The agent [creates its own inbox](/blog/agent-self-signup-explained) the first time it sends.
 
 ## Registering the tool with CodeAgent

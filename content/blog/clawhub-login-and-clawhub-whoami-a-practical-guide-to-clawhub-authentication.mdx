@@ -43,6 +43,8 @@ The default `clawhub login` command kicks off a browser-based OAuth flow. You ru
 
 ```bash
 clawhub login
+```
+
 This is the easiest path when you're working on your own machine. The CLI handles the token exchange and writes the credential file for you. Once it's done, every subsequent command (search, install, inspect, update) authenticates automatically.
 
 But what happens when there's no browser? If you're SSHed into a remote server, running a CI pipeline, or operating inside a container, the browser flow simply can't open. The command will hang or fail. That's where token-based login comes in.
@@ -53,6 +55,8 @@ When a browser isn't available, you pass an API token directly:
 
 ```bash
 clawhub login --token lm_sk_live_abc123yourtoken
+```
+
 This skips the browser entirely. The CLI validates the token against the ClawHub API and stores it in the same local credential file. From the CLI's perspective, the result is identical to a browser login. Every subsequent command works the same way.
 
 To get an API token, generate one from your ClawHub account settings in the web dashboard. Treat this token like a password. Anyone with the token can act as you.

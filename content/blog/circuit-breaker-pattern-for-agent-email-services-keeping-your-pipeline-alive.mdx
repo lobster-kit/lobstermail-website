@@ -168,6 +168,8 @@ function isTransient(err: any): boolean {
   const code = err?.statusCode || err?.code;
   return code === 429 || code === 503 || code === 'ETIMEDOUT' || code === 'ECONNREFUSED';
 }
+```
+
 This is intentionally minimal. Production implementations should add the doubling backoff, shared state, queue management, and monitoring hooks. Libraries like `opossum` (Node.js) or `pybreaker` (Python) give you all of that out of the box.
 
 ## Where to start

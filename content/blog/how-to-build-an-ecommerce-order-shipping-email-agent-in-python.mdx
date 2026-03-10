@@ -47,11 +47,14 @@ from lobstermail import LobsterMail
 lm = await LobsterMail.create()
 inbox = await lm.create_smart_inbox(name="shipping-updates")
 # shipping-updates@lobstermail.ai
+```
+
 No API keys to configure upfront. The agent [provisions itself on first run](/blog/agent-self-signup-explained), creating a free account and storing its token locally. The inbox is dedicated to shipping notifications, isolated from your marketing emails and support inbox. If you're running in a container or Lambda, set `LOBSTERMAIL_API_KEY` as an environment variable instead.
 
 ```bash
 pip install lobstermail shippo
 ## Connect to a shipping API
+```
 
 Shippo, EasyPost, and KeyDelivery all return similar tracking objects. Here's a minimal function that fetches the current status for a tracking number:
 
@@ -120,6 +123,8 @@ Here's where the agent earns its keep. Instead of static templates with `{{track
 ```python
 def compose_shipping_email(order: dict, tracking: dict) -> str:
     prompt = f"""Write a brief, friendly shipping update email.
+```
+
 Customer: {order['customer_name']}
 Order: #{order['order_id']}
 Status: {tracking['detail']}
@@ -131,6 +136,7 @@ Keep it under 100 words. No corporate filler. Include tracking info."""
 
     # Your LLM call here: OpenAI, Anthropic, local model
     return llm_completion(prompt)
+```
 ```
 
 A first-time buyer gets a warmer tone. A delayed package gets an honest acknowledgment with a revised estimate. A delivered order gets a short confirmation with a feedback link. The agent adapts because it reads context, not slot fills.

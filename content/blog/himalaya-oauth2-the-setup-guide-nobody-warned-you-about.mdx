@@ -69,6 +69,8 @@ backend.auth.refresh-token.keyring = "gmail-oauth2-refresh-token"
 backend.auth.auth-url = "https://accounts.google.com/o/oauth2/v2/auth"
 backend.auth.token-url = "https://oauth2.googleapis.com/token"
 backend.auth.scopes = "https://mail.google.com/"
+```
+
 The SMTP side mirrors this structure but points at `smtp.gmail.com` on port 465. You can reuse the same OAuth2 tokens.
 
 One thing Google doesn't make obvious: if your OAuth2 app is in "testing" mode, refresh tokens expire after 7 days. You need to publish the app (which requires a review process) or you'll wake up to broken auth every week.
@@ -94,6 +96,8 @@ backend.auth.auth-url = "https://login.microsoftonline.com/common/oauth2/v2.0/au
 backend.auth.token-url = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
 backend.auth.pkce = true
 backend.auth.scopes = "https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send"
+```
+
 Notice `backend.auth.pkce = true`. Microsoft requires PKCE (Proof Key for Code Exchange) for public clients. If you skip this, the token exchange fails with a vague error that doesn't mention PKCE at all. That detail alone cost me two hours.
 
 ## The redirect error everyone hits

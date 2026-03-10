@@ -56,6 +56,8 @@ CREATE TABLE message_recipients (
   type        TEXT NOT NULL CHECK (type IN ('to', 'cc', 'bcc')),
   delivery_status TEXT DEFAULT 'pending'
 );
+```
+
 Each recipient gets its own row with its own delivery status. When your agent sends a message to five addresses, you get five `message_recipients` rows, each independently trackable. This is what makes it possible to answer "did the confirmation email actually reach `alice@example.com`?" without parsing raw SMTP logs.
 
 BCC recipients exist in this table but are excluded from any recipient list returned to other parties. The schema knows about them; the API surface doesn't expose them to anyone except the sender.
@@ -85,6 +87,8 @@ CREATE TABLE agent_actions (
   metadata    JSONB,
   created_at  TIMESTAMPTZ DEFAULT now()
 );
+```
+
 The `metadata` column (JSONB in Postgres, or a document in NoSQL) holds action-specific details: the extracted verification code, the parsed structured output, the retry count, the error reason. This is where the schema absorbs the unpredictable variety of agent behavior without requiring a new column for every use case.
 
 Why does this matter? Debugging. When an agent workflow fails at step 4 of 7, you need to see what happened at steps 1 through 3. Traditional email schemas can tell you what messages exist. Agent action logs tell you what the agent tried to do and where it stopped.

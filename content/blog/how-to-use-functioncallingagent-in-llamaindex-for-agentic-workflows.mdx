@@ -26,6 +26,8 @@ If you've been building agents with LlamaIndex, you've probably seen this import
 
 ```python
 from llama_index.core.agent import FunctionCallingAgent
+```
+
 Maybe you copied it into your project, hit a confusing error about `FunctionCallingAgentWorker`, and spent 20 minutes figuring out which class you actually need. You're not alone. The naming is genuinely confusing, the docs split responsibilities across multiple classes, and most examples online skip the parts that matter for production use.
 
 This guide covers the full picture: what `FunctionCallingAgent` does, how it relates to `FunctionCallingAgentWorker` and `AgentRunner`, and how to wire it into real workflows (including giving your agent the ability to send email).
@@ -68,6 +70,8 @@ agent = FunctionCallingAgent.from_tools(
 
 response = agent.chat("What's the weather like in Montreal?")
 print(response)
+```
+
 The LLM sees `get_weather` as a callable function, decides when to invoke it based on the user's message, and incorporates the result into its response. No prompt hacking, no regex parsing of tool calls. The LLM's native function-calling interface handles all of that.
 
 ## FunctionCallingAgent vs. ReActAgent

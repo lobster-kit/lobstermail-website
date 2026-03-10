@@ -29,6 +29,8 @@ The import line is simple enough:
 
 ```python
 from llama_index.core.agent import FunctionCallingAgent
+```
+
 What comes after that import is where people get stuck. How do you define tools? Which LLMs actually support function calling? What happens when a tool call fails? And how do you wire this up so your agent can take real actions, not just retrieve documents?
 
 I've been building agent workflows that include transactional actions (like provisioning email inboxes and sending messages), and FunctionCallingAgent is the cleanest abstraction LlamaIndex offers for this pattern. Here's what I've learned.
@@ -79,6 +81,8 @@ agent = FunctionCallingAgent.from_tools(
 
 response = agent.chat("What is 42 times 17, then add 5?")
 print(response)
+```
+
 The `verbose=True` flag is worth keeping on during development. It prints each tool call the LLM makes, so you can see exactly what's happening under the hood.
 
 ## Exposing real actions as tools

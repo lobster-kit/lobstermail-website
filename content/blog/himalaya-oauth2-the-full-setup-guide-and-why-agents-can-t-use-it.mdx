@@ -77,12 +77,16 @@ message.send.backend.auth.refresh-token.keyring = "gmail-oauth2-refresh-token"
 message.send.backend.auth.auth-url = "https://accounts.google.com/o/oauth2/v2/auth"
 message.send.backend.auth.token-url = "https://oauth2.googleapis.com/token"
 message.send.backend.auth.scope = "https://mail.google.com/"
+```
+
 The scope `https://mail.google.com/` grants full IMAP and SMTP access. Google doesn't offer a narrower scope for IMAP-only access, so this is what you need.
 
 Store the client secret in your keyring before running Himalaya:
 
 ```bash
 secret-tool store --label="gmail-oauth2-client-secret" account gmail-oauth2-client-secret
+```
+
 The first time you run `himalaya envelope list`, it opens your default browser to the Google consent screen. You approve it, the redirect fires back to a localhost port Himalaya is listening on, and the tokens get saved to your keyring.
 
 ## Outlook OAuth2 configuration

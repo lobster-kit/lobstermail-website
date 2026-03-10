@@ -81,6 +81,8 @@ if (email.isInjectionRisk) {
 
 ```typescript
 const safeContent = email.safeBodyForLLM();
+```
+
 This wraps the content in boundary markers (`[EMAIL_CONTENT_START]` / `[EMAIL_CONTENT_END]`) and flags untrusted sections with explicit delimiters. These markers work with system prompts that instruct the model to treat content within boundaries as data, not instructions. It's not foolproof. But it forces the attacker to break through both the boundary convention and the model's instruction following, which is significantly harder than injecting into raw text.
 
 **Email authentication** (SPF, DKIM, DMARC) is the structural layer underneath everything else. A failed SPF check means the sending server isn't authorized for that domain. A failed DKIM check means the message was modified in transit. These aren't injection-specific defenses, but they eliminate entire categories of spoofed emails that would otherwise carry injection payloads.

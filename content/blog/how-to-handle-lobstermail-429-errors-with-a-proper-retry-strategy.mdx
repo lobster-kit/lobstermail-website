@@ -66,6 +66,8 @@ if (response.status === 429) {
   console.log(`Rate limited. Waiting ${retryAfter}s before retry.`);
   await sleep(retryAfter * 1000);
 }
+```
+
 Always respect this header. Don't guess. Don't hardcode a two-second delay. The server knows its own capacity better than your agent does.
 
 ## Exponential backoff with jitter
@@ -100,6 +102,8 @@ async function retryWithBackoff<T>(
   }
   throw new Error('Max retries exceeded');
 }
+```
+
 Cap your maximum wait at 60 seconds. If you're still getting 429s after a minute between attempts, something else is wrong and you should alert rather than keep retrying.
 
 ## Preventing duplicate sends on retry

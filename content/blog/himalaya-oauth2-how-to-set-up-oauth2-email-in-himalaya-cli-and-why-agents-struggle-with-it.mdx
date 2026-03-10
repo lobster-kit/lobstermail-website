@@ -71,6 +71,8 @@ message.send.backend.auth.refresh-token.keyring = "gmail-oauth2-refresh-token"
 message.send.backend.auth.auth-url = "https://accounts.google.com/o/oauth2/v2/auth"
 message.send.backend.auth.token-url = "https://oauth2.googleapis.com/token"
 message.send.backend.auth.scopes = ["https://mail.google.com/"]
+```
+
 Yes, you need to duplicate the OAuth2 block for both IMAP and SMTP in the same account. The `https://mail.google.com/` scope covers both read and send for Gmail. Outlook uses different scopes, which I'll cover next.
 
 ## Gmail vs Outlook: the configuration differences
@@ -97,6 +99,8 @@ backend.auth.auth-url = "https://login.microsoftonline.com/common/oauth2/v2.0/au
 backend.auth.token-url = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
 backend.auth.pkce = true
 backend.auth.scopes = ["https://outlook.office.com/IMAP.AccessAsUser.All"]
+```
+
 For Outlook SMTP, the scope changes to `https://outlook.office.com/SMTP.Send`. You'll need both if you want to read and send.
 
 One gotcha: Microsoft's Azure app registration requires you to add the redirect URI explicitly under "Mobile and desktop applications," not "Web." If you pick the wrong platform type, you'll get a redirect mismatch error that's not obvious to debug.

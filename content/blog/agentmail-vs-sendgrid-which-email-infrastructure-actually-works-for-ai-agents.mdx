@@ -56,6 +56,8 @@ await sgMail.send({
   subject: 'Your receipt',
   text: 'Thanks for your purchase.',
 });
+```
+
 Deliverability is solid. SendGrid manages IP reputation, offers dedicated IPs on higher tiers, and provides analytics for open rates, click tracking, and bounce handling. For one-directional email (your app talks, the user listens), it works.
 
 ## Where SendGrid breaks down for agents
@@ -79,6 +81,8 @@ AgentMail introduced the concept of a managed inbox that an agent creates progra
 ```javascript
 const inbox = await agentmail.createInbox();
 // inbox.address → something like agent-7x@agentmail.to
+```
+
 The agent now has an email address. It can send from it, receive into it, and read conversation threads. This is what "agent-first" means in practice. The infrastructure assumes the primary user is software, not a person clicking buttons in a dashboard.
 
 SendGrid assumes a human configured everything in advance: the sending domain, the API key, the webhook endpoint, the parsing logic. That assumption falls apart when you have 50 agents that each need their own email identity, or when an agent needs to spin up a temporary inbox for a single task.

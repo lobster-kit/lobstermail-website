@@ -129,6 +129,8 @@ const inbox = await lm.createSmartInbox({ name: 'My Agent' });
 
 // Your agent now has its own address like my-agent@lobstermail.ai
 const emails = await inbox.receive();
+```
+
 No OAuth flows, no Google Cloud Console, no quota dashboards to monitor, no risk to your personal Google account. The agent provisions its own inbox and manages its own email. If something goes wrong, your personal accounts are completely isolated.
 
 The free tier gives you 1,000 emails per month. For agents that need more, the Builder tier at $9/month covers most production workloads. Neither tier requires a credit card for the free plan or puts your personal accounts at risk.

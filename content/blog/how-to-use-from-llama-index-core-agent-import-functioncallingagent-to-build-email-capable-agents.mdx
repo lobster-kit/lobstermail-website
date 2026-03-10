@@ -30,6 +30,8 @@ You've seen the import line everywhere. Every LlamaIndex tutorial, every agentic
 
 ```python
 from llama_index.core.agent import FunctionCallingAgent
+```
+
 But most of those tutorials stop at toy examples. "Here's a calculator tool. Here's a weather lookup." Nobody shows you what happens when you wire up tools that actually do things in the real world, like sending email, parsing inbound messages, or signing up for services on your agent's behalf.
 
 This guide covers how `FunctionCallingAgent` works, how it differs from the alternatives in LlamaIndex, and how to connect it to tools that let your agent handle email autonomously.
@@ -75,6 +77,8 @@ agent = FunctionCallingAgent.from_tools(tools, llm=llm, verbose=True)
 
 response = agent.chat("Check my inbox and reply to any unread messages")
 print(response)
+```
+
 The `verbose=True` flag prints each tool call and its result as the agent runs. Useful for debugging, noisy in production. Turn it off once you trust the workflow.
 
 ## FunctionCallingAgent vs FunctionCallingAgentWorker

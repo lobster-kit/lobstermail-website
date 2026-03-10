@@ -32,6 +32,8 @@ The import line is simple enough:
 
 ```python
 from llama_index.core.agent import FunctionCallingAgent
+```
+
 What happens after that import is where things get interesting. This guide walks through the full setup, from installing dependencies to building an agent that can orchestrate multi-step email workflows using real tools.
 
 ## What is FunctionCallingAgent in LlamaIndex?
@@ -87,6 +89,8 @@ agent = FunctionCallingAgent.from_tools(
 
 response = agent.chat("Check the weather in Montreal and email the result to sam@example.com")
 print(response)
+```
+
 When you run this, the agent will first call `get_weather("Montreal")`, read the result, then call `send_summary("sam@example.com", "...")` with a composed message. Two tool calls, sequenced automatically. You didn't have to write any orchestration logic.
 
 The `verbose=True` flag prints each tool call as it happens, which is invaluable for debugging.
