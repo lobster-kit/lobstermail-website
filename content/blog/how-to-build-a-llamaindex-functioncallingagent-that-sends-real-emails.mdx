@@ -1,0 +1,279 @@
+---
+title: how to build a llamaindex functioncallingagent that sends real emails
+description: >-
+  Build a LlamaIndex FunctionCallingAgent that sends and receives actual emails.
+  Step-by-step tutorial with real email infrastructure, not dummy functions.
+date: '2026-03-09'
+author: Samuel Chenard
+tags:
+  - guides
+  - automation
+  - email
+  - infrastructure
+  - openclaw
+image: >-
+  /blog/how-to-build-a-llamaindex-functioncallingagent-that-sends-real-emails.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — llama_index
+  functioncallingagent email
+publish_at: '2026-03-09T10:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-09T20:51:46.934Z'
+---
+Every LlamaIndex function calling tutorial has the same problem. You define a `send_email` tool, wire it into a `FunctionCallingAgent`, and the agent "sends" an email that goes absolutely nowhere. The function just prints to your terminal. Demo over.
+
+That's fine for a proof-of-concept. It's not fine when your agent actually needs to email a customer, confirm a signup, or retrieve a verification code from an inbox it controls. For that, you need real email infrastructure behind the function call.
+
+This tutorial connects a LlamaIndex `FunctionAgent` (the successor to `FunctionCallingAgent`) to actual email sending and receiving. No simulated functions. No mock SMTP. Your agent will provision its own inbox, send from it, and read what comes back.
+
+## How to build a LlamaIndex email agent in 5 steps
+
+1. Install `llama-index-core` and your LLM provider package.
+2. Define email functions with clear docstrings describing their parameters.
+3. Wrap each function as a `FunctionTool`.
+4. Initialize `FunctionAgent` with the tools and your chosen LLM.
+5. Run the agent with a natural-language email instruction.
+
+That's the skeleton. Now let's fill it in with real email behind every tool call.
+
+## What is FunctionCallingAgent in LlamaIndex?
+
+`FunctionCallingAgent` is LlamaIndex's agent class that uses an LLM's native tool-calling API (OpenAI, Anthropic, Mistral) to decide which Python functions to invoke and with what arguments. Instead of parsing text output and hoping the format is right, the LLM returns structured function calls that the framework executes directly.
+
+As of LlamaIndex 0.11+, `FunctionCallingAgent` has been succeeded by `FunctionAgent` in the new workflow-based agent architecture. The core idea is identical: you define tools, the LLM picks which ones to call, and the framework handles execution. `FunctionAgent` just does it within the newer `Workflow` system, which makes multi-step orchestration cleaner. If you're starting a new project, use `FunctionAgent`. If you have existing code with `FunctionCallingAgent`, it still works.
+
+Both approaches support OpenAI (GPT-4o, GPT-4.1), Anthropic (Claude 3+), and Mistral models with function calling capabilities.
+
+## Setting up the project
+
+Install the dependencies. We're using OpenAI here, but swap in `llama-index-llms-anthropic` or `llama-index-llms-mistral` if you prefer.
+
+```bash
+pip install llama-index-core llama-index-llms-openai
+npm install @lobsterkit/lobstermail
+Wait, why npm? Because your agent's email tools will call a small Node sidecar (or you can use the LobsterMail REST API directly from Python). I'll show both approaches.
+
+## Defining real email tools
+
+Here's where most tutorials fall apart. They define something like:
+
+```python
+def send_email(to: str, subject: str, body: str) -> str:
+    """Send an email."""
+    print(f"Sending to {to}: {subject}")
+    return "Email sent successfully"
+That's a lie. Nothing was sent. Let's replace it with a function that hits a real email API:
+
+```python
+import requests
+import os
+
+LOBSTERMAIL_TOKEN = os.environ["LOBSTERMAIL_TOKEN"]
+INBOX_ID = os.environ["LOBSTERMAIL_INBOX_ID"]
+BASE_URL = "https://api.lobstermail.ai/v1"
+
+def send_email(to: str, subject: str, body: str) -> str:
+    """Send an email from the agent's inbox.
+
+    Args:
+        to: Recipient email address.
+        subject: Email subject line.
+        body: Plain text email body.
+    """
+    response = requests.post(
+        f"{BASE_URL}/inboxes/{INBOX_ID}/send",
+        headers={"Authorization": f"Bearer {LOBSTERMAIL_TOKEN}"},
+        json={"to": to, "subject": subject, "text": body}
+    )
+    if response.status_code == 200:
+        return f"Email sent to {to} with subject '{subject}'"
+    return f"Failed to send: {response.status_code} {response.text}"
+
+
+def check_inbox(limit: int = 5) -> str:
+    """Check the agent's inbox for recent emails.
+
+    Args:
+        limit: Number of recent emails to retrieve (default 5).
+    """
+    response = requests.get(
+        f"{BASE_URL}/inboxes/{INBOX_ID}/emails",
+        headers={"Authorization": f"Bearer {LOBSTERMAIL_TOKEN}"},
+        params={"limit": limit}
+    )
+    if response.status_code != 200:
+        return f"Failed to check inbox: {response.status_code}"
+
+    emails = response.json().get("emails", [])
+    if not emails:
+        return "Inbox is empty."
+
+    summaries = []
+    for e in emails:
+        summaries.append(f"From: {e['from']} | Subject: {e['subject']} | Preview: {e.get('preview', '')[:100]}")
+    return "\n".join(summaries)
+```
+
+These functions hit a real API. When the agent calls `send_email`, an actual email arrives in someone's actual inbox. When it calls `check_inbox`, it reads real messages.
+
+The docstrings matter. The LLM uses them to understand when and how to call each tool. Vague docstrings produce vague tool usage.
+
+## Wiring tools into FunctionAgent
+
+Now wrap the functions and hand them to the agent:
+
+```python
+from llama_index.core.tools import FunctionTool
+from llama_index.core.agent.workflow import FunctionAgent
+from llama_index.llms.openai import OpenAI
+
+# Wrap plain functions as tools
+send_tool = FunctionTool.from_defaults(fn=send_email)
+inbox_tool = FunctionTool.from_defaults(fn=check_inbox)
+
+# Initialize the agent
+agent = FunctionAgent(
+    tools=[send_tool, inbox_tool],
+    llm=OpenAI(model="gpt-4o"),
+    system_prompt=(
+        "You are an email assistant. You can send emails and check the inbox. "
+        "Always confirm the recipient and subject before sending. "
+        "Never send emails to addresses the user hasn't explicitly specified."
+    ),
+)
+```
+
+That system prompt line about not sending to unspecified addresses? That's not optional. Without guardrails, an agent with email tools will happily compose and send messages to whoever seems relevant. You need explicit boundaries.
+
+You can pass as many tools as you want to the `tools` list. A calendar tool, a CRM lookup tool, a Slack notification tool. The LLM decides which ones to call based on the user's request.
+
+## Running the agent
+
+```python
+import asyncio
+
+async def main():
+    response = await agent.run(
+        "Check my inbox for any emails from support@acme.com, "
+        "then forward a summary to team@mycompany.com"
+    )
+    print(response)
+
+asyncio.run(main())
+```
+
+The agent will call `check_inbox`, filter the results for emails from `support@acme.com`, compose a summary, and call `send_email` to forward it. Two tool calls, one natural-language instruction.
+
+Both `FunctionAgent` and the older `FunctionCallingAgent` support async tool functions. If your email API calls are slow (network latency, rate limiting), making your tools `async def` prevents the agent from blocking while waiting.
+
+## The part tutorials skip: what happens in production
+
+Getting a demo working takes twenty minutes. Keeping it running takes more thought.
+
+**Error handling inside tools.** If `send_email` throws an unhandled exception, the agent receives the traceback as the tool's output. Some LLMs handle this gracefully (they'll tell the user the send failed). Others will hallucinate a success message. Catch exceptions inside your tool functions and return clear error strings.
+
+**Rate limits and send volume.** An agent in a loop can burn through email quotas fast. LobsterMail's free tier gives you 1,000 emails per month. The Builder tier ($9/mo) bumps that to 5,000 with up to 500 sends per day. If your agent is doing high-volume outreach, you need to track usage inside the tool function and return a rate-limit message before hitting the ceiling.
+
+**Audit logging.** Every email your agent sends should be logged somewhere your team can review. This isn't just good practice; it's a liability question. If your agent sends something wrong, you need to know what it said, to whom, and when. A simple approach: append every `send_email` call to a log file or database table before making the API request.
+
+**Human-in-the-loop approval.** For sensitive workflows, you might want the agent to draft the email but not send it until a human approves. One pattern: have the tool return a "draft saved" confirmation instead of actually sending, then build a separate approval queue that triggers the real send.
+
+## FunctionAgent vs. ReActAgent for email
+
+LlamaIndex offers two main agent types. `FunctionAgent` uses the LLM's native function calling to pick tools. `ReActAgent` uses a reasoning-action loop where the LLM writes out its thought process in text, then specifies a tool call.
+
+For email tools, `FunctionAgent` is usually the better choice. Function calling is more deterministic: the LLM returns structured JSON specifying which function to call and with what arguments. ReAct agents can be creative in their reasoning, but that creativity sometimes means they'll reformulate your email content in unexpected ways before passing it to the tool.
+
+The exception: if you're using a model that doesn't support native function calling, `ReActAgent` is your only option. But most modern models from OpenAI, Anthropic, and Mistral support it now.
+
+## Where the inbox comes from
+
+I glossed over something earlier. Those environment variables, `LOBSTERMAIL_TOKEN` and `LOBSTERMAIL_INBOX_ID`, have to come from somewhere.
+
+With LobsterMail, your agent can provision its own inbox at startup. The SDK handles account creation and inbox provisioning in a single call:
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create();
+const inbox = await lm.createSmartInbox({ name: 'Support Assistant' });
+console.log(inbox.address); // support-assistant@lobstermail.ai
+```
+
+No API keys to configure manually. No DNS records. No OAuth flows. The agent hatches its own inbox and starts using it. You can store the resulting token and inbox ID as environment variables for your Python agent to consume.
+
+That self-provisioning is the part most email setups get wrong for agents. Traditional email requires a human to create accounts, configure SMTP credentials, and set up domain authentication. An autonomous agent can't do any of that on its own.
+
+## Handling credentials securely
+
+Never hardcode email tokens in your tool functions. Use environment variables or a secrets manager. If your agent is running in a container or cloud function, inject credentials at deploy time.
+
+For LobsterMail specifically, the SDK stores its token at `~/.lobstermail/token` by default. If your Python tools need that same token, read it from the file or export it as an environment variable in your startup script. Don't commit it to version control.
+
+## Testing without sending real emails
+
+During development, you probably don't want your agent firing off actual emails every time you test. Two approaches:
+
+1. **Use a test inbox.** Create a dedicated inbox and only send to it. LobsterMail's `createSmartInbox` makes this trivial; spin up a `test-agent@lobstermail.ai` inbox and point all test sends there.
+2. **Mock at the tool level.** Swap your real `send_email` function for a mock during tests. Since `FunctionTool.from_defaults` takes any callable, you can inject a mock that logs the call without hitting the network.
+
+The first approach is better for integration tests. The second is better for unit tests. Use both.
+
+If you're looking for a way to give your LlamaIndex agent real email capabilities without wrestling with SMTP configuration, [LobsterMail](/) handles the infrastructure so your tools can focus on logic.
+
+<FAQ>
+  <FAQItem question="What Python package do I need to install to use FunctionCallingAgent in LlamaIndex?">
+    Install `llama-index-core` for the agent framework and a provider package like `llama-index-llms-openai` or `llama-index-llms-anthropic` for the LLM. Run `pip install llama-index-core llama-index-llms-openai` to get started.
+  </FAQItem>
+
+  <FAQItem question="What is the difference between FunctionAgent and the legacy FunctionCallingAgent in LlamaIndex?">
+    `FunctionAgent` is the newer workflow-based replacement for `FunctionCallingAgent`. Both use an LLM's native tool-calling API, but `FunctionAgent` integrates with LlamaIndex's `Workflow` system for cleaner multi-step orchestration. Use `FunctionAgent` for new projects.
+  </FAQItem>
+
+  <FAQItem question="Which LLMs support function calling in LlamaIndex?">
+    OpenAI (GPT-4o, GPT-4.1), Anthropic (Claude 3, Claude 4), and Mistral all support native function calling through their respective LlamaIndex integrations. Any model with a tool-calling API will work.
+  </FAQItem>
+
+  <FAQItem question="How do I define an email-sending function as a tool for a LlamaIndex agent?">
+    Write a Python function with typed parameters and a descriptive docstring, then wrap it with `FunctionTool.from_defaults(fn=your_function)`. The LLM reads the docstring to understand when and how to call the tool.
+  </FAQItem>
+
+  <FAQItem question="Can I use async functions as tools in a LlamaIndex FunctionCallingAgent?">
+    Yes. Both `FunctionAgent` and `FunctionCallingAgent` support `async def` tool functions. This prevents the agent from blocking on slow network calls like email API requests.
+  </FAQItem>
+
+  <FAQItem question="How do I connect a LlamaIndex email agent to a real email API instead of a dummy function?">
+    Replace the mock `print()` in your tool function with an HTTP request to an email API like LobsterMail's REST endpoint. Pass the recipient, subject, and body as JSON, and return the API's response status to the agent.
+  </FAQItem>
+
+  <FAQItem question="How do I prevent a LlamaIndex agent from sending emails without human approval?">
+    Have the send tool save a draft instead of sending immediately. Build a separate approval queue where a human reviews and triggers the actual send. Set clear boundaries in the agent's system prompt about when sending is allowed.
+  </FAQItem>
+
+  <FAQItem question="What happens if a function tool raises an exception inside a LlamaIndex agent?">
+    The agent receives the traceback as the tool's output. Some LLMs report the error to the user; others may hallucinate a success. Always catch exceptions inside your tool functions and return clear error messages instead.
+  </FAQItem>
+
+  <FAQItem question="How do I test an email agent without actually sending real emails?">
+    Either send to a dedicated test inbox (create one with `createSmartInbox({ name: 'test-agent' })`) or swap your real tool function for a mock during unit tests. `FunctionTool.from_defaults` accepts any callable.
+  </FAQItem>
+
+  <FAQItem question="How do I log or audit all emails sent by a LlamaIndex FunctionCallingAgent?">
+    Add logging inside your `send_email` tool function before making the API request. Write the recipient, subject, body, and timestamp to a log file or database. This creates an audit trail for every message your agent sends.
+  </FAQItem>
+
+  <FAQItem question="How do I handle email authentication credentials securely in a LlamaIndex agent?">
+    Use environment variables or a secrets manager. Never hardcode tokens in tool functions. For LobsterMail, the SDK stores its token at `~/.lobstermail/token` by default. Export it as an env var in your startup script.
+  </FAQItem>
+
+  <FAQItem question="How do I scale a LlamaIndex email agent to handle high sending volumes?">
+    Track send counts inside your tool function and return rate-limit warnings before hitting your email provider's ceiling. LobsterMail's Builder tier supports 500 sends per day. For higher volume, implement a send queue with backoff logic.
+  </FAQItem>
+
+  <FAQItem question="What is the difference between FunctionAgent and ReActAgent for email tools?">
+    `FunctionAgent` uses structured JSON function calls, making it more deterministic. `ReActAgent` reasons in text before acting, which can introduce unexpected rewording of email content. Use `FunctionAgent` when your model supports native tool calling.
+  </FAQItem>
+</FAQ>
