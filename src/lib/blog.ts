@@ -15,6 +15,7 @@ export interface BlogPost {
   image?: string;
   imageAlt?: string;
   type?: string;
+  status?: string;
   author?: string;
   content: string;
   readingTime: number;
@@ -48,12 +49,15 @@ export const getAllPosts = cache(function getAllPosts(): BlogPost[] {
       imageAlt: data.imageAlt,
       type: data.type,
       author: data.author,
+      status: data.status,
       content,
       readingTime: getReadingTime(content),
     };
   });
 
-  return posts.sort((a, b) => {
+  return posts
+    .filter((p) => p.status !== "draft")
+    .sort((a, b) => {
     const da = a.date ? new Date(a.date).getTime() : 0;
     const db = b.date ? new Date(b.date).getTime() : 0;
     return db - da;
@@ -66,6 +70,8 @@ export function getPostBySlug(slug: string): BlogPost | null {
 
   const fileContent = fs.readFileSync(filePath, "utf-8");
   const { data, content } = matter(fileContent);
+
+  if (data.status === "draft") return null;
 
   return {
     slug,
@@ -88,6 +94,11 @@ export function getAllSlugs(): string[] {
   return fs
     .readdirSync(BLOG_DIR)
     .filter((f) => f.endsWith(".mdx"))
+    .filter((f) => {
+      const fileContent = fs.readFileSync(path.join(BLOG_DIR, f), "utf-8");
+      const { data } = matter(fileContent);
+      return data.status !== "draft";
+    })
     .map((f) => f.replace(/\.mdx$/, ""));
 }
 
