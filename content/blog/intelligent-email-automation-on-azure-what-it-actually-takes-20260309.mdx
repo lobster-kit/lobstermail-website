@@ -109,7 +109,7 @@ For most agent builders, the Azure approach is like renting a commercial kitchen
 
 If your agent needs to provision its own inbox, send and receive email, and handle basic delivery concerns without a human wiring up five Azure services first, you want infrastructure that was built for that use case from the start.
 
-This is where agent-first email platforms come in. LobsterMail, for example, lets an agent create its own inbox with a single SDK call. No Azure Communication Services setup, no Exchange Online licensing, no Managed Identity configuration. The agent calls `LobsterMail.create()`, gets an inbox, and starts sending and receiving. Built-in [security scanning](/blog/prompt-injection-email-agents) catches prompt injection attempts in inbound email, which is something you'd need to build yourself on Azure.
+This is where agent-first email platforms come in. LobsterMail, for example, lets an agent create its own inbox with a single SDK call. No Azure Communication Services setup, no Exchange Online licensing, no Managed Identity configuration. The agent calls `LobsterMail.create()`, gets an inbox, and starts sending and receiving. Built-in [security scanning](/blog/prompt-injection-in-emails-what-ai-agents-need-to-know) catches prompt injection attempts in inbound email, which is something you'd need to build yourself on Azure.
 
 The free tier gives you 1,000 emails/month with no credit card. For agents that need more volume, the Builder tier at $9/month covers most production workloads. Compare that to the $200-500/month Azure stack and the math gets simple fast.
 
