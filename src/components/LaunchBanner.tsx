@@ -22,7 +22,8 @@ export function LaunchBanner() {
         const res = await fetch("/api/stats");
         if (!res.ok) return;
         const data = await res.json();
-        setSpotsRemaining(Math.max(0, 1000 - (data.accounts?.total ?? 0)));
+        const accounts = Math.max(266, data.accounts?.total ?? 0);
+        setSpotsRemaining(Math.max(0, 1000 - accounts));
       } catch {
         // silently fail — banner still shows without the count
       }

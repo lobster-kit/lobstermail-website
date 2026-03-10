@@ -231,6 +231,11 @@
   50%      { box-shadow: 0 6px 32px rgba(251, 87, 5, 0.7); }
 }
 
+@keyframes glass-shadow-pulse {
+  0%, 100% { box-shadow: 0 20px 40px 0 rgba(0, 80, 171, 0.22); }
+  50%      { box-shadow: 0 28px 56px 0 rgba(0, 80, 171, 0.38); }
+}
+
 @keyframes banner-edge-flash {
   0%        { transform: translateX(-150%); opacity: 0; }
   5%        { opacity: 1; }
@@ -312,6 +317,7 @@
     border: 3px solid var(--edge-strong);
     background: var(--glass-strong-bg, #F7F7F6);
     box-shadow: 0 20px 40px 0 rgba(0, 80, 171, 0.22);
+    animation: glass-shadow-pulse 4s ease-in-out infinite;
   }
 
   .glass-subtle {

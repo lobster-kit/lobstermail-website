@@ -14,7 +14,7 @@ export interface Guide extends GuideMeta {
 
 export async function getGuides(): Promise<GuideMeta[]> {
   const res = await fetch(`${API}/v1/docs/guides`, {
-    next: { revalidate: 3600 },
+    next: { revalidate: 3600, tags: ["guides"] },
   });
   const { guides } = await res.json();
   return guides; // already sorted by `order`
@@ -22,7 +22,7 @@ export async function getGuides(): Promise<GuideMeta[]> {
 
 export async function getGuide(slug: string): Promise<Guide | null> {
   const res = await fetch(`${API}/v1/docs/guides/${slug}`, {
-    next: { revalidate: 3600 },
+    next: { revalidate: 3600, tags: ["guides", `guide-${slug}`] },
   });
   if (!res.ok) return null;
   return res.json();
@@ -30,14 +30,14 @@ export async function getGuide(slug: string): Promise<Guide | null> {
 
 export async function getSkillContent(): Promise<string> {
   const res = await fetch(`${API}/skill`, {
-    next: { revalidate: 600 },
+    next: { revalidate: 3600, tags: ["skill"] },
   });
   return res.text();
 }
 
 export async function getOpenApiSpec(): Promise<string> {
   const res = await fetch(`${API}/v1/docs/openapi`, {
-    next: { revalidate: 3600 },
+    next: { revalidate: 3600, tags: ["openapi"] },
   });
   return res.text();
 }

@@ -2,6 +2,7 @@ import Image from "next/image";
 import { Check } from "@phosphor-icons/react/dist/ssr";
 import { FadeIn } from "./FadeIn";
 import { GetStartedPopup } from "./GetStartedPopup";
+import { PromoCounter } from "./PromoCounter";
 
 const freePlanFeatures = [
   "No human required",
@@ -38,6 +39,9 @@ export function Pricing() {
           <p className="mx-auto mt-5 max-w-md text-base text-secondary sm:text-lg">
             Don&#39;t get trapped in the lobster cage of emails.
           </p>
+          <div className="mt-4">
+            <PromoCounter />
+          </div>
         </FadeIn>
 
         <div className="mx-auto mt-14 grid max-w-3xl gap-6 sm:grid-cols-2">

@@ -32,9 +32,6 @@ export function Hero() {
             </p>
           </FadeIn>
 
-          <FadeIn delay={0.24}>
-            <CredibilityPill />
-          </FadeIn>
         </div>
 
         {/* Right: code card with glow */}
@@ -49,6 +46,13 @@ export function Hero() {
           <CodeSnippet />
         </FadeIn>
       </div>
+
+      {/* Credibility pill — centered below hero */}
+      <FadeIn delay={0.3}>
+        <div className="relative z-10 mt-[90px] flex justify-center sm:mt-[90px]">
+          <CredibilityPill />
+        </div>
+      </FadeIn>
     </section>
   );
 }
