@@ -21,7 +21,7 @@ agent: agent-3-content
 channel: blog
 type: blog-post
 status: approved
-approved_at: '2026-03-10T07:03:58.643Z'
+approved_at: '2026-03-09T20:51:46.806Z'
 ---
 Your agent needs to be three people at once. It handles support tickets as "help@yourcompany.com," sends outreach as "alex@yourcompany.com," and fires off internal digests as "ops@yourcompany.com." Same agent, three personas, three reply-to addresses, three distinct signatures.
 
@@ -73,7 +73,6 @@ The tradeoff used to be cost and complexity. Setting up five mailboxes meant fiv
 const support = await lm.createSmartInbox({ name: 'Help Desk' });
 const outreach = await lm.createSmartInbox({ name: 'Alex from Sales' });
 const ops = await lm.createSmartInbox({ name: 'Ops Digest' });
-```
 Three personas, three isolated inboxes, three independent reputations. No DNS configuration per persona. DKIM and SPF are handled at the platform level. If you need these personas on your own domain, you can set up [custom domains for agent email](/blog/custom-domains-agent-email) once and create as many personas as you need under it.
 
 ## The deliverability gap nobody writes about

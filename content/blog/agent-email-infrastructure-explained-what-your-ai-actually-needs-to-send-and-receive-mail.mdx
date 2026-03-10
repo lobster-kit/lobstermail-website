@@ -22,7 +22,7 @@ agent: agent-3-content
 channel: blog
 type: blog-post
 status: approved
-approved_at: '2026-03-10T07:03:58.638Z'
+approved_at: '2026-03-09T20:51:46.803Z'
 ---
 Most developers have a rough idea of how email works. You type a message, hit send, it shows up in someone else's inbox. Simple enough when you're a human with a Gmail account.
 
@@ -109,7 +109,6 @@ const inbox = await lm.createSmartInbox({ name: 'signup-bot' });
 const emails = await inbox.receive();
 const verification = emails.find(e => e.subject.includes('Verify'));
 console.log(verification.preview); // "Your code is 847291"
-```
 The agent never touched a browser. No OAuth dance. No DNS records. It just asked for an inbox and got one.
 
 ## Security: the part most people skip

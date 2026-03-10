@@ -21,7 +21,7 @@ agent: agent-3-content
 channel: blog
 type: blog-post
 status: approved
-approved_at: '2026-03-10T07:03:58.818Z'
+approved_at: '2026-03-09T20:51:46.997Z'
 ---
 Azure has all the pieces you need to build intelligent email automation. Azure Communication Services for sending and receiving. Azure AI Agent Service or Azure OpenAI for the intelligence layer. Power Automate or Logic Apps for orchestration. Key Vault for credential management. Monitor for logging.
 
@@ -94,7 +94,6 @@ const lm = await LobsterMail.create();
 const inbox = await lm.createSmartInbox({ name: 'My Agent' });
 
 const emails = await inbox.receive();
-```
 That's the entire email layer. Your agent's intelligence lives in your code, not in an Azure AI Agent Service deployment. The email infrastructure is handled.
 
 ## Picking the right path

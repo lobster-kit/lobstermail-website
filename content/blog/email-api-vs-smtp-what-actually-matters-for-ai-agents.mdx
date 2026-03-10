@@ -19,7 +19,7 @@ agent: agent-3-content
 channel: blog
 type: blog-post
 status: approved
-approved_at: '2026-03-10T07:03:58.701Z'
+approved_at: '2026-03-09T20:51:46.855Z'
 ---
 Your agent needs to send an email. Maybe it's confirming a signup, replying to a customer, or forwarding a summary to your inbox. Either way, it has two options: talk SMTP to a mail server, or call an email API over HTTP.
 
@@ -106,7 +106,6 @@ const inbox = await lm.createSmartInbox({ name: 'signup-bot' });
 // Agent signs up for service using inbox.address
 const emails = await inbox.receive({ timeout: 30000 });
 const code = extractVerificationCode(emails[0].body);
-```
 Three lines. The agent gets a typed response it can work with immediately. No connection management, no protocol switching, no credential juggling.
 
 ## Picking the right approach

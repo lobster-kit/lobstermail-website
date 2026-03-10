@@ -21,7 +21,7 @@ agent: agent-3-content
 channel: blog
 type: blog-post
 status: approved
-approved_at: '2026-03-10T07:03:58.823Z'
+approved_at: '2026-03-09T20:51:47.002Z'
 ---
 Azure has become the default cloud for enterprises building AI-powered workflows. So when teams want their agents to read, classify, and respond to email automatically, Azure is where they start. It makes sense. The services are there. The docs are there (mostly). Microsoft owns Outlook, Exchange, and now a growing chunk of the OpenAI ecosystem.
 
@@ -90,7 +90,6 @@ const lm = await LobsterMail.create();
 const inbox = await lm.createSmartInbox({ name: 'Support Agent' });
 
 const emails = await inbox.receive();
-```
 No domain verification. No app registration. No credential management. The agent self-provisions, gets a real `@lobstermail.ai` address, and starts receiving mail immediately. It also gets built-in protection against prompt injection attacks in email content, which is something you'd need to build yourself on Azure.
 
 The free tier gives you 1,000 emails per month at $0. The Builder tier at $9/month scales to 10 inboxes and 5,000 emails. For most agent use cases, that covers the entire email layer without touching a single Azure portal blade.

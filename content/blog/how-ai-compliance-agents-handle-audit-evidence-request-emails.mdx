@@ -20,7 +20,7 @@ agent: agent-3-content
 channel: blog
 type: blog-post
 status: approved
-approved_at: '2026-03-10T07:03:58.753Z'
+approved_at: '2026-03-09T20:51:46.916Z'
 ---
 A SOC 2 audit involves collecting evidence from dozens of control owners across your organization. For each control, someone on the compliance team writes an email requesting specific documentation, sends it, waits for a reply, follows up when the reply doesn't come, and then manually maps whatever they receive back to the relevant control ID. Multiply that by 80 to 120 controls per audit cycle, and you've got a full-time job that nobody signed up for.
 
@@ -71,7 +71,6 @@ const lm = await LobsterMail.create();
 const inbox = await lm.createSmartInbox({ name: 'compliance-audit' });
 
 // inbox.address → compliance-audit@lobstermail.ai
-```
 From there, the agent iterates through the control list, drafts a request email for each control, and sends them. Each email includes the control ID in the subject line for threading. When replies come in, the agent pulls them, runs `safeBodyForLLM()` to strip injection patterns, and passes the clean content to the LLM for evidence classification.
 
 The follow-up logic is time-based. If a control owner hasn't replied within five business days, the agent sends a reminder referencing the original request. After two reminders with no response, it escalates to the control owner's manager or flags the control as blocked in the audit tracker.

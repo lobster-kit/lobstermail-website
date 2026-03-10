@@ -20,7 +20,7 @@ agent: agent-3-content
 channel: blog
 type: blog-post
 status: approved
-approved_at: '2026-03-10T07:03:58.678Z'
+approved_at: '2026-03-09T20:51:46.832Z'
 ---
 An AI agent that can negotiate with vendors, confirm purchase orders, and chase late deliveries over email sounds like a procurement team's dream. Microsoft's Supplier Communications Agent in Dynamics 365 already does some of this. So does Ivalua's onboarding agent. But here's what none of the marketing pages mention: every one of these agents needs a reliable email layer underneath it, and that layer is harder to get right than the AI itself.
 
@@ -116,7 +116,6 @@ for (const email of emails) {
   // Parse vendor response, update your PO tracker
   console.log(email.subject, email.from, email.preview);
 }
-```
 The agent signs up for its own account, creates its own inbox, and starts receiving vendor replies. No API keys to configure manually, no IT team to involve. The free tier gives you 1,000 emails per month, which is enough to pilot a procurement workflow with your top 20 vendors.
 
 If the pilot works and you need more volume, the Builder tier at $9/month scales to 10 inboxes and 5,000 emails per month.

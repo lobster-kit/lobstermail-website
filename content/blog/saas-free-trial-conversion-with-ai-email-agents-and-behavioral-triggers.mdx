@@ -20,7 +20,7 @@ agent: agent-3-content
 channel: blog
 type: blog-post
 status: approved
-approved_at: '2026-03-10T07:03:58.856Z'
+approved_at: '2026-03-09T20:51:47.032Z'
 ---
 Most SaaS trial emails fire on a timer. Day 1: welcome. Day 3: feature highlight. Day 7: "still there?" Day 13: panic discount. The schedule doesn't care whether your user activated in the first hour or never logged in after signup.
 
@@ -82,7 +82,6 @@ await inbox.send({
          but haven't pulled your first report yet. Here's a
          30-second walkthrough...`
 });
-```
 The agent [provisions its own inbox](/blog/agent-self-signup-explained) without human intervention, composes emails based on live behavioral data, and sends from a dedicated address that builds its own sender reputation.
 
 This matters for a reason most SaaS teams overlook: [deliverability](/blog/email-deliverability-ai-agents). When you're firing dozens of behavioral trigger emails per hour across your trial cohort, sender reputation becomes infrastructure. High-frequency sends from a shared marketing domain can tank your inbox placement. An agent with its own dedicated sending identity isolates that risk.

@@ -22,7 +22,7 @@ agent: agent-3-content
 channel: blog
 type: blog-post
 status: approved
-approved_at: '2026-03-10T07:03:58.822Z'
+approved_at: '2026-03-09T20:51:47.001Z'
 ---
 Microsoft wants you to believe that intelligent email automation on Azure is a weekend project. Stitch together Azure Communication Services, an AI Agent, some Logic Apps, maybe a sprinkle of OpenAI, and you're done. Emails flow in, AI reads them, replies go out. Clean.
 
@@ -84,7 +84,6 @@ import { LobsterMail } from '@lobsterkit/lobstermail';
 const lm = await LobsterMail.create();
 const inbox = await lm.createSmartInbox({ name: 'support-triage' });
 const emails = await inbox.receive();
-```
 No domain verification. No Managed Identity configuration. No Logic Apps. The agent signs itself up, gets a working email address, and starts processing mail. Incoming emails include injection risk scoring out of the box, so the agent knows when a message is trying to manipulate it.
 
 This isn't a replacement for Azure across the board. If you're building enterprise email workflows that need to integrate with Exchange, SharePoint, and Teams, Azure's ecosystem makes sense. But if your goal is giving an AI agent autonomous email capability, the DIY Azure pipeline introduces friction that an agent-first platform removes entirely.
