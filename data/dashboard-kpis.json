@@ -1,47 +1,43 @@
 {
-  "generated_at": "2026-03-11T01:15:02.602Z",
+  "generated_at": "2026-03-11T07:15:03.305Z",
   "kpis": {
     "mrr_usd": 0,
     "paid_accounts": 2,
-    "free_accounts": 22,
-    "total_accounts": 30,
-    "npm_installs_7d": 5,
+    "free_accounts": 27,
+    "total_accounts": 35,
+    "npm_installs_7d": 7,
     "seo_clicks_7d": 49,
     "seo_impressions_7d": 4348,
-    "seo_avg_position": 7.1,
-    "total_emails_sent": 16,
+    "seo_avg_position": 0,
+    "total_emails_sent": 30,
     "total_emails_received": 100,
-    "total_inboxes": 42,
-    "daily_visitors": 491,
+    "total_inboxes": 49,
+    "daily_visitors": 1055,
     "daily_visitors_human": 7122,
-    "daily_visitors_bot": 350,
+    "daily_visitors_bot": 797,
     "github_stars": 0,
     "x_followers": 2,
     "clawhub_skill_installs": 0
   },
   "deltas": {
-    "total_inboxes": 42,
-    "total_emails_sent": 16,
+    "total_inboxes": 49,
+    "total_emails_sent": 30,
     "total_emails_received": 100,
-    "free_accounts": 22,
+    "free_accounts": 27,
     "github_stars": 0,
     "x_followers": 2,
     "clawhub_skill_installs": 0,
-    "openclaw_github_stars": 298007,
+    "openclaw_github_stars": 299729,
     "openclaw_npm_daily": null,
-    "openclaw_twitter_followers": 439708
+    "openclaw_twitter_followers": 440431
   },
   "market": {
-    "openclaw_github_stars": 298007,
+    "openclaw_github_stars": 299729,
     "openclaw_npm_daily": 0,
-    "openclaw_twitter_followers": 439708
+    "openclaw_twitter_followers": 440431
   },
   "sparklines": {
     "mrr_usd": [
-      {
-        "date": "2026-02-23",
-        "value": 0
-      },
       {
         "date": "2026-02-24",
         "value": 0
@@ -92,15 +88,15 @@
       },
       {
         "date": "2026-03-10",
+        "value": 0
+      },
+      {
+        "date": "2026-03-11",
         "value": 0
       }
     ],
     "paid_accounts": [
       {
-        "date": "2026-02-23",
-        "value": 0
-      },
-      {
         "date": "2026-02-24",
         "value": 0
       },
@@ -151,13 +147,13 @@
       {
         "date": "2026-03-10",
         "value": 2
+      },
+      {
+        "date": "2026-03-11",
+        "value": 2
       }
     ],
     "seo_clicks": [
-      {
-        "date": "2026-02-23",
-        "value": 0
-      },
       {
         "date": "2026-02-24",
         "value": 0
@@ -209,13 +205,13 @@
       {
         "date": "2026-03-10",
         "value": 0
+      },
+      {
+        "date": "2026-03-11",
+        "value": 0
       }
     ],
     "seo_impressions": [
-      {
-        "date": "2026-02-23",
-        "value": 0
-      },
       {
         "date": "2026-02-24",
         "value": 9
@@ -267,13 +263,13 @@
       {
         "date": "2026-03-10",
         "value": 0
+      },
+      {
+        "date": "2026-03-11",
+        "value": 0
       }
     ],
     "daily_visitors": [
-      {
-        "date": "2026-02-23",
-        "value": 0
-      },
       {
         "date": "2026-02-24",
         "value": 0
@@ -325,13 +321,13 @@
       {
         "date": "2026-03-10",
         "value": 491
+      },
+      {
+        "date": "2026-03-11",
+        "value": 1055
       }
     ],
     "total_accounts": [
-      {
-        "date": "2026-02-23",
-        "value": 0
-      },
       {
         "date": "2026-02-24",
         "value": 0
@@ -383,11 +379,15 @@
       {
         "date": "2026-03-10",
         "value": 30
+      },
+      {
+        "date": "2026-03-11",
+        "value": 35
       }
     ]
   },
   "pipeline": {
-    "drafts": 368,
+    "drafts": 185,
     "approved": 6,
     "published": 333
   },
@@ -404,9 +404,9 @@
     }
   },
   "agents": {
-    "agent_2_last_run": "2026-03-11T00:10:16.007Z",
-    "agent_3_last_run": "2026-03-10T07:03:55.576Z",
-    "agent_6_last_run": "2026-03-10T22:00:12.727Z"
+    "agent_2_last_run": "2026-03-11T06:04:03.818Z",
+    "agent_3_last_run": "2026-03-11T07:03:39.860Z",
+    "agent_6_last_run": "2026-03-11T04:06:23.718Z"
   },
-  "latest_date": "2026-03-10"
+  "latest_date": "2026-03-11"
 }
