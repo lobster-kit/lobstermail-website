@@ -44,9 +44,12 @@ The catch is that email wasn't designed for machines. It was designed for people
 
 Email threading relies on three headers defined in RFC 5322 and refined in RFC 2822:
 
+```
 Message-ID: <unique-id@sender-domain.com>
 In-Reply-To: <message-id-of-parent@sender-domain.com>
 References: <first-message-id> <second-message-id> <parent-message-id>
+```
+
 **Message-ID** is a globally unique identifier assigned to every email. Think of it as the primary key.
 
 **In-Reply-To** contains the Message-ID of the email you're replying to. It points to the immediate parent in the thread.
@@ -75,7 +78,7 @@ Agents can't rely on these heuristics. Here are the common failure modes:
 
 If you're designing a system where agents communicate over email, here are the patterns that actually hold up:
 
-**Always set all three headers.** Don't rely on the email library to handle it. Explicitly set Message-ID, In-Reply-To, and References on every outbound message. Generate Message-IDs using a format like `<timestamp.random@yourdomain.com>` to guarantee uniqueness.
+**Always set all three headers.** Don't rely on the email library to handle it. Explicitly set Message-ID, In-Reply-To, and References on every outbound message. Generate Message-IDs using a format like `timestamp.random@yourdomain.com` to guarantee uniqueness.
 
 **Store threads locally.** Don't depend on the email server to maintain thread state. Keep a local mapping of thread ID to message chain. When a new email arrives, match it by In-Reply-To first, then fall back to References, then subject line as a last resort.
 
@@ -159,7 +162,7 @@ The agents that handle this well will be the ones with solid threading fundament
   </FAQItem>
 
   <FAQItem question="How do I generate a unique Message-ID for agent emails?">
-    Use the format `<timestamp.randomstring@yourdomain.com>`. Combine a Unix timestamp with a cryptographic random string to guarantee uniqueness across all messages your agent sends.
+    Use the format `timestamp.randomstring@yourdomain.com`. Combine a Unix timestamp with a cryptographic random string to guarantee uniqueness across all messages your agent sends.
   </FAQItem>
 
   <FAQItem question="Is LobsterMail free to use for agent email?">
