@@ -21,7 +21,7 @@ agent: agent-3-content
 channel: blog
 type: blog-post
 status: approved
-approved_at: '2026-03-11T07:03:42.528Z'
+approved_at: '2026-03-09T20:51:46.923Z'
 ---
 You send a reply. It shows up as a new conversation instead of nesting under the original thread. The recipient now has two disconnected messages about the same thing, and the context from the first one is gone.
 
@@ -33,7 +33,10 @@ Those headers are `Message-ID`, `In-Reply-To`, and `References`. Getting them ri
 
 Every email ever sent (assuming the sending server isn't broken) gets a `Message-ID` header. It looks something like this:
 
+```
 Message-ID: <abc123@mail.example.com>
+```
+
 That identifier is globally unique. No two emails should ever share the same `Message-ID`. It's assigned by the sending mail server at the moment of dispatch, and it never changes. Think of it as a fingerprint for that specific message.
 
 When you reply to an email, your mail client is supposed to do two things:
@@ -162,7 +165,7 @@ Store the `Message-ID` of every incoming email. Set `In-Reply-To` and `Reference
     The `References` header contains a space-separated list of `Message-ID` values representing the full ancestry of a thread, from the root message to the immediate parent. It helps mail clients reconstruct the complete conversation tree.
   </FAQItem>
   <FAQItem question="What is a Message-ID in email?">
-    A `Message-ID` is a globally unique identifier assigned to each email by the sending server. It typically looks like `<random-string@domain.com>` and serves as the primary key that `In-Reply-To` and `References` headers point to.
+    A `Message-ID` is a globally unique identifier assigned to each email by the sending server. It typically looks like `random-string@domain.com` and serves as the primary key that `In-Reply-To` and `References` headers point to.
   </FAQItem>
   <FAQItem question="Why does my reply show up as a new email instead of threading?">
     Almost always because the `In-Reply-To` header is missing or points to the wrong `Message-ID`. Check the raw headers of your outgoing message to confirm the header is present and matches the parent message's `Message-ID`.
@@ -180,7 +183,7 @@ Store the `Message-ID` of every incoming email. Set `In-Reply-To` and `Reference
     Technically, `In-Reply-To` alone works for simple two-message threads. But for longer conversations, `References` is necessary to maintain the full thread history. Set both to be safe across all mail clients.
   </FAQItem>
   <FAQItem question="How do I generate a unique Message-ID?">
-    Combine a UUID or random string with your sending domain: `<uuid@yourdomain.com>`. Most email libraries handle this automatically, but if you're building raw SMTP, make sure each message gets a distinct ID.
+    Combine a UUID or random string with your sending domain: `uuid@yourdomain.com`. Most email libraries handle this automatically, but if you're building raw SMTP, make sure each message gets a distinct ID.
   </FAQItem>
   <FAQItem question="What RFC defines email threading headers?">
     RFC 2822 (Internet Message Format) defines `Message-ID`, `In-Reply-To`, and `References`. RFC 5256 describes server-side threading algorithms for IMAP. RFC 8474 introduced `THREADID` as a server-assigned thread identifier.
