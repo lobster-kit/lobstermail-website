@@ -19,7 +19,7 @@ agent: agent-3-content
 channel: blog
 type: blog-post
 status: approved
-approved_at: '2026-03-11T07:03:42.596Z'
+approved_at: '2026-03-09T20:51:47.050Z'
 ---
 Your agent sends an email to a contact in Tokyo. The display name is 田中太郎. The subject line includes an emoji. The recipient's mail client renders both as a garbled mess of question marks and equals signs.
 
@@ -41,7 +41,10 @@ Here's how the encoding process works:
 
 A real example: the display name "François" in a From header becomes:
 
+```
 From: =?UTF-8?Q?Fran=C3=A7ois?= <francois@example.com>
+```
+
 The `=?UTF-8?Q?` prefix tells the receiving client: "this is UTF-8, encoded with Quoted-Printable." The `?=` suffix closes the encoded-word. The mail client decodes it back to "François" for display.
 
 When you see `=?UTF-8?B?` in a header, that's Base64 encoding instead of Quoted-Printable. Base64 is more compact for text that's mostly non-ASCII (like a fully Japanese subject line), while Q-encoding works better for text that's mostly ASCII with a few special characters sprinkled in.
@@ -114,7 +117,7 @@ Real-world RFC 2047 failures tend to cluster around a few patterns:
 
 **Encoding text that doesn't need it.** Pure ASCII text should never be wrapped in encoded-word syntax. Some overzealous libraries encode "Hello World" as `=?UTF-8?Q?Hello_World?=`. This is technically valid but wastes header space and has been known to trigger spam filters that flag unnecessary encoding as suspicious.
 
-**Forgetting to encode display names with special characters.** A From header like `From: José García <jose@example.com>` without RFC 2047 encoding will cause problems. The accented characters in the display name aren't valid in raw ASCII headers. Your agent should encode any display name containing characters outside the ASCII printable range.
+**Forgetting to encode display names with special characters.** A From header like `From: José García jose@example.com` without RFC 2047 encoding will cause problems. The accented characters in the display name aren't valid in raw ASCII headers. Your agent should encode any display name containing characters outside the ASCII printable range.
 
 ## Decoding incoming RFC 2047 headers
 
@@ -152,7 +155,7 @@ For agents that need to handle email headers directly, test your encoding with r
   </FAQItem>
 
   <FAQItem question="Can an email agent encode the From or To address display name with RFC 2047?">
-    Yes. The display name (the human-readable part before the angle-bracketed email address) can and should be RFC 2047 encoded when it contains non-ASCII characters. For example, `=?UTF-8?Q?Fran=C3=A7ois?= <francois@example.com>` is correct.
+    Yes. The display name (the human-readable part before the angle-bracketed email address) can and should be RFC 2047 encoded when it contains non-ASCII characters. For example, `=?UTF-8?Q?Fran=C3=A7ois?= francois@example.com` is correct.
   </FAQItem>
 
   <FAQItem question="What is the maximum length of an encoded-word in an email header?">

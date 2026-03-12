@@ -290,6 +290,8 @@ All standard markdown works: headings (`##`, `###`, `####`), bold, italic, links
 
 **CRITICAL: Every code fence must be closed.** Every opening ` ```language ` MUST have a matching closing ` ``` ` on its own line after the code. Never let prose continue inside an unclosed code fence — this breaks MDX rendering and causes FAQ components to display as raw text.
 
+**CRITICAL: Never use bare angle-bracket emails outside code fences.** Writing `<user@domain.com>` in prose or FAQ answers causes MDX to parse it as a JSX component tag, which breaks the Vercel build. Instead use backtick-wrapped code without angle brackets: `` `user@domain.com` ``. Inside triple-backtick code blocks, angle brackets are safe.
+
 ### Internal links
 
 - Blog posts: `[link text](/blog/other-slug)`
