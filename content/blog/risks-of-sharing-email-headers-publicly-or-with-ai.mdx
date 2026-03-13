@@ -1,0 +1,106 @@
+---
+title: 'risks of sharing email headers publicly or with ai: what gets exposed'
+description: >-
+  Email headers contain IP addresses, mail server paths, authentication results,
+  and routing data. Here's exactly what's at risk when you share them publicly or
+  let an AI agent process them — and how to handle it safely.
+date: '2026-03-13'
+author: Samuel Chenard
+tags:
+  - email
+  - security
+  - privacy
+  - guides
+image: /blog/risks-of-sharing-email-headers-publicly-or-with-ai.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — email header
+  security risks
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: draft
+---
+
+Email headers are metadata most people never look at. They sit above the body of every message, recording how the email traveled from sender to recipient, what servers it touched, and whether it passed authentication checks. Most of the time, nobody cares.
+
+But headers contain a surprising amount of sensitive information. If you're sharing them on forums, pasting them into AI tools, or letting an AI agent process raw headers as part of a workflow — you should know exactly what you're exposing.
+
+## What email headers actually contain
+
+A typical email header block is 30-80 lines of structured metadata. Here's what's in there:
+
+**Received: headers** trace the full routing path of the message. Each mail server the email passed through adds its own `Received:` line, including the server's hostname, IP address, and timestamp. If the sender is on a corporate network, this can reveal internal infrastructure.
+
+**Sender and recipient IP addresses** show up in `Received:` chains. For webmail users, the originating IP is sometimes the mail server itself. But for desktop clients or self-hosted mail, the sender's actual IP address gets logged — which maps to a physical location, an ISP, and sometimes a specific organization.
+
+**X-Originating-IP** is even more direct. Some email clients (older versions of Outlook Web Access, some webmail providers) include this header with the sender's real IP address. It's not universal, but when it's there, it's a precise identifier.
+
+**Authentication results** — SPF, DKIM, and DMARC — tell you whether the email passed verification. That sounds harmless, but these results reveal the sender's exact email authentication setup, including which servers are authorized to send on behalf of their domain and what policy they enforce on failures.
+
+**Message-ID format** varies by email client and organization. A Message-ID like `<CABx+4n1kq@mail.gmail.com>` tells you it came from Gmail. One like `<HE1PR0102MB3456.eurprd01.prod.exchangelabs.com>` tells you it came from a Microsoft 365 tenant in Europe. That's organizational intelligence handed out for free.
+
+**Custom X-headers** are where things get interesting. Many organizations add internal tracking headers: `X-Mailer`, `X-Spam-Status`, `X-Support-Ticket-ID`, `X-Customer-ID`. These are meant for internal routing and analytics. They were never designed to be shared publicly, and they can contain user IDs, ticket numbers, or internal system identifiers.
+
+**Timezone and locale data** embedded in `Date:` headers and server timestamps reveal where the sender is located and when they're active. For targeted attacks, that's useful reconnaissance.
+
+## Risks of sharing headers publicly
+
+Developers share email headers all the time — on Stack Overflow, GitHub issues, support forums, Discord servers. Usually to debug a deliverability problem or trace a bounce. The intent is fine. The exposure often isn't.
+
+**IP address exposure.** A `Received:` chain with an unredacted IP maps to a location, an ISP, and sometimes a corporate network. For self-hosted mail servers, it reveals the exact IP of the sender's infrastructure. That's useful for port scanning, network mapping, or just figuring out where someone works.
+
+**Internal infrastructure leakage.** Server hostnames like `mail-internal-03.corp.example.com` or `exchange-node-2.prod.acme.io` reveal naming conventions, software choices, and network topology. An attacker doesn't need to guess what you're running if you've already told them.
+
+**Social engineering vectors.** Knowing someone's email stack makes phishing dramatically easier. If an attacker can see that you're running Exchange 2019 with Barracuda filtering, they can craft messages that bypass your specific setup. Headers are a blueprint for your defenses.
+
+**Compliance exposure.** Under GDPR, IP addresses are personal data. Headers that include originating IPs, user IDs in custom X-headers, or identifiable Message-ID patterns may constitute PII. Posting them publicly without redaction could be a compliance issue — especially if the headers belong to someone else.
+
+## Risks of sharing headers with AI
+
+Pasting headers into ChatGPT or feeding them to an AI agent introduces a different set of problems. The shell might be different, but the exposure is real.
+
+**Training data retention.** When you paste email headers into a general-purpose AI tool, that content may be retained for model training unless you've explicitly opted out. Your internal server names, IP addresses, and authentication configuration could end up as training data, surfacing in unexpected contexts later.
+
+**Agent processing risks.** An AI agent with access to raw email headers has access to routing data, IP addresses, authentication details, and internal identifiers. If the agent is compromised, misconfigured, or its conversation history is accessible to other users, all of that data is exposed. The agent doesn't need to be malicious — it just needs to be leaky.
+
+**Prompt injection via headers.** This is the one that keeps security researchers up at night. Malicious actors can embed instructions directly in email header fields — `Subject:`, `X-Custom-Header:`, even `From:` display names. When an AI agent processes the raw header block, those embedded instructions can hijack the agent's behavior. The [ShadowLeak](https://thehackernews.com/2025/09/shadowleak-zero-click-flaw-leaks-gmail.html) vulnerability demonstrated exactly this pattern: a single crafted email triggering data exfiltration from an AI agent's connected accounts. Headers are just another text field the model processes, and models don't distinguish between "metadata to analyze" and "instructions to follow."
+
+**Context window leakage.** Once headers are in an LLM's context window, they can influence subsequent outputs. In multi-turn conversations or agent workflows where the context persists, header data from one task could surface in responses to a completely different query. Your mail server hostname showing up in someone else's debugging session isn't a feature.
+
+## How to share headers safely
+
+None of this means you should never share email headers. They're genuinely useful for debugging. You just need to redact before sharing.
+
+**Before posting publicly:**
+- Strip or replace all IP addresses in `Received:` chains with `[REDACTED]`
+- Remove `X-Originating-IP` entirely
+- Redact internal server hostnames (replace `mail-internal-03.corp.example.com` with `[internal-server]`)
+- Remove custom X-headers that contain user IDs, ticket numbers, or internal identifiers
+- Scrub the `Message-ID` if it contains organizational information
+
+**Before sharing with AI tools:**
+- Apply the same redactions you'd use for public posting
+- Use tools with clear data retention policies and opt-out of training data collection where possible
+- Prefer tools that process data locally over cloud-based LLMs for sensitive headers
+
+**For AI agent workflows:**
+- Never pass raw headers directly into an LLM's context. Run them through a sanitization layer that strips routing data, IPs, and authentication details before the model sees them
+- Scan header fields for prompt injection attempts — embedded instructions in `Subject:`, `From:`, or custom headers are a real attack vector
+- Limit what your agent actually receives. Most agent tasks (replying to emails, categorizing messages, extracting information) need the subject, sender address, date, and body. They don't need the full `Received:` chain or authentication results
+
+LobsterMail handles this at the infrastructure level — sensitive routing data is stripped before agent processing, and inbound headers are scanned for prompt injection patterns before they reach your agent's context window. Your agent gets the information it needs to do its job without carrying the full header payload as attack surface.
+
+<FAQ>
+  <FAQItem question="Can someone hack me with just my email headers?">
+    Not directly. Email headers alone won't give someone remote access to your systems. But they provide reconnaissance — IP addresses, server software, network topology, authentication configuration — that makes targeted attacks significantly easier. Think of headers as a map of your defenses, not a key to the door.
+  </FAQItem>
+  <FAQItem question="Should I share email headers with AI for debugging?">
+    Yes, but redact first. Strip IP addresses, internal hostnames, custom X-headers with user identifiers, and X-Originating-IP before pasting into any AI tool. The authentication results (SPF/DKIM/DMARC pass/fail) and general routing structure are usually sufficient for debugging without exposing sensitive details.
+  </FAQItem>
+  <FAQItem question="Do AI agents need access to raw email headers?">
+    Almost never. For the vast majority of agent tasks — reading, replying, categorizing, summarizing — the agent needs the sender address, subject line, date, and body. Raw headers add attack surface (prompt injection via header fields) without adding functionality. Process headers through a sanitization layer and pass only what the agent actually needs.
+  </FAQItem>
+  <FAQItem question="How does LobsterMail handle email header security?">
+    LobsterMail strips sensitive routing data (internal IPs, server hostnames, authentication internals) from headers before they reach your agent's context. Inbound messages are also scanned for prompt injection patterns embedded in header fields. Your agent gets clean, safe metadata — not a raw header block that doubles as an attack vector.
+  </FAQItem>
+</FAQ>

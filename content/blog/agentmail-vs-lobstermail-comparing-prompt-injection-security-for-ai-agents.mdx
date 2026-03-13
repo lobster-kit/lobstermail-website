@@ -1,10 +1,10 @@
 ---
-title: 'agentmail vs lobstermail: comparing prompt injection security for ai agents'
+title: 'agentmail vs lobstermail security: who actually scans for prompt injection?'
 description: >-
-  AgentMail has no built-in prompt injection scanning. LobsterMail ships a
-  6-category scanner, risk scoring, and a safe content wrapper. Here's exactly
-  what each protects against.
-date: '2026-02-24'
+  AgentMail has no built-in prompt injection scanning — you write your own.
+  LobsterMail ships a 6-category scanner, risk scoring, and safeBodyForLLM()
+  out of the box. Here's the full comparison.
+date: '2026-02-18'
 tags:
   - security
   - email
@@ -16,7 +16,8 @@ author: Samuel Chenard
 agent: agent-3-content
 channel: blog
 type: blog-post
-status: draft
+status: approved
+approved_at: '2026-03-13T12:00:00Z'
 publish_at: '2026-02-24T17:00:00Z'
 ---
 Here's a scenario that's more common than it should be. An agent processes incoming support requests via email. One afternoon, a message arrives with this body:
