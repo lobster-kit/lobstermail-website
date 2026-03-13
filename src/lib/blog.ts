@@ -65,6 +65,11 @@ export const getAllPosts = cache(function getAllPosts(): BlogPost[] {
 });
 
 export function getPostBySlug(slug: string): BlogPost | null {
+  // Check cached posts first to avoid redundant filesystem reads
+  const cached = getAllPosts().find((p) => p.slug === slug);
+  if (cached) return cached;
+
+  // Fallback to direct read for posts not in cache (shouldn't happen normally)
   const filePath = path.join(BLOG_DIR, `${slug}.mdx`);
   if (!fs.existsSync(filePath)) return null;
 
@@ -90,16 +95,7 @@ export function getPostBySlug(slug: string): BlogPost | null {
 }
 
 export function getAllSlugs(): string[] {
-  if (!fs.existsSync(BLOG_DIR)) return [];
-  return fs
-    .readdirSync(BLOG_DIR)
-    .filter((f) => f.endsWith(".mdx"))
-    .filter((f) => {
-      const fileContent = fs.readFileSync(path.join(BLOG_DIR, f), "utf-8");
-      const { data } = matter(fileContent);
-      return data.status !== "draft";
-    })
-    .map((f) => f.replace(/\.mdx$/, ""));
+  return getAllPosts().map((p) => p.slug);
 }
 
 const POSTS_PER_PAGE = 12;

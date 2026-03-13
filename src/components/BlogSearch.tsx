@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useState,
+  useDeferredValue,
   useMemo,
   type ReactNode,
 } from "react";
@@ -60,21 +61,22 @@ function Provider({
   children: ReactNode;
 }) {
   const [query, setQuery] = useState("");
-  const isSearching = query.trim().length > 0;
+  const deferredQuery = useDeferredValue(query);
+  const isSearching = deferredQuery.trim().length > 0;
 
   const filtered = useMemo(() => {
     if (!isSearching) return null;
-    const q = query.toLowerCase();
+    const q = deferredQuery.toLowerCase();
     return allPosts.filter(
       (post) =>
         post.title.toLowerCase().includes(q) ||
         post.description.toLowerCase().includes(q) ||
         post.tags.some((tag) => tag.toLowerCase().includes(q))
     );
-  }, [query, isSearching, allPosts]);
+  }, [deferredQuery, isSearching, allPosts]);
 
   return (
-    <BlogSearchContext.Provider value={{ query, setQuery, isSearching, filtered }}>
+    <BlogSearchContext.Provider value={{ query, setQuery, isSearching: query.trim().length > 0, filtered }}>
       {children}
     </BlogSearchContext.Provider>
   );
