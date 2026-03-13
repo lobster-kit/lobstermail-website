@@ -1,0 +1,172 @@
+---
+title: what is DKIM and why it matters when your agent sends email
+description: >-
+  DKIM signs outgoing emails with a cryptographic key so recipients know the
+  message wasn't tampered with. Here's how it works and what agents need to get
+  right.
+date: '2026-03-13'
+author: Samuel Chenard
+tags:
+  - email
+  - infrastructure
+  - security
+  - guides
+  - openclaw
+image: /blog/what-is-dkim-and-why-it-matters-when-your-agent-sends-email.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — what is DKIM
+  email signing agents
+publish_at: '2026-03-13T09:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-13T07:39:17.706Z'
+---
+Last Tuesday I watched an agent send 40 perfectly written outreach emails from a freshly provisioned inbox. Gmail flagged every single one as spam. The content was fine. The addresses were valid. The problem was invisible: no DKIM signature.
+
+DKIM (DomainKeys Identified Mail) is the reason some emails land in the primary inbox and others vanish into the spam abyss. It's a cryptographic handshake between the sending server and the receiving server that answers one question: was this email actually sent by the domain it claims to come from, and did anyone tamper with it along the way?
+
+For humans managing a single domain, DKIM is a set-it-and-forget-it DNS record. For AI agents that provision their own inboxes and send autonomously, it's the difference between working email and expensive noise.
+
+## How DKIM actually works
+
+The concept is simpler than most explanations make it sound.
+
+When an email leaves a mail server, the server takes specific parts of the message (usually the headers and body) and runs them through a hash function. It then encrypts that hash with a private key that only the sending server knows. The result is a string of characters called the DKIM signature, and it gets attached to the email as a header.
+
+Here's a simplified version of what that header looks like:
+
+DKIM-Signature: v=1; a=rsa-sha256; d=lobstermail.ai;
+  s=selector1; c=relaxed/relaxed;
+  h=from:to:subject:date;
+  bh=abc123hashofbody...;
+  b=xyz789signaturevalue...
+A few things to notice. The `d=` tag identifies the signing domain. The `s=` tag points to a specific selector, which tells the receiving server where to find the public key in DNS. The `h=` tag lists which headers were included in the signature. And `b=` is the signature itself.
+
+When the email arrives at Gmail, Outlook, or any other provider, the receiving server looks up the public key by querying `selector1._domainkey.lobstermail.ai` in DNS. It decrypts the signature, recomputes the hash from the email it received, and compares the two. If they match, the email passes DKIM. If they don't, something changed in transit, or the signature was forged.
+
+That's it. No passwords exchanged, no tokens shared. Just public-key cryptography applied to email headers.
+
+## What DKIM doesn't do
+
+DKIM verifies integrity and origin. It does not encrypt the email. The message content is still visible to anyone who intercepts it. It also doesn't prevent someone from sending email that claims to be from your domain. That's what DMARC and SPF handle (and they build on DKIM to work properly).
+
+Think of DKIM as a wax seal on a letter. It proves the letter came from who it says and wasn't opened along the way. But it doesn't hide what's inside, and it doesn't stop someone from writing a different letter with a fake seal. You need the full trio (SPF, DKIM, DMARC) to cover all the bases.
+
+## Why agents have a harder time with DKIM
+
+A human developer sets up DKIM once. They generate a key pair, publish the public key as a DNS TXT record, configure their mail server to sign outbound messages, and move on with their life. The whole process takes maybe 20 minutes if you know what you're doing.
+
+Agents don't have that luxury for a few reasons.
+
+First, agents often create inboxes dynamically. An agent spins up a new address, uses it for a task, and might discard it. If every new inbox requires manual DNS configuration, the whole point of autonomous operation falls apart.
+
+Second, agents don't manage DNS. Publishing a DKIM record means accessing the domain registrar, adding a TXT record with a specific name and value, and waiting for propagation. That's a human workflow. Agents that try to automate it need access to DNS APIs, which introduces credential management, error handling for propagation delays, and rollback logic for failures.
+
+Third, agents send email at machine speed. A human might send 20 emails a day. An agent might send 200 in an hour. Without valid DKIM signatures, that volume gets flagged immediately. Gmail and Microsoft have both tightened their authentication requirements over the past year. As of February 2024, Google requires DKIM for any sender pushing more than 5,000 messages per day. Microsoft followed with similar enforcement. Even at lower volumes, unsigned emails get scored negatively.
+
+## The DKIM record itself
+
+If you're curious what a DKIM DNS record looks like, here's the structure:
+
+```
+selector1._domainkey.yourdomain.com  TXT  "v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEB..."
+```
+
+The `p=` value is the public key, base64-encoded. The `k=` tag specifies the key type (almost always RSA, though Ed25519 support is growing). The `v=DKIM1` just identifies this as a DKIM record.
+
+Selectors are useful because they let you rotate keys without downtime. You publish a new key under `selector2`, start signing with it, and eventually remove `selector1`. This is also how email services handle multiple sending sources: each source gets its own selector and key pair.
+
+## What happens when DKIM fails
+
+When a DKIM check fails, the receiving server doesn't automatically reject the message. What happens depends on the domain's DMARC policy. If DMARC is set to `p=none`, the failure gets logged but the email still arrives. If it's set to `p=quarantine`, the email goes to spam. If it's `p=reject`, the email bounces.
+
+In practice, even without a strict DMARC policy, a failed DKIM check hurts your sender reputation. Mailbox providers use authentication results as one input in their spam scoring models. An email that fails DKIM might still arrive, but it starts with a penalty.
+
+For agents, the feedback loop is worse than for humans. When your emails go to spam, you often don't find out until much later (if ever). Agents don't check whether recipients actually saw the message. They mark "email sent" as complete and move on. This means a DKIM misconfiguration can quietly undermine an entire workflow for days before anyone notices.
+
+## How managed email services handle this
+
+This is where infrastructure choices matter. If your agent is sending through a raw SMTP server you configured yourself, you own the full DKIM setup: key generation, DNS records, signing configuration, key rotation. That's a lot of moving parts for something that should be invisible plumbing.
+
+Managed email services handle DKIM signing automatically. When you provision an inbox through a service like LobsterMail, the signing infrastructure is already in place. Every outbound email gets a valid DKIM signature without the agent (or the developer) touching DNS or managing keys. The public keys are published, the private keys are secured, and rotation happens on schedule.
+
+This matters most for agents that create inboxes on the fly. If your agent calls `createSmartInbox()` and starts sending five minutes later, those emails need valid DKIM signatures from the first message. There's no warm-up period for authentication. Either the signature is there or it isn't.
+
+## Testing your DKIM setup
+
+Whether you're managing DKIM yourself or relying on a service, you should verify it works. Send a test email to a Gmail address and click "Show original" in the three-dot menu. You'll see the authentication results near the top:
+
+```
+Authentication-Results: mx.google.com;
+  dkim=pass header.d=yourdomain.com header.s=selector1;
+  spf=pass;
+  dmarc=pass
+```
+
+If DKIM shows `fail` or `none`, something is wrong. Common causes: the DNS record hasn't propagated yet, the selector in the signature doesn't match the DNS record, or the email body was modified after signing (some mailing list software does this).
+
+You can also use command-line tools to check the DNS record directly:
+
+```bash
+dig selector1._domainkey.yourdomain.com TXT +short
+```
+
+If that returns your public key, the DNS side is correct and the issue is likely in the signing configuration.
+
+## The practical takeaway
+
+DKIM is not optional for agent email. It's the baseline authentication mechanism that every major mailbox provider checks. Without it, your agent's emails are starting the deliverability race with a broken leg.
+
+If you're building agents that send email, you have two paths. You can manage DKIM yourself: generate keys, publish DNS records, configure signing, handle rotation, and monitor for failures. Or you can use infrastructure that handles it for you, so your agent can focus on what it's actually supposed to be doing.
+
+For most agent builders, the second path makes more sense. Not because the first is impossible, but because DNS management and key rotation are the kind of invisible maintenance that eats time without producing value. Your agent needs authenticated email. How the authentication gets there is a plumbing problem, and plumbing problems are best solved once.
+
+If you're looking for a simple way to give your agent email with DKIM already handled, [check out LobsterMail](/).
+
+<FAQ>
+  <FAQItem question="What does DKIM stand for?">
+    DKIM stands for DomainKeys Identified Mail. It's an email authentication standard that lets a sending server attach a cryptographic signature to outgoing messages so recipients can verify the email wasn't altered in transit.
+  </FAQItem>
+
+  <FAQItem question="Does DKIM encrypt my emails?">
+    No. DKIM verifies that the email content hasn't been tampered with and confirms the sending domain, but the message itself remains readable to anyone who intercepts it. For encryption, you'd need TLS (in transit) or S/MIME/PGP (end-to-end).
+  </FAQItem>
+
+  <FAQItem question="What's the difference between DKIM, SPF, and DMARC?">
+    SPF verifies that the sending server's IP is authorized to send for the domain. DKIM verifies the message wasn't modified and confirms the signing domain. DMARC ties them together with a policy that tells receiving servers what to do when checks fail. All three work as a set.
+  </FAQItem>
+
+  <FAQItem question="Can I set up DKIM without access to DNS?">
+    No. DKIM requires publishing a public key as a DNS TXT record. If you can't modify DNS for your domain, you'll need to use a subdomain you control or a managed service that handles DNS for you.
+  </FAQItem>
+
+  <FAQItem question="How often should I rotate DKIM keys?">
+    Most security guidelines recommend rotating DKIM keys every 6 to 12 months. Use selectors to manage rotation: publish a new key under a new selector, switch signing, then remove the old record after a transition period.
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail handle DKIM automatically?">
+    Yes. Every email sent through LobsterMail inboxes is automatically signed with a valid DKIM signature. No DNS configuration or key management is needed on your end. [Get started here](/).
+  </FAQItem>
+
+  <FAQItem question="What happens if my DKIM signature fails verification?">
+    The outcome depends on your domain's DMARC policy. With `p=none`, the failure is logged but delivery proceeds. With `p=quarantine`, the email may land in spam. With `p=reject`, the email bounces. Even without strict DMARC, failed DKIM hurts your sender reputation.
+  </FAQItem>
+
+  <FAQItem question="Why do AI agents struggle with DKIM more than humans?">
+    Agents create inboxes dynamically, send at high volume, and don't manage DNS records. Each of those factors makes DKIM setup harder. Humans configure it once and forget about it; agents need it to work automatically from the first message on every new inbox.
+  </FAQItem>
+
+  <FAQItem question="Can I use Ed25519 keys instead of RSA for DKIM?">
+    The DKIM spec supports Ed25519 (RFC 8463), and it produces shorter signatures. However, not all receiving servers verify Ed25519 yet. Most setups still use RSA with 2048-bit keys for maximum compatibility.
+  </FAQItem>
+
+  <FAQItem question="How do I check if my emails are passing DKIM?">
+    Send an email to a Gmail address, open it, click the three-dot menu, and select "Show original." Look for `dkim=pass` in the Authentication-Results header. You can also query your DKIM DNS record directly with `dig selector._domainkey.yourdomain.com TXT +short`.
+  </FAQItem>
+
+  <FAQItem question="Is DKIM required for email deliverability?">
+    Technically no server will reject email solely for lacking DKIM if there's no DMARC policy enforcing it. In practice, unsigned emails score worse with every major provider. Google requires DKIM for bulk senders (5,000+ messages/day), and Microsoft has similar requirements. For agents sending at any real volume, DKIM is effectively mandatory.
+  </FAQItem>
+</FAQ>
