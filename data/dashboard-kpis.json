@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-03-14T07:15:09.693Z",
+  "generated_at": "2026-03-14T13:15:17.263Z",
   "kpis": {
     "mrr_usd": 0,
     "paid_accounts": 2,
-    "free_accounts": 34,
-    "total_accounts": 41,
+    "free_accounts": 37,
+    "total_accounts": 44,
     "npm_installs_7d": 13,
-    "seo_clicks_7d": 58,
-    "seo_impressions_7d": 6979,
-    "seo_avg_position": 0,
+    "seo_clicks_7d": 69,
+    "seo_impressions_7d": 9021,
+    "seo_avg_position": 11,
     "total_emails_sent": 30,
-    "total_emails_received": 69,
-    "total_inboxes": 51,
+    "total_emails_received": 73,
+    "total_inboxes": 53,
     "daily_visitors": 493,
     "daily_visitors_human": 71,
     "daily_visitors_bot": 381,
@@ -20,21 +20,21 @@
     "clawhub_skill_installs": 0
   },
   "deltas": {
-    "total_inboxes": 22,
+    "total_inboxes": 24,
     "total_emails_sent": 21,
-    "total_emails_received": 7,
-    "free_accounts": 17,
+    "total_emails_received": 11,
+    "free_accounts": 20,
     "github_stars": 0,
     "x_followers": 0,
     "clawhub_skill_installs": 0,
-    "openclaw_github_stars": 43845,
+    "openclaw_github_stars": 44536,
     "openclaw_npm_daily": null,
-    "openclaw_twitter_followers": 34932
+    "openclaw_twitter_followers": 36084
   },
   "market": {
-    "openclaw_github_stars": 311106,
+    "openclaw_github_stars": 311797,
     "openclaw_npm_daily": 0,
-    "openclaw_twitter_followers": 451358
+    "openclaw_twitter_followers": 452510
   },
   "sparklines": {
     "mrr_usd": [
@@ -200,7 +200,7 @@
       },
       {
         "date": "2026-03-12",
-        "value": 0
+        "value": 16
       },
       {
         "date": "2026-03-13",
@@ -258,7 +258,7 @@
       },
       {
         "date": "2026-03-12",
-        "value": 0
+        "value": 2577
       },
       {
         "date": "2026-03-13",
@@ -382,31 +382,31 @@
       },
       {
         "date": "2026-03-14",
-        "value": 41
+        "value": 44
       }
     ]
   },
   "pipeline": {
-    "drafts": 191,
+    "drafts": 188,
     "approved": 3,
-    "published": 335
+    "published": 338
   },
   "content": {
     "total_topics": 300,
     "roadmap_progress": {
       "total": 300,
-      "planned": 147,
+      "planned": 145,
       "targeted": 12,
-      "drafted": 98,
+      "drafted": 100,
       "approved": 0,
       "published": 43,
       "refreshing": 0
     }
   },
   "agents": {
-    "agent_2_last_run": "2026-03-14T06:07:42.385Z",
-    "agent_3_last_run": "2026-03-13T07:38:21.328Z",
-    "agent_6_last_run": "2026-03-14T04:01:43.388Z"
+    "agent_2_last_run": "2026-03-14T12:08:26.938Z",
+    "agent_3_last_run": "2026-03-14T07:19:51.105Z",
+    "agent_6_last_run": "2026-03-14T10:01:43.917Z"
   },
   "latest_date": "2026-03-14"
 }
