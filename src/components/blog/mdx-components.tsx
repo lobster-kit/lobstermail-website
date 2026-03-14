@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { docsComponents } from "@/components/docs/mdx-components";
 import { Callout } from "@/components/docs/Callout";
 import { BlogCTA } from "./BlogCTA";
+import { InlineGetStarted } from "./InlineGetStarted";
 
 /* ─── Blog-specific Components ─── */
 
@@ -107,4 +108,5 @@ export const blogComponents: Record<string, React.ComponentType<any>> = {
   FAQ,
   FAQItem,
   BlogCTA,
+  InlineGetStarted,
 };

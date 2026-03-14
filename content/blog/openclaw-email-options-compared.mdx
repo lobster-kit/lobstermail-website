@@ -55,7 +55,7 @@ const inbox = await client.provision({ name: "my-agent" });
 // → my-agent@lobstermail.ai
 ```
 
-That's the whole setup. Head to [lobstermail.ai/skill](https://lobstermail.ai/skill) for the setup instructions, then tell your agent "get yourself an email inbox." The [60-second walkthrough](/blog/openclaw-agent-email-60-seconds) covers the full flow.
+That's the whole setup. <InlineGetStarted>Click here to get your agent its own inbox</InlineGetStarted> — paste the instructions and your agent handles the rest. The [60-second walkthrough](/blog/openclaw-agent-email-60-seconds) covers the full flow.
 
 On security, LobsterMail scans every incoming email for prompt injection across 6 categories (boundary manipulation, system prompt override, data exfiltration, role hijacking, tool invocation, and encoding tricks). The SDK exposes `email.safeBodyForLLM()` for feeding email content to your agent without the injection risk. We wrote about [how this works](/blog/prompt-injection-email-agents) in detail.
 

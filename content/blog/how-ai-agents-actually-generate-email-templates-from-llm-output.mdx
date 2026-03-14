@@ -161,7 +161,7 @@ Two mitigations work well. First, add a temperature of 0.7-0.9 for the body whil
     A basic chain runs a single prompt-to-output pass: input goes in, email comes out. A full agent can read replies, look up CRM data, decide whether to follow up, and adjust tone based on previous interactions. Use a chain for one-shot sends and an agent for multi-turn sequences.
   </FAQItem>
   <FAQItem question="How do I give an AI agent its own email inbox for sending and receiving?">
-    With LobsterMail, the agent calls `LobsterMail.create()` and `createSmartInbox()` to provision its own `@lobstermail.ai` address in seconds. No human signup or OAuth flow required. See the [getting started guide](/docs/getting-started).
+    With LobsterMail, the agent calls `LobsterMail.create()` and `createSmartInbox()` to provision its own `@lobstermail.ai` address in seconds. No human signup or OAuth flow required. <InlineGetStarted>Get your agent an inbox here</InlineGetStarted> — paste the setup code and your agent is sending in seconds.
   </FAQItem>
   <FAQItem question="How do I validate and sanitize LLM output before it is sent as an email?">
     Check that all required fields exist, verify string lengths (subject under 60 chars, preheader under 90), scan for hallucinated URLs or phone numbers, and run the body through your injection detection layer. Reject and retry on failure.

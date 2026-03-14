@@ -1,0 +1,201 @@
+---
+title: how to clawhub install gog and give your openclaw agent email
+description: >-
+  Step-by-step guide to installing the gog skill with clawhub in OpenClaw,
+  configuring exec permissions, and why your agent needs dedicated email
+  infrastructure.
+date: '2026-03-14'
+author: Ian Bussières
+tags:
+  - openclaw
+  - guides
+  - email
+  - infrastructure
+  - getting-started
+image: /blog/how-to-clawhub-install-gog-and-give-your-openclaw-agent-email.png
+imageAlt: >-
+  Pixel art lobster mascot illustration for email infrastructure — "clawhub
+  install gog" openclaw
+---
+
+The gog skill is one of the most popular OpenClaw skills on ClawHub. It gives your agent access to Google Workspace: Gmail, Calendar, Drive, Contacts, Sheets, and Docs, all through a single installation. Run `clawhub install gog`, authorize a few OAuth scopes, and your agent can read your inbox, create calendar events, and edit spreadsheets.
+
+That's the pitch. The reality is a bit more nuanced, especially when it comes to email.
+
+I've been setting up OpenClaw agents for months now, and the gog skill is usually one of the first things people install. It makes sense. Email is the connective tissue of the internet, and an agent that can't send or receive messages is limited in what it can actually accomplish. But there's a difference between "my agent can access my Gmail" and "my agent has its own email infrastructure." That difference matters more than most people realize when they first run `clawhub install gog`.
+
+Let's walk through the installation, the configuration gotchas, and then talk honestly about where gog fits and where it doesn't.
+
+## How to install the gog skill with ClawHub
+
+If you haven't touched ClawHub before, it's the package manager for OpenClaw skills. Think npm, but for agent capabilities. Here's the full installation process:
+
+1. Install clawhub globally with `npm i -g clawhub` (requires Node.js 18+)
+2. Run `clawhub install gog` in your terminal from any directory
+3. Open your `openclaw.json` and add `"exec"` to the tools allow list under your agent configuration
+4. Restart OpenClaw and verify gog appears in the active skills list with `clawhub list`
+
+That's it for the basic setup. The whole process takes about two minutes if nothing goes wrong. But something often does go wrong, and it's almost always step 3.
+
+### A quick note on ClawHub versions
+
+Make sure you're running ClawHub 2.4 or later. Earlier versions had a dependency resolution bug that could silently skip post-install hooks, which meant gog's configuration scaffolding wouldn't generate properly. You can check your version with `clawhub --version`. If you're on an older release, run `npm update -g clawhub` before proceeding. This alone saves a lot of debugging headaches.
+
+## The exec permission problem
+
+The most common issue after running `clawhub install gog` is that the exec tool doesn't get delivered to the agent. You've added it to the allow list, you've restarted OpenClaw, but your agent still can't run shell commands. This is the bug described in [Issue #27299](https://github.com/openclaw/openclaw/issues/27299) on the OpenClaw repo, and it trips up a lot of people.
+
+Here's what's usually happening. The `openclaw.json` file has two relevant sections: the global tools configuration and the per-agent tools configuration. If you add `exec` to the global allow list but your agent's configuration has its own `tools` block, the per-agent block takes precedence. Your agent never sees the exec permission.
+
+The fix is straightforward. Make sure the `exec` entry exists in the specific agent's allow list, not just the global one:
+
+```json
+{
+  "agents": {
+    "my-agent": {
+      "skills": ["gog"],
+      "tools": {
+        "allow": ["exec", "web_search", "read_file"]
+      }
+    }
+  }
+}
+There's also a subtlety around deny lists. Setting `"deny": ["bash", "process"]` is not the same as removing exec from the allow list. The deny list blocks specific tool variants, while the allow list controls which tool categories are available at all. If you want gog to work but want to restrict what shell commands it can run, use the deny list for granular control. If you want to prevent shell access entirely, remove exec from the allow list. Don't try to do both at the same time; the behavior gets unpredictable.
+
+### Verifying exec is working
+
+Once you've edited `openclaw.json`, restart your agent and run a simple test. Ask the agent to execute `echo hello` or `ls`. If exec is correctly configured, you'll see the output in the agent's response. If the agent says it doesn't have access to shell tools, double-check the per-agent tools block. Another common pitfall: JSON syntax errors in `openclaw.json` can silently revert to defaults. Run your config through a JSON validator before restarting.
+
+## Configuring Google OAuth scopes
+
+After the exec tool is working, gog will prompt you to authorize Google OAuth scopes the first time your agent tries to access a Google service. The scopes it requests are broad: full Gmail access, Calendar read/write, Drive file management, Contacts, Sheets, and Docs.
+
+This is where I start to feel uneasy. Granting an AI agent full read/write access to your personal Gmail account is a meaningful security decision. If your agent's prompt gets hijacked through any input channel (a malicious email, a poisoned web page, a crafted document), that agent now has the keys to your entire email history, your calendar, and your files.
+
+The gog skill doesn't sandbox these permissions. There's no way to say "read-only Gmail but read-write Calendar." It's all or nothing for each service. And the exec tool on top of that means the agent has filesystem access too.
+
+For personal projects and experimentation, this is probably fine. For anything production-facing, it's worth thinking about blast radius.
+
+### Token storage and rotation
+
+One detail the gog README doesn't emphasize: OAuth tokens are stored in plain text in your OpenClaw config directory by default. That's `~/.openclaw/tokens/` on most systems. Anyone with read access to that directory can impersonate your agent's Google access. If you're running OpenClaw on a shared machine or a cloud VM, make sure file permissions are locked down. Run `chmod 700 ~/.openclaw/tokens/` at minimum, and consider encrypting the directory at rest if your threat model warrants it.
+
+## Where gog works well
+
+Let me be fair to gog. It's genuinely useful for personal productivity agents. If you want an OpenClaw agent that can:
+
+- Scan your Gmail for meeting invites and add them to your calendar
+- Draft replies to routine emails based on templates you've defined
+- Pull data from Google Sheets into a report
+- Create and organize documents in Google Drive automatically
+- Sync contacts across services
+
+Then gog is the right tool. It's well-maintained (Peter Steinberger keeps it updated), the ClawHub installation is smooth, and the Google Workspace integration is thorough.
+
+The 54,000+ installs on LLMBase reflect real usage. People are getting value from it.
+
+## Where gog falls short for agent email
+
+The gap shows up when your agent needs its own email identity rather than borrowing yours.
+
+Consider a common scenario: you're building an agent that signs up for services, receives verification emails, extracts confirmation codes, and manages ongoing communications. With gog, all of that flows through your personal Gmail. Your agent's service emails mix with your personal inbox. If the agent makes a mistake (sends something weird, triggers a spam report), it's your Gmail reputation that takes the hit.
+
+Gmail API rate limits compound the problem. Google enforces per-user quotas that are generous for human use but tight for automated systems. If your agent is processing high volumes of incoming mail, you'll hit the daily quota ceiling faster than you'd expect. There's no built-in fallback when gog loses its Google token either. OpenClaw doesn't retry the auth flow automatically; the agent just fails silently until you manually re-authorize.
+
+Multi-agent setups make this worse. If three agents share one gog installation, they're all competing for the same Gmail API quota, reading each other's mail, and sending from the same address. There's no isolation.
+
+This is the fundamental tension: gog treats email as a feature of your Google account. But for agents that need to operate independently, email needs to be infrastructure they control themselves.
+
+### Debugging email delivery failures
+
+When gog does fail on email operations, the error messages are often unhelpful. You'll typically see a generic `GOOGLE_API_ERROR` in the OpenClaw logs without much context. Common causes include expired tokens, exceeded quotas, or Gmail's spam filters blocking outbound messages that look automated. Check your Google account's security activity page for blocked sign-in attempts, and review the API quota dashboard at console.cloud.google.com to see if you're hitting rate limits. These steps save hours of guesswork.
+
+## Giving your agent its own inbox
+
+This is where an agent-first approach to email changes the equation. Instead of routing everything through your personal Gmail via gog, your agent provisions its own address and manages its own mail independently.
+
+With LobsterMail, that looks like this:
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create();
+const inbox = await lm.createSmartInbox({ name: 'My OpenClaw Agent' });
+
+// Agent has its own address: my-openclaw-agent@lobstermail.ai
+const emails = await inbox.receive();
+No OAuth scopes. No shared quotas. No risk to your personal accounts. The agent hatches its own inbox and handles email as a self-contained capability. If something goes wrong, the blast radius is limited to that one inbox, not your entire Google Workspace.
+
+You can run gog alongside LobsterMail, too. Use gog for Calendar, Drive, and Sheets where the Google integration makes sense. Route email through LobsterMail where isolation and independence matter. They're not mutually exclusive.
+
+### Integration patterns for OpenClaw
+
+If you want both gog and LobsterMail active in the same agent, the cleanest approach is to keep gog's Gmail scope disabled (by revoking just the Gmail OAuth scope in your Google account settings) while leaving Calendar, Drive, and Sheets active. Then configure LobsterMail as the sole email handler. Your agent uses gog for everything Google except email, and LobsterMail for all mail operations. This gives you the best of both tools without permission overlap or quota conflicts.
+
+## When to use which
+
+If you're building a personal assistant that manages your existing Gmail, use gog. It's purpose-built for that.
+
+If your agent needs its own email identity for signing up to services, handling inbound communications, or operating in production without touching your personal accounts, use dedicated email infrastructure. The Free tier at LobsterMail gives you 1,000 emails per month with zero configuration, which is enough to test and validate before committing to anything. For higher volumes, the Builder tier at $9/mo unlocks expanded quotas and priority support.
+
+The real answer for most OpenClaw setups is both. Gog handles the Google Workspace surface area. A dedicated email layer handles everything that shouldn't live in your personal inbox.
+
+If you want to try it, <InlineGetStarted>get your agent its own inbox here</InlineGetStarted> — the full setup takes under five minutes.
+
+<FAQ>
+  <FAQItem question="What is clawhub install gog and what does the gog skill add to OpenClaw?">
+    `clawhub install gog` installs the gog skill from ClawHub, OpenClaw's skill package manager. The gog skill gives your agent access to Google Workspace services including Gmail, Calendar, Drive, Contacts, Sheets, and Docs through OAuth-authenticated APIs.
+  </FAQItem>
+
+  <FAQItem question="What is the exact command to install the gog skill using clawhub?">
+    Run `npm i -g clawhub` to install ClawHub globally, then run `clawhub install gog`. After installation, add `"exec"` to your agent's tools allow list in `openclaw.json` and restart OpenClaw.
+  </FAQItem>
+
+  <FAQItem question="Do I need Node.js and npm installed before running clawhub install gog?">
+    Yes. ClawHub requires Node.js 18 or later. Install Node.js from nodejs.org, which includes npm, then run `npm i -g clawhub` before installing any skills.
+  </FAQItem>
+
+  <FAQItem question="How do I add exec to the allow list in openclaw.json so gog can run shell commands?">
+    Open `openclaw.json` and find your agent's configuration block. Under `"tools"`, add `"exec"` to the `"allow"` array. Make sure you're editing the per-agent config, not just the global one, since per-agent settings take precedence.
+  </FAQItem>
+
+  <FAQItem question="Why does the exec tool sometimes not get delivered to the agent even after being added to the allow list?">
+    This is usually caused by adding exec to the global allow list while a per-agent tools block exists that overrides it. The fix is to add `"exec"` directly to your specific agent's `"tools.allow"` array in `openclaw.json`. See [Issue #27299](https://github.com/openclaw/openclaw/issues/27299) for details.
+  </FAQItem>
+
+  <FAQItem question="What Google OAuth scopes does the gog skill request?">
+    The gog skill requests full read/write access to Gmail, Google Calendar, Google Drive, Contacts, Sheets, and Docs. These scopes are all-or-nothing per service; you can't grant read-only access to Gmail while allowing full access to Calendar.
+  </FAQItem>
+
+  <FAQItem question="Can I use the gog skill in a multi-agent setup where a sub-agent handles email?">
+    You can, but all agents sharing one gog installation compete for the same Gmail API quota and read from the same inbox. For multi-agent setups, a dedicated email service like [LobsterMail](/) gives each agent its own isolated inbox and quota.
+  </FAQItem>
+
+  <FAQItem question="How does the gog skill compare to a dedicated agent-first email service for production workloads?">
+    Gog routes email through your personal Gmail, sharing your quota, reputation, and inbox. A dedicated service like LobsterMail gives agents their own addresses, isolated quotas, and built-in [security protections](/blog/5-agent-email-setup-mistakes-that-tank-your-deliverability) without touching your personal accounts.
+  </FAQItem>
+
+  <FAQItem question="What are the Gmail API rate limits when using gog at scale?">
+    Google enforces per-user daily quotas on Gmail API calls. For standard consumer accounts, this is roughly 250 quota units per second and a daily sending limit of 500 messages. Automated agents can hit these ceilings quickly during high-volume operations.
+  </FAQItem>
+
+  <FAQItem question="How do I uninstall or update the gog skill with clawhub?">
+    Run `clawhub uninstall gog` to remove it or `clawhub update gog` to pull the latest version. After updating, restart OpenClaw to load the new skill version.
+  </FAQItem>
+
+  <FAQItem question="Is the gog skill sandboxed, or does it have full filesystem access via exec?">
+    When exec is in the allow list, gog has the ability to run shell commands with the same filesystem permissions as the OpenClaw process. It is not sandboxed by default. Use the deny list to restrict specific tool variants if you need tighter control.
+  </FAQItem>
+
+  <FAQItem question="What happens if the gog skill loses its Google token?">
+    OpenClaw does not automatically retry the OAuth flow. If the token expires or is revoked, the agent will fail silently on Google API calls until you manually re-authorize through the OAuth consent flow.
+  </FAQItem>
+
+  <FAQItem question="What is the difference between deny bash/process and removing exec from the allow list entirely?">
+    Removing exec from the allow list prevents the agent from accessing any shell execution tools. The deny list with `"bash"` or `"process"` entries is more granular: it keeps exec available but blocks specific command types. Use the allow list for broad control and the deny list for fine-tuning.
+  </FAQItem>
+
+  <FAQItem question="How do I verify that the gog skill is active and connected after installation?">
+    Run `clawhub list` in your terminal to see all installed skills and their status. Gog should appear as active. You can also check your OpenClaw agent logs for skill initialization messages on startup.
+  </FAQItem>
+</FAQ>

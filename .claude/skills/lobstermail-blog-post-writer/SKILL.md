@@ -284,6 +284,22 @@ FAQ rules:
 <Video src="https://youtube.com/embed/VIDEO_ID" title="Video title" />
 ```
 
+#### Inline setup CTA (CRITICAL — use instead of linking to docs for setup)
+
+When directing readers to set up LobsterMail or get an inbox, NEVER write "head to lobstermail.ai/skill", "follow the instructions", or link to `/docs/getting-started` as a setup CTA. Instead use the inline component:
+
+```mdx
+<InlineGetStarted>Click here to get your agent its own inbox</InlineGetStarted>
+```
+
+This renders as an inline link that pops a modal and auto-copies setup instructions to the reader's clipboard. The reader clicks, pastes to their agent, done. Customize the link text to fit the sentence naturally.
+
+Examples:
+- `<InlineGetStarted>Click here to get your agent its own inbox</InlineGetStarted> — paste the instructions and your agent handles the rest.`
+- `If you want your agent to handle email, <InlineGetStarted>click here to get started</InlineGetStarted>.`
+
+**Note:** Linking to `/docs/getting-started` or other docs for *technical detail* (e.g., "See the [security docs](/docs/security-and-injection) for how scoring works") is fine. The rule only applies when selling simplicity or directing readers to set up an inbox.
+
 #### Standard markdown
 
 All standard markdown works: headings (`##`, `###`, `####`), bold, italic, links (external links open in new tab automatically), lists, code blocks with language syntax, inline code, tables, blockquotes, horizontal rules (`---`).
@@ -391,4 +407,5 @@ Tags are extracted automatically from frontmatter. Each unique tag generates a `
 - [ ] Links to other posts or docs where relevant
 - [ ] Code blocks have language specified
 - [ ] Image entry added to `scripts/generate-blog-images.mjs` and generated
+- [ ] No "head to lobstermail.ai/skill" or "follow the instructions" — uses `<InlineGetStarted>` instead
 - [ ] Build passes with `pnpm build`
