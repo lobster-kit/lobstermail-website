@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-15T07:15:05.159Z",
+  "generated_at": "2026-03-15T13:15:01.667Z",
   "kpis": {
     "mrr_usd": 0,
     "paid_accounts": 2,
     "free_accounts": 89,
     "total_accounts": 98,
     "npm_installs_7d": 14,
-    "seo_clicks_7d": 69,
-    "seo_impressions_7d": 9021,
-    "seo_avg_position": 0,
+    "seo_clicks_7d": 71,
+    "seo_impressions_7d": 9685,
+    "seo_avg_position": 10.2,
     "total_emails_sent": 42,
-    "total_emails_received": 216,
+    "total_emails_received": 217,
     "total_inboxes": 111,
     "daily_visitors": 353,
     "daily_visitors_human": 100,
@@ -22,19 +22,19 @@
   "deltas": {
     "total_inboxes": 77,
     "total_emails_sent": 27,
-    "total_emails_received": 134,
+    "total_emails_received": 135,
     "free_accounts": 72,
     "github_stars": 0,
     "x_followers": 0,
     "clawhub_skill_installs": 0,
-    "openclaw_github_stars": 33163,
+    "openclaw_github_stars": 33772,
     "openclaw_npm_daily": null,
-    "openclaw_twitter_followers": 28971
+    "openclaw_twitter_followers": 29855
   },
   "market": {
-    "openclaw_github_stars": 313317,
+    "openclaw_github_stars": 313926,
     "openclaw_npm_daily": 0,
-    "openclaw_twitter_followers": 456860
+    "openclaw_twitter_followers": 457744
   },
   "sparklines": {
     "mrr_usd": [
@@ -200,7 +200,7 @@
       },
       {
         "date": "2026-03-13",
-        "value": 0
+        "value": 7
       },
       {
         "date": "2026-03-14",
@@ -258,7 +258,7 @@
       },
       {
         "date": "2026-03-13",
-        "value": 0
+        "value": 1359
       },
       {
         "date": "2026-03-14",
@@ -387,9 +387,9 @@
     ]
   },
   "pipeline": {
-    "drafts": 191,
-    "approved": 7,
-    "published": 338
+    "drafts": 24,
+    "approved": 4,
+    "published": 340
   },
   "content": {
     "total_topics": 300,
@@ -404,9 +404,9 @@
     }
   },
   "agents": {
-    "agent_2_last_run": "2026-03-15T06:03:15.020Z",
+    "agent_2_last_run": "2026-03-15T12:03:55.672Z",
     "agent_3_last_run": "2026-03-15T07:13:45.667Z",
-    "agent_6_last_run": "2026-03-15T04:00:40.282Z"
+    "agent_6_last_run": "2026-03-15T10:00:41.515Z"
   },
   "latest_date": "2026-03-15"
 }
