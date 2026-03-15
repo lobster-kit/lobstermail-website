@@ -103,9 +103,15 @@ export function Footer() {
               href="https://postmake.io"
               target="_blank"
               rel="noopener noreferrer"
-              className="link-underline transition-colors hover:text-foreground"
+              className="transition-opacity hover:opacity-80"
             >
-              Postmake
+              <img
+                src="https://www.postmake.io/postmake_badge_light.png"
+                alt="Featured on Postmake"
+                width={100}
+                height={28}
+                className="inline-block"
+              />
             </a>
             <span className="text-muted" aria-hidden="true">
               |
@@ -135,10 +141,16 @@ export function Footer() {
             <a
               href="http://saasbison.com"
               target="_blank"
-              rel="noopener noreferrer"
-              className="link-underline transition-colors hover:text-foreground"
+              rel="dofollow noopener noreferrer"
+              className="transition-opacity hover:opacity-80"
             >
-              SaaSBison
+              <img
+                src="http://saasbison.com/badge.png"
+                alt="Featured on SaaSBison"
+                width={100}
+                height={27}
+                className="inline-block"
+              />
             </a>
           </div>
         </div>
