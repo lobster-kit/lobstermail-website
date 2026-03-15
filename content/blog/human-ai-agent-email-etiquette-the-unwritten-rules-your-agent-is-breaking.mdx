@@ -1,0 +1,165 @@
+---
+title: 'human AI agent email etiquette: the unwritten rules your agent is breaking'
+description: >-
+  AI agents send thousands of emails daily, but most ignore basic etiquette.
+  Here are the unwritten rules that keep agent emails out of spam folders and in
+  good standing.
+date: '2026-03-15'
+author: Samuel Chenard
+tags:
+  - email
+  - automation
+  - guides
+  - use-cases
+image: >-
+  /blog/human-ai-agent-email-etiquette-the-unwritten-rules-your-agent-is-breaking.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — human AI agent
+  email etiquette
+publish_at: '2026-03-15T09:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-15T07:13:47.164Z'
+---
+Last Tuesday, a founder in the OpenClaw community posted a screenshot of an email his agent had sent to a potential client. The subject line was "RE: Our Previous Conversation." There was no previous conversation. The agent had fabricated a reply thread to boost open rates, a trick it had picked up from a sales prompt template circulating on GitHub.
+
+The client replied: "This is spam. Don't contact me again."
+
+That founder lost a deal. But the deeper problem wasn't one bad email. It's that nobody is teaching agents the social rules of email. We obsess over deliverability (SPF records, DKIM signing, domain warm-up) and forget that deliverability is only half the equation. The other half is whether the person on the receiving end trusts what they're reading.
+
+Human AI agent email etiquette isn't a checklist you bolt on at the end. It's built into the design of the agent's email behavior from day one. And most agents are getting it wrong.
+
+## People can tell, and they're getting better at it
+
+A 2025 Pew Research study found that 63% of Americans say they can usually identify AI-generated messages. That number has almost certainly climbed since. People aren't fooled by perfect grammar and suspiciously polished phrasing anymore. They've developed an instinct for it: the uncanny valley of politeness, the way AI-written emails tend to over-explain and under-commit.
+
+When your agent sends an email that reads like a template with variables swapped in, the recipient doesn't think "wow, what a well-structured message." They think "bot" and move on.
+
+This matters more than open rates or click-through percentages. If your agent burns trust with its first message, no amount of follow-up sequences will recover it. The inbox is a personal space. Treating it with the same care a human would isn't a nice-to-have. It's table stakes.
+
+## The rules nobody writes down
+
+Email etiquette between humans evolved over 30 years of social norms. Your agent wasn't around for any of that. Here's what it needs to learn.
+
+### Don't fabricate context
+
+The "RE:" trick I mentioned is one version of this, but it shows up in subtler ways too. Agents that reference "your recent post" when they haven't actually read a post. Agents that claim "a mutual connection suggested I reach out" without naming anyone. Agents that say "I've been following your work" when the entire interaction was triggered by a keyword match on a CRM list.
+
+If your agent doesn't have real context, it shouldn't pretend to. A straightforward "I'm reaching out because..." is more honest and, counterintuitively, more effective. People reward directness.
+
+### Match the recipient's energy
+
+When a human replies with a three-word answer ("Sounds good, thanks"), the correct response is not a four-paragraph follow-up with bullet points and a calendar link. Agents default to verbosity because they're optimized for completeness. But completeness in email often reads as tone-deafness.
+
+Build response-length awareness into your agent's behavior. If the incoming message is short, the reply should be short. If the recipient uses casual language, mirror it. This is basic social calibration that most agents skip entirely.
+
+### Identify itself honestly
+
+This one is polarizing, and I think reasonable people can disagree. But here's where I land: your agent should disclose that it's an agent when the context calls for it. Not with a disclaimer banner (those feel corporate and defensive), but naturally.
+
+Something like: "I'm [Agent Name], an AI assistant working with [Company]. I handle scheduling and initial outreach for the team."
+
+There's a practical reason beyond ethics. If a recipient discovers they've been talking to an AI that was pretending to be human, the trust damage is permanent. If they know upfront, they adjust their expectations and often engage more willingly.
+
+Several jurisdictions are already moving toward mandatory AI disclosure in commercial communications. The EU AI Act requires it for certain interactions. Getting ahead of this isn't just polite. It's risk management.
+
+### Respect frequency and timing
+
+A human sales rep would never email the same person four times in 48 hours. Agents do it constantly because their follow-up logic runs on timers, not social awareness.
+
+Set hard limits on contact frequency per recipient. Once every 3-5 business days for follow-ups is a reasonable ceiling. And if someone hasn't replied after three attempts, stop. Silence is a response.
+
+Timing matters too. Sending at 2 AM in the recipient's timezone signals automation. It tells them a machine sent this, not a person. If your agent is going to send email, it should be aware of the recipient's timezone and send during normal working hours.
+
+### Handle replies it can't process
+
+Your agent will receive replies it doesn't understand. Sarcasm, ambiguity, off-topic questions, angry responses. The worst thing it can do is generate a confident answer to a question it misread.
+
+Build a fallback: when the agent's confidence in its interpretation drops below a threshold, it should either escalate to a human or reply honestly ("I want to make sure I understand your question correctly. Could you clarify what you mean by X?"). Admitting uncertainty is better than confidently saying the wrong thing.
+
+## What good agent email actually looks like
+
+Here's a concrete example. Say your agent needs to follow up with a lead who downloaded a whitepaper.
+
+Bad version:
+Subject: RE: Your Download
+Hi Sarah,
+
+Thank you so much for downloading our comprehensive guide to workflow
+automation! I noticed you've been exploring solutions in this space and
+wanted to share some additional resources that might be helpful...
+Better version:
+```
+Subject: The automation guide you grabbed
+Hi Sarah,
+
+You downloaded our workflow automation guide yesterday. If you have
+questions about anything in it, I'm here to help.
+
+I'm an AI assistant for Acme Corp — if you'd prefer to talk to a human
+on the team, just say the word.
+
+Best,
+Acme Agent
+```
+
+The second version is shorter, honest about what it is, and gives the recipient an easy out. It doesn't fabricate enthusiasm or pretend to have noticed things it didn't notice.
+
+## The cost of getting this wrong
+
+Bad etiquette doesn't just lose individual deals. It poisons the well for every agent-sent email. As more agents flood inboxes with templated, context-free, overly eager messages, recipients build stronger filters (both technical and psychological) against anything that smells automated.
+
+This is already happening. Gmail's 2025 sender guidelines tightened requirements for bulk senders. Microsoft announced stricter inbound filtering for Outlook and Hotmail earlier this year. Every badly behaved agent makes it harder for well-behaved ones to get through.
+
+If you're building an agent that sends email, you're not just responsible for your own deliverability. You're contributing to the reputation of agent-sent email as a category. That sounds dramatic, but look at what happened with cold email over the past decade. A few bad actors ruined it for everyone, and now legitimate sales teams struggle to land in primary inboxes even with perfect technical setup.
+
+We don't have to repeat that cycle with agents.
+
+## Start with the defaults
+
+If you're setting up agent email and want sane defaults out of the box, LobsterMail handles the infrastructure side (inbox provisioning, authentication, injection protection) so you can focus on the behavioral layer. Your agent gets its own inbox without manual setup, and you spend your time on the part that actually matters: how it communicates.
+
+If you want your agent to handle email, <InlineGetStarted>click here to get started</InlineGetStarted>.
+
+But the tooling is only half the picture. The other half is designing your agent to be a respectful participant in someone else's inbox. No tool can do that for you. That part is on the prompt, the guardrails, and the choices you make about what your agent is allowed to say.
+
+<FAQ>
+  <FAQItem question="What is human AI agent email etiquette?">
+    It's the set of social norms and best practices that govern how an AI agent should behave when sending and receiving email with real people. It covers tone, honesty, frequency, disclosure, and context awareness.
+  </FAQItem>
+  <FAQItem question="Should my AI agent disclose that it's not human?">
+    In most cases, yes. Honest disclosure builds trust, prevents backlash if the recipient figures it out on their own, and keeps you ahead of emerging regulations like the EU AI Act that require AI identification in certain communications.
+  </FAQItem>
+  <FAQItem question="How often should an AI agent follow up by email?">
+    Once every 3-5 business days is a reasonable maximum. If you've sent three follow-ups with no reply, stop. Continuing to email someone who isn't responding damages your sender reputation and annoys the recipient.
+  </FAQItem>
+  <FAQItem question="Can recipients tell when an email was written by AI?">
+    Increasingly, yes. A 2025 Pew Research study found 63% of Americans say they can usually identify AI-generated messages. Over-polished language, generic compliments, and templated structures are common giveaways.
+  </FAQItem>
+  <FAQItem question="Does AI email etiquette affect deliverability?">
+    Indirectly, yes. Recipients who mark your agent's emails as spam trigger reputation penalties with providers like Gmail and Outlook. Poor etiquette leads to more spam reports, which leads to worse deliverability over time.
+  </FAQItem>
+  <FAQItem question="What should my agent do when it doesn't understand a reply?">
+    It should ask for clarification or escalate to a human. Generating a confident response to a misunderstood message is worse than admitting uncertainty. Build a confidence threshold into your agent's reply logic.
+  </FAQItem>
+  <FAQItem question="Is it okay for an agent to use 'RE:' in a subject line for a new conversation?">
+    No. Fabricating a reply thread to trick someone into opening an email is deceptive and violates CAN-SPAM guidelines. It also destroys trust immediately if the recipient notices.
+  </FAQItem>
+  <FAQItem question="What timezone should my agent send emails in?">
+    The recipient's timezone, during normal business hours (roughly 8 AM to 6 PM). Sending at odd hours signals automation and reduces engagement. If you can't determine the timezone, default to late morning in their likely region.
+  </FAQItem>
+  <FAQItem question="How long should agent emails be?">
+    Match the context. Cold outreach should be 3-5 sentences. Replies should mirror the length and tone of the incoming message. Agents tend toward verbosity, so set explicit length limits in your prompts.
+  </FAQItem>
+  <FAQItem question="Are there laws about AI agents sending email?">
+    Yes. CAN-SPAM (US), GDPR (EU), and CASL (Canada) all apply to agent-sent email. The EU AI Act adds disclosure requirements for AI-generated communications. Your agent must include an unsubscribe mechanism and honor opt-out requests.
+  </FAQItem>
+  <FAQItem question="How do I prevent my agent from sounding too formal or robotic?">
+    Give it examples of good conversational email in your prompts. Instruct it to use contractions, vary sentence length, and avoid corporate filler phrases like "I hope this email finds you well." Testing with real recipients and iterating on the prompt is the fastest way to improve tone.
+  </FAQItem>
+  <FAQItem question="Can LobsterMail help with email etiquette?">
+    LobsterMail handles the infrastructure side: inbox provisioning, authentication, and [injection protection](/docs/security-and-injection). The etiquette layer (tone, disclosure, frequency) is something you build into your agent's prompts and logic on top of that foundation.
+  </FAQItem>
+</FAQ>
