@@ -76,7 +76,7 @@ function Provider({
   }, [deferredQuery, isSearching, allPosts]);
 
   return (
-    <BlogSearchContext.Provider value={{ query, setQuery, isSearching: query.trim().length > 0, filtered }}>
+    <BlogSearchContext.Provider value={{ query, setQuery, isSearching, filtered }}>
       {children}
     </BlogSearchContext.Provider>
   );
@@ -104,7 +104,7 @@ function SearchInput() {
           className="w-full rounded-xl border-2 border-edge bg-background py-2.5 pl-10 pr-10 text-sm text-foreground placeholder:text-secondary outline-none transition-colors focus:border-accent/40 [&::-webkit-search-cancel-button]:hidden"
         />
         {isSearching && (
-          <Button className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-muted transition-colors hover:text-foreground outline-none">
+          <Button onPress={() => setQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-muted transition-colors hover:text-foreground outline-none">
             <X size={16} />
           </Button>
         )}
