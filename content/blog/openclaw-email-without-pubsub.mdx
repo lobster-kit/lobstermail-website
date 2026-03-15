@@ -1,10 +1,15 @@
 ---
-title: "how to set up email for your OpenClaw agent (without Google Pub/Sub)"
-description: "Skip the GCP project, the OAuth scoping, and the $300 weekend. Your OpenClaw agent can have its own email in one command."
+title: how to set up email for your OpenClaw agent (without Google Pub/Sub)
+description: >-
+  Skip the GCP project, the OAuth scoping, and the $300 weekend. Your OpenClaw
+  agent can have its own email in one command.
 date: '2026-02-12'
-author: "Samuel Chenard"
-tags: ["openclaw", "getting-started", "guides"]
-image: "/blog/openclaw-email-without-pubsub.png"
+author: Samuel Chenard
+tags:
+  - openclaw
+  - getting-started
+  - guides
+image: /blog/openclaw-email-without-pubsub.png
 ---
 
 If you've tried giving your OpenClaw agent email, you probably started where everyone starts: Gmail. And if you wanted real-time delivery instead of polling every few minutes, you ran into the Pub/Sub setup.
@@ -17,6 +22,8 @@ That quote stuck with me because it captures the gap between what OpenClaw deliv
 
 There's a simpler path. It doesn't involve Google Cloud, Pub/Sub, or your personal inbox at all.
 
+
+<InlineGetStarted>Give your agent its own email</InlineGetStarted> — one click, and your agent sets up the rest.
 ## What the Pub/Sub setup actually looks like
 
 Let's be honest about what you're signing up for. To get real-time Gmail in OpenClaw using the Gog skill, you need to:

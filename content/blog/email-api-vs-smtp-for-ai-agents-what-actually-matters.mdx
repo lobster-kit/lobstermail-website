@@ -25,6 +25,8 @@ Last month I helped someone debug an agent that kept dropping emails. The agent 
 
 The fix was simple: switch to an email API. But the *why* behind that fix is worth understanding, especially if you're building agents that need to send or receive email autonomously.
 
+
+<InlineGetStarted>Get your agent its own inbox</InlineGetStarted> — paste the instructions and your agent handles the rest.
 ## The core difference
 
 The main difference between an email API and SMTP is how your code talks to the mail server. SMTP (Simple Mail Transfer Protocol) opens a persistent TCP connection and exchanges a sequence of text commands to deliver a message. An email API wraps that process behind an HTTP endpoint, so your code sends a POST request with JSON and gets a response back. For AI agents, this distinction affects everything from error handling to credential management.

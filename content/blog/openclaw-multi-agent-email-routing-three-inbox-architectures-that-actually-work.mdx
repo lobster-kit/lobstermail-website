@@ -28,6 +28,8 @@ I've seen this solved three ways in the wild. Two of them scale cleanly. One cre
 
 Here's the breakdown.
 
+
+If you'd rather skip the manual setup, <InlineGetStarted>LobsterMail handles this in about a minute</InlineGetStarted>.
 ## Why single-inbox assumptions break at two agents
 
 Single-agent email is trivial. One agent, one inbox, one polling loop. But multi-agent setups introduce a real routing problem: inbound messages arrive at a single address before any agent can claim them. The question is what happens between delivery and handling.

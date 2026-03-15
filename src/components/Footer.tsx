@@ -75,6 +75,72 @@ export function Footer() {
               Terms
             </Link>
           </div>
+          <hr className="w-full max-w-xs border-t border-current opacity-10" />
+          <div className="flex flex-wrap items-center justify-center gap-3 text-xs">
+            <a
+              href="https://www.aitoolzdir.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link-underline transition-colors hover:text-foreground"
+            >
+              AI Toolz Dir
+            </a>
+            <span className="text-muted" aria-hidden="true">
+              |
+            </span>
+            <a
+              href="https://dang.ai"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link-underline transition-colors hover:text-foreground"
+            >
+              Dang.ai
+            </a>
+            <span className="text-muted" aria-hidden="true">
+              |
+            </span>
+            <a
+              href="https://postmake.io"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link-underline transition-colors hover:text-foreground"
+            >
+              Postmake
+            </a>
+            <span className="text-muted" aria-hidden="true">
+              |
+            </span>
+            <a
+              href="https://twelve.tools"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link-underline transition-colors hover:text-foreground"
+            >
+              Twelve Tools
+            </a>
+            <span className="text-muted" aria-hidden="true">
+              |
+            </span>
+            <a
+              href="https://mostpopularaitools.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link-underline transition-colors hover:text-foreground"
+            >
+              Most Popular AI Tools
+            </a>
+            <span className="text-muted" aria-hidden="true">
+              |
+            </span>
+            <a
+              href="http://saasbison.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link-underline transition-colors hover:text-foreground"
+            >
+              SaaSBison
+            </a>
+          </div>
         </div>
       </FadeIn>
     </footer>

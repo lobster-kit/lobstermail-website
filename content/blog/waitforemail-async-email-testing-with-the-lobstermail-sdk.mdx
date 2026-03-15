@@ -32,6 +32,8 @@ The root problem is that `setTimeout` has no idea when the email arrives. You're
 
 `waitForEmail()` is the LobsterMail SDK's answer. It holds execution until a matching email actually lands in the inbox, then returns immediately. No polling loop. No arbitrary sleep. If nothing arrives within your timeout window, it throws a descriptive error that tells you exactly what it was waiting for.
 
+
+There's a faster path: <InlineGetStarted>let your agent provision its own inbox</InlineGetStarted> instead of configuring credentials by hand.
 ## How it works
 
 Install the SDK:

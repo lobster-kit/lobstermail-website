@@ -24,6 +24,8 @@ The native path requires SES domain verification, IAM send permissions, and a co
 
 LobsterMail is a different approach. The SDK handles provisioning, delivery, and receiving through a single API. Your agent calls a Lambda action, gets its own `@lobstermail.ai` address, and starts sending and receiving within the same conversation turn. No SES setup, no domain configuration, no SMTP credentials.
 
+
+<InlineGetStarted>Get your agent its own inbox</InlineGetStarted> — paste the instructions and your agent handles the rest.
 ## Action groups in 60 seconds
 
 When a Bedrock agent decides it needs to do something — look up a record, call an API, send an email, it identifies the right action, assembles the parameters, and invokes a Lambda function through an action group you've defined.

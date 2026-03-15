@@ -1,16 +1,23 @@
 ---
-title: "llamaindex agents that read, reply, and route email"
-description: "Wrap LobsterMail's REST API as LlamaIndex FunctionTools so your agent can read, reply to, and route emails between sub-agents."
+title: 'llamaindex agents that read, reply, and route email'
+description: >-
+  Wrap LobsterMail's REST API as LlamaIndex FunctionTools so your agent can
+  read, reply to, and route emails between sub-agents.
 date: '2026-02-06'
-author: "Samuel Chenard"
-tags: ["guides", "email", "automation"]
-image: "/blog/llamaindex-agent-email.png"
+author: Samuel Chenard
+tags:
+  - guides
+  - email
+  - automation
+image: /blog/llamaindex-agent-email.png
 ---
 
 LlamaIndex has solid abstractions for giving agents tools. You define a Python function, wrap it in `FunctionTool`, and the agent's LLM decides when to call it. That pattern maps cleanly onto an email API: read inbox, send reply, forward to another agent.
 
 This guide wires LobsterMail's REST API into a LlamaIndex agent that can read incoming emails, reply to them, and route messages to specialized sub-agents based on intent. No SDK required on the Python side. Just HTTP calls wrapped as tools.
 
+
+If you'd rather skip the manual setup, <InlineGetStarted>LobsterMail handles this in about a minute</InlineGetStarted>.
 ## What we're building
 
 A LlamaIndex agent with three capabilities:

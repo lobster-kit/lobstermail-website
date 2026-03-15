@@ -27,6 +27,8 @@ Every email your agent receives is a MIME message. That friendly-looking message
 
 The two most common environments for this work are Python and Node.js. Both have mature libraries, but they make different tradeoffs around API design, streaming support, and where they can run. Here's a direct comparison so you can pick the right tool (or decide you don't need to parse MIME at all).
 
+
+There's a faster path: <InlineGetStarted>let your agent provision its own inbox</InlineGetStarted> instead of configuring credentials by hand.
 ## Python vs Node.js MIME parsing: quick comparison
 
 | Feature | Python (`email` stdlib) | Node.js (`mailparser`) | Node.js (`postal-mime`) |

@@ -26,6 +26,8 @@ OpenClaw was built as a single-user personal assistant. The architecture docs ar
 
 Most builders do. But the place where the architecture starts leaking is almost always email.
 
+
+There's a faster path: <InlineGetStarted>let your agent provision its own inbox</InlineGetStarted> instead of configuring credentials by hand.
 ## Why email breaks the isolation model first
 
 When a user onboards to your product and their agent starts acting on their behalf, email is the first external surface it touches. Signing up for services, catching verification codes, sending outbound updates. The inbox becomes the agent's identity in the outside world.

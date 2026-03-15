@@ -27,6 +27,8 @@ You started with one agent and one inbox. It worked fine. Then you added five ag
 
 This is the moment most teams discover that their inbox architecture doesn't scale sideways. It scales up (bigger server, more memory, faster polling) until it doesn't. Horizontal scaling for agent inboxes is a different approach: instead of making one thing bigger, you spread the work across many independent units. For AI agents that self-provision their own email, this distinction matters more than it does for traditional web apps.
 
+
+If you'd rather skip the manual setup, <InlineGetStarted>LobsterMail handles this in about a minute</InlineGetStarted>.
 ## Horizontal scaling vs vertical scaling for agent inboxes
 
 The core difference is direction. Vertical scaling means giving a single agent (or a single inbox) more resources. Horizontal scaling means adding more agents and more inboxes, distributing the load across them.

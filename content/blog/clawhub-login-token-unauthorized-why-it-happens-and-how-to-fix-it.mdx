@@ -1,0 +1,174 @@
+---
+title: 'clawhub login --token unauthorized: why it happens and how to fix it'
+description: >-
+  Getting 'Unauthorized' when running clawhub login --token? Here's why ClawHub
+  CLI rejects valid tokens and a step-by-step fix.
+date: '2026-03-14'
+author: Ian Bussières
+tags:
+  - openclaw
+  - troubleshooting
+  - guides
+  - infrastructure
+image: /blog/clawhub-login-token-unauthorized-why-it-happens-and-how-to-fix-it.png
+imageAlt: >-
+  Pixel art lobster mascot illustration for email infrastructure — clawhub login
+  --token unauthorized
+---
+
+You generated a fresh token from ClawHub Settings, pasted it into `clawhub login --token`, and got back a single word: `Unauthorized`. You tried again with a new token. Same result. You tried `--no-browser`. Still dead.
+
+This has been one of the most persistent bugs in the OpenClaw ecosystem since late January 2026. Issues [#6933](https://github.com/openclaw/openclaw/issues/6933), [#5483](https://github.com/openclaw/openclaw/issues/5483), and [#72](https://github.com/openclaw/clawhub/issues/72) all describe the same core problem: tokens that look valid, were just created seconds ago, and still get rejected by the CLI. It's not you. But there are real fixes, and most of them take under five minutes.
+
+
+Want to skip straight to a working inbox? <InlineGetStarted>LobsterMail gives your agent its own email</InlineGetStarted> without the manual wiring.
+## How to fix clawhub login --token unauthorized (step-by-step)
+
+1. Regenerate a fresh token at `clawhub.ai/settings/cli/auth` (not the general API tokens page)
+2. Confirm the token format starts with `clh_h_`, not `clh_` or `ghp_`
+3. Test the token directly with curl before touching the CLI:
+   ```bash
+   curl -H "Authorization: Bearer clh_h_YOUR_TOKEN" https://www.clawhub.ai/api/auth/verify
+4. Set the registry base URL to the canonical domain to prevent redirect header-dropping:
+   ```bash
+   clawhub config set registry https://www.clawhub.ai
+   ```
+5. Clear any cached credentials from previous sessions:
+   ```bash
+   rm -rf ~/.config/clawhub/auth.json
+   ```
+6. Run the login command again with the fresh token:
+   ```bash
+   clawhub login --token clh_h_YOUR_TOKEN
+   ```
+7. If you're on a headless server, add `--no-browser` to skip the OAuth fallback entirely
+
+If step 3 returns a 200 response but step 6 still fails, you're almost certainly hitting the redirect bug. Step 4 is the fix.
+
+## Why valid tokens get rejected
+
+The root cause in most cases is an HTTP redirect that strips the `Authorization` header. When the CLI sends your token to `https://clawhub.ai/api/auth/verify`, some environments (particularly behind proxies or on certain Node.js versions) follow a 301 redirect to `https://www.clawhub.ai/api/auth/verify`. HTTP clients are supposed to drop the `Authorization` header on redirects to a different origin. Even though `clawhub.ai` and `www.clawhub.ai` serve the same app, they're technically different origins.
+
+Your token is valid. The server never sees it.
+
+This is why the curl test in step 3 matters. If you hit the canonical URL directly (`www.clawhub.ai`), no redirect happens, no header gets dropped, and the token works fine. Setting the registry base URL (step 4) tells the CLI to skip the redirect entirely.
+
+## Token types and why they matter
+
+ClawHub has two types of tokens, and using the wrong one is the second most common cause of the Unauthorized error.
+
+**Browser OAuth tokens** are created when you run `clawhub login` and complete the browser flow. These tokens are tied to your browser session, scoped to your user account, and stored automatically by the CLI. They work for most operations but can't be copy-pasted between machines.
+
+**Personal CLI tokens** start with `clh_h_` and are generated from Settings, under CLI Auth. These are the tokens you pass to `--token`. They carry full CLI permissions including skill publishing and deletion. The older `clh_` prefix (without the `_h_`) was used for read-only API access and doesn't have write permissions. If your token starts with just `clh_`, that's why `clawhub login` accepts it but subsequent operations like `clawhub skill delete` fail with Unauthorized.
+
+GitHub OAuth tokens (`ghp_` prefix) don't work with ClawHub at all, despite both platforms using OAuth. They're completely separate authentication systems.
+
+## Headless environments: VPS, Docker, CI/CD
+
+If you're running the ClawHub CLI on a headless VPS, inside a Docker container, or in a CI/CD pipeline, the browser OAuth flow isn't an option. You need token auth to work.
+
+The recommended approach:
+
+```bash
+# In your CI config or Dockerfile
+export CLAWHUB_TOKEN=clh_h_YOUR_TOKEN
+clawhub login --token "$CLAWHUB_TOKEN" --no-browser
+Two things to watch for in automated environments. First, some CI runners reset the filesystem between steps, which means the credential cache at `~/.config/clawhub/auth.json` disappears. Either re-run `clawhub login` at the start of each job or set the `CLAWHUB_TOKEN` environment variable, which the CLI checks before looking at the config file.
+
+Second, if your pipeline publishes skills to ClawHub and also runs email-triggered workflows, you're managing two separate token lifecycles. A ClawHub token expiring mid-run means your skill publish fails silently. There's no built-in token rotation in the ClawHub CLI yet, so the practical fix is to generate long-lived tokens and store them in your CI secret manager.
+
+For agents that need to authenticate programmatically without any human intervention, this is where the infrastructure gap becomes obvious. The ClawHub CLI was designed for developers sitting at a terminal, not for autonomous processes running on a schedule. If your agent needs to publish skills and also handle email (say, receiving a notification that a skill review is complete), those are two separate auth systems that don't talk to each other.
+
+LobsterMail handles the email side of this equation. Your agent provisions its own inbox with a single SDK call, no OAuth dance, no browser popup, no token to rotate. The ClawHub side still requires manual token management, but at least the email piece is one less thing breaking at 3 AM.
+
+## Diagnosing 401 vs. 403 vs. connection errors
+
+Not all "Unauthorized" errors are the same, even though the CLI prints the same message for several different failure modes.
+
+A **401 Unauthorized** means the server received your request but the token was missing, malformed, or expired. This is the redirect bug or wrong-token-type issue described above.
+
+A **403 Forbidden** means the token is valid but doesn't have permission for the operation you're attempting. This happens when you use a read-only `clh_` token for a write operation, or when the token was created by a different user than the skill owner.
+
+A **connection error** that the CLI reports as "Unauthorized" is a known bug in `clawhub` npm versions prior to 2026.1.28. The CLI catches network timeouts and misreports them as auth failures. Updating to the latest version fixes this:
+
+```bash
+npm install -g clawhub@latest
+```
+
+You can distinguish these cases by testing with curl first. A 401 response body includes `{"error": "unauthorized"}`. A 403 includes `{"error": "forbidden", "reason": "insufficient_scope"}`. A timeout gives you no response body at all.
+
+## Multi-account and token switching
+
+If you work across multiple ClawHub accounts (personal projects plus a team account, for example), stale credentials are a common trap. The CLI stores one active token at a time in `~/.config/clawhub/auth.json`. Logging in with a new token overwrites the old one without warning.
+
+There's no built-in profile switching. The workaround is to use environment variables:
+
+```bash
+# Personal account
+CLAWHUB_TOKEN=clh_h_personal_token clawhub skill list
+
+# Team account
+CLAWHUB_TOKEN=clh_h_team_token clawhub skill publish
+```
+
+The `CLAWHUB_TOKEN` environment variable takes priority over the config file, so you can switch contexts without touching the stored credentials.
+
+## When none of this works
+
+If you've followed every step above and the CLI still returns Unauthorized, there are two remaining possibilities. The ClawHub auth service itself could be down (check [status.openclaw.ai](https://status.openclaw.ai)). Or your account could be flagged, which happens occasionally with new accounts that trigger abuse detection. In that case, reach out to the OpenClaw team on the community forum.
+
+The good news: once you fix the registry URL and use the right token type, this problem stays fixed. It's a one-time configuration issue, not a recurring headache.
+
+## LobsterMail and agent-friendly auth
+
+For the email side of your agent's workflow, [LobsterMail](/) removes this class of problem entirely. No tokens to manage, no OAuth to configure, no redirect bugs to debug. Your agent calls `LobsterMail.create()`, gets an inbox, and starts sending. The Free tier lets you test this with zero commitment, and the Builder tier ($9/mo) gives you everything most agents need for production workloads. If you're tired of wrestling with auth systems that weren't built for agents, that's worth a look.
+
+<FAQ>
+  <FAQItem question="Why does clawhub login --token still return Unauthorized after I copied the token from Settings?">
+    You're likely copying from the general API tokens page instead of Settings, then CLI Auth. CLI tokens use the `clh_h_` prefix. General API tokens (`clh_`) are read-only and don't authenticate CLI sessions.
+  </FAQItem>
+
+  <FAQItem question="What is the expected token format for ClawHub CLI authentication?">
+    CLI tokens start with `clh_h_` followed by a long alphanumeric string. If your token starts with just `clh_` (no `_h_`), it's a read-only API token that won't work for CLI login. GitHub tokens (`ghp_`) are completely incompatible.
+  </FAQItem>
+
+  <FAQItem question="How can I verify my ClawHub token is valid using curl before trying the CLI?">
+    Run `curl -H "Authorization: Bearer clh_h_YOUR_TOKEN" https://www.clawhub.ai/api/auth/verify` and check for a 200 response. Make sure you use `www.clawhub.ai` to avoid the redirect that strips auth headers.
+  </FAQItem>
+
+  <FAQItem question="Does clawhub login --no-browser --token work on a headless VPS or Docker container?">
+    Yes, combining `--no-browser` with `--token` is the recommended approach for headless environments. You can also set the `CLAWHUB_TOKEN` environment variable instead of passing it on the command line.
+  </FAQItem>
+
+  <FAQItem question="Why does the ClawHub CLI drop the Authorization header during an HTTP redirect?">
+    When the CLI hits `clawhub.ai` and gets a 301 redirect to `www.clawhub.ai`, HTTP clients drop the Authorization header because the redirect crosses origins. Fix it by setting the registry base to `https://www.clawhub.ai` with `clawhub config set registry https://www.clawhub.ai`.
+  </FAQItem>
+
+  <FAQItem question="How do I clear cached or stale credentials from the ClawHub CLI config?">
+    Delete the auth file at `~/.config/clawhub/auth.json`. Then run `clawhub login --token` with a fresh token. The CLI doesn't have a built-in "logout" command.
+  </FAQItem>
+
+  <FAQItem question="How do I authenticate the ClawHub CLI inside a CI/CD pipeline?">
+    Set `CLAWHUB_TOKEN` as a CI secret and run `clawhub login --token "$CLAWHUB_TOKEN" --no-browser` at the start of each job. The environment variable takes priority over any config file.
+  </FAQItem>
+
+  <FAQItem question="What does 401 Unauthorized mean vs. 403 Forbidden in ClawHub CLI?">
+    A 401 means the server didn't receive a valid token (missing, malformed, or stripped by a redirect). A 403 means the token is valid but lacks permission for that operation, usually because it's a read-only token being used for a write action.
+  </FAQItem>
+
+  <FAQItem question="Are there known bugs in specific clawhub npm package versions that cause Unauthorized errors?">
+    Yes. Versions before 2026.1.28 misreport network timeouts as Unauthorized errors. Update to the latest version with `npm install -g clawhub@latest`.
+  </FAQItem>
+
+  <FAQItem question="How should an automated agent rotate or refresh ClawHub tokens to prevent mid-run failures?">
+    The ClawHub CLI doesn't support automatic token rotation yet. Generate long-lived tokens, store them in your CI secret manager, and monitor for 401 responses. For email workflows, [LobsterMail](/) handles auth automatically so agents don't need to manage tokens at all.
+  </FAQItem>
+
+  <FAQItem question="Can I use a GitHub OAuth token with the ClawHub CLI?">
+    No. GitHub tokens (`ghp_` prefix) are part of a completely separate auth system. ClawHub requires its own CLI tokens generated from `clawhub.ai/settings/cli/auth`.
+  </FAQItem>
+
+  <FAQItem question="How do I publish a skill to ClawHub from the command line?">
+    After authenticating with a `clh_h_` token, run `clawhub skill publish` from your skill's directory. Make sure the token was created by the account that owns the skill, or you'll get a 403 error.
+  </FAQItem>
+</FAQ>

@@ -23,6 +23,8 @@ The culprit is almost always a webhook delivery failure. The frustrating part is
 
 Here's a systematic approach to webhook delivery failure debugging in production, focused on the specific patterns that break LobsterMail-based agent workflows.
 
+
+There's a faster path: <InlineGetStarted>let your agent provision its own inbox</InlineGetStarted> instead of configuring credentials by hand.
 ## How the failure cascade works
 
 When LobsterMail can't deliver a webhook, it retries with exponential backoff, up to 10 times. Any non-2xx response from your endpoint, or a timeout after 10 seconds, counts as a failure. After 10 consecutive failures, the webhook is automatically disabled.

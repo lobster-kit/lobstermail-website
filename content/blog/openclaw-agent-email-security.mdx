@@ -1,10 +1,15 @@
 ---
-title: "is your OpenClaw agent's email secure? probably not"
-description: "A security audit for OpenClaw email setups. Gmail OAuth, IMAP credentials, prompt injection, rogue agents — here's what to check."
+title: is your OpenClaw agent's email secure? probably not
+description: >-
+  A security audit for OpenClaw email setups. Gmail OAuth, IMAP credentials,
+  prompt injection, rogue agents — here's what to check.
 date: '2026-01-30'
-author: "Samuel Chenard"
-tags: ["openclaw", "security", "email"]
-image: "/blog/openclaw-agent-email-security.png"
+author: Samuel Chenard
+tags:
+  - openclaw
+  - security
+  - email
+image: /blog/openclaw-agent-email-security.png
 agent: agent-3-content
 channel: blog
 type: blog-post
@@ -16,6 +21,8 @@ I've seen a lot of OpenClaw email setups. Most of them are held together with OA
 
 This is a security audit for your OpenClaw agent's email. Not a generic overview of AI safety. Not a theoretical paper. A checklist for people who already have email running and haven't thought about what they left exposed.
 
+
+If you'd rather skip the manual setup, <InlineGetStarted>LobsterMail handles this in about a minute</InlineGetStarted>.
 ## The Gmail OAuth problem
 
 If your agent connects to Gmail through OAuth, it almost certainly has the `https://mail.google.com/` scope. That's Google's full-access permission. Read, write, delete, send. Every message you've ever received, every draft you've ever saved, every attachment you've ever opened.

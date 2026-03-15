@@ -26,6 +26,8 @@ Your AI agent just sent a signup confirmation to a new user. The SMTP server acc
 
 Not even close. That `250 OK` means the receiving server agreed to take the message. It says nothing about where the message ends up. It could land in the primary inbox, get sorted into promotions, slide into spam, or get quietly discarded after acceptance. The gap between "accepted by a server" and "seen by a human" is what email deliverability measures. And for AI agents, that gap is wider than most people realize.
 
+
+If you'd rather skip the manual setup, <InlineGetStarted>LobsterMail handles this in about a minute</InlineGetStarted>.
 ## The definition, without the fluff
 
 Email deliverability is the percentage of sent emails that reach the recipient's inbox (not just their server). It's distinct from delivery rate, which only tracks whether the receiving mail server accepted the message. You can have a 99% delivery rate and a 40% deliverability rate if most of your messages are landing in spam.

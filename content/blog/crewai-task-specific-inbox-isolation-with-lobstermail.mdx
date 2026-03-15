@@ -22,6 +22,8 @@ Run a three-agent CrewAI crew for long enough and you'll hit the shared-inbox pr
 
 CrewAI isn't at fault. The framework handles role separation well. The shared inbox is an infrastructure decision made early (one account, one address, keep it simple) that stops working the moment two agents start sending email in parallel.
 
+
+There's a faster path: <InlineGetStarted>let your agent provision its own inbox</InlineGetStarted> instead of configuring credentials by hand.
 ## Where role separation falls apart
 
 CrewAI pushes you toward clean agent boundaries. Your researcher researches, your writer writes, your QA agent checks output. Context passing, task sequencing, tool routing: the framework handles all of it. Done carefully, it scales further than most people expect.

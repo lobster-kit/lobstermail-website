@@ -28,6 +28,8 @@ None of those are wrong. They're just more infrastructure than the actual work w
 
 There's a pattern that sidesteps all of it: email as shared pipeline state. Each skill in the chain reads from and writes to a dedicated LobsterMail inbox. The inbox becomes the pipeline's memory. It works across machines, survives restarts, and the audit trail is free.
 
+
+There's a faster path: <InlineGetStarted>let your agent provision its own inbox</InlineGetStarted> instead of configuring credentials by hand.
 ## Why email works as a state store
 
 Three properties make email useful here that aren't obvious upfront.

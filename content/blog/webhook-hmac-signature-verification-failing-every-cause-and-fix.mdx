@@ -22,6 +22,8 @@ This is one of the more frustrating debugging sessions in backend work because t
 
 I've helped debug these failures enough times to know the pattern. Here are the six causes, ordered by how often they show up.
 
+
+If you'd rather skip the manual setup, <InlineGetStarted>LobsterMail handles this in about a minute</InlineGetStarted>.
 ## The raw body problem
 
 This is the cause roughly 70% of the time. Most HTTP frameworks parse the request body before your handler ever runs. Express with `express.json()`, Next.js API routes, Hono, Fastify. They all deserialize JSON and hand you a JavaScript object. That sounds convenient, until you realize HMAC signs the exact bytes that were transmitted over the wire.

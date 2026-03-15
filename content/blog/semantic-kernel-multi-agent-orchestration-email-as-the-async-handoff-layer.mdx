@@ -25,6 +25,8 @@ But there's a class of workflows that breaks this model, and it's the one that c
 
 Email is the answer. And with agents that can self-provision their own inboxes, wiring this into a Semantic Kernel pipeline is simpler than it looks.
 
+
+Want to skip straight to a working inbox? <InlineGetStarted>LobsterMail gives your agent its own email</InlineGetStarted> without the manual wiring.
 ## How Semantic Kernel structures multi-agent work
 
 The [Semantic Kernel agent framework](https://learn.microsoft.com/en-us/semantic-kernel/frameworks/agent/agent-orchestration/) composes agents into orchestration patterns: sequential pipelines where steps run in order, concurrent fan-out where multiple agents run in parallel, and dynamic handoffs where an agent decides at runtime which specialist to invoke next. Each agent carries its own tools, memory, and instructions. The Process Manager tracks which step is active and what each step produced.

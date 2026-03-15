@@ -25,6 +25,8 @@ Polling is the default because it's simple. But simple comes with costs that com
 
 This tutorial covers a different approach: keeping a WebSocket connection open so LobsterMail pushes emails to your agent the moment they arrive.
 
+
+There's a faster path: <InlineGetStarted>let your agent provision its own inbox</InlineGetStarted> instead of configuring credentials by hand.
 ## The real cost of polling
 
 A polling loop running every 5 seconds generates 17,280 API requests per inbox per day. At 10-second intervals, that's still 8,640 requests. Multiply across multiple inboxes or multiple agents, and you're burning through rate limits on requests that almost always return empty.

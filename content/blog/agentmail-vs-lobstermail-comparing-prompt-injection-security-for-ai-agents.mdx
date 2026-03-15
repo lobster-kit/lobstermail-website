@@ -2,8 +2,8 @@
 title: 'agentmail vs lobstermail security: who actually scans for prompt injection?'
 description: >-
   AgentMail has no built-in prompt injection scanning — you write your own.
-  LobsterMail ships a 6-category scanner, risk scoring, and safeBodyForLLM()
-  out of the box. Here's the full comparison.
+  LobsterMail ships a 6-category scanner, risk scoring, and safeBodyForLLM() out
+  of the box. Here's the full comparison.
 date: '2026-02-18'
 tags:
   - security
@@ -35,6 +35,8 @@ Email is the most exposed surface for this. It's async, it arrives from stranger
 
 That layer is exactly where AgentMail and LobsterMail diverge.
 
+
+<InlineGetStarted>Give your agent its own email</InlineGetStarted> — one click, and your agent sets up the rest.
 ## What AgentMail offers for injection defense
 
 AgentMail provides a capable send/receive email API with a clean developer experience. For straightforward use cases, it works well.

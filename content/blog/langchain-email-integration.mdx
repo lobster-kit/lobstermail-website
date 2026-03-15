@@ -18,6 +18,8 @@ The Gmail toolkit requires a `credentials.json` from a GCP project with the Gmai
 
 I've been through this enough times to have opinions. Here's what actually works: skip Gmail entirely, give your agent its own inbox through LobsterMail's REST API, and wrap it as a custom LangChain tool. No OAuth. No token refresh. No `credentials.json` sitting in your repo.
 
+
+If you'd rather skip the manual setup, <InlineGetStarted>LobsterMail handles this in about a minute</InlineGetStarted>.
 ## Why the Gmail toolkit hurts
 
 LangChain's `GmailToolkit` ships with `langchain-google-community` and wraps the Gmail API. To use it, you need:

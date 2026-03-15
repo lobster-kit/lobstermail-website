@@ -27,6 +27,8 @@ This post is for developers using LobsterMail with a custom domain who are stuck
 
 If you're building an agent that needs email as part of a broader automation, [this piece on agent email without pub/sub](/blog/openclaw-email-without-pubsub) is worth reading once you're unblocked.
 
+
+There's a faster path: <InlineGetStarted>let your agent provision its own inbox</InlineGetStarted> instead of configuring credentials by hand.
 ## Start here: check actual propagation
 
 This sounds obvious but skipping it wastes an hour. DNS changes don't apply instantly. The industry standard is "up to 48 hours," but in practice most changes propagate within 15–30 minutes for providers like Cloudflare, Route 53, and Porkbun. Registrar-managed DNS — GoDaddy, Namecheap, that kind of thing, runs slow. Expect 4–6 hours minimum.

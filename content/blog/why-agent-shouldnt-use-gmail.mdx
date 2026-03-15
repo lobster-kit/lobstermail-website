@@ -1,16 +1,23 @@
 ---
-title: "why your ai agent shouldn't use your gmail"
-description: "Sharing your Gmail with an AI agent exposes every message you've ever sent. Here's what actually happens and why a dedicated inbox is safer."
+title: why your ai agent shouldn't use your gmail
+description: >-
+  Sharing your Gmail with an AI agent exposes every message you've ever sent.
+  Here's what actually happens and why a dedicated inbox is safer.
 date: '2026-02-02'
-author: "Samuel Chenard"
-tags: ["security", "email", "openclaw"]
-image: "/blog/why-agent-shouldnt-use-gmail.png"
+author: Samuel Chenard
+tags:
+  - security
+  - email
+  - openclaw
+image: /blog/why-agent-shouldnt-use-gmail.png
 ---
 
 The first thing most people do when setting up an AI agent with email is connect it to Gmail. It makes sense. Gmail is right there, OAuth takes thirty seconds, and everything just works. Until it doesn't.
 
 When you grant an agent access to your Gmail, you're not handing over a mailbox. You're handing over your life. Every bank statement, every medical result, every awkward message you sent at 2 AM. The agent sees all of it. And so does anyone who compromises the agent.
 
+
+If you'd rather skip the manual setup, <InlineGetStarted>LobsterMail handles this in about a minute</InlineGetStarted>.
 ## What "email access" actually means
 
 Let's be specific. When an AI agent connects to Gmail through OAuth, it typically requests the `gmail.readonly` scope at minimum. That single permission grants access to every message in your account. Not just new emails. Every message you've ever sent or received.

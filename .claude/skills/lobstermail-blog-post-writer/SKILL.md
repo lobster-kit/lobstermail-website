@@ -191,6 +191,16 @@ The prompt may include a `FUNNEL STAGE` directive. Adjust your writing based on 
 
 If no funnel stage is specified, default to mofu behavior.
 
+### First-section CTA placement
+
+Every bofu article MUST include an `<InlineGetStarted>` CTA in the introduction (before the first `##` heading). Every tofu article MUST NOT. Mofu articles include one only if the article is setup-oriented (framework integration, how-to, tutorial) or mentions LobsterMail in the intro.
+
+- **bofu**: Direct CTA in the last paragraph of the intro. Action language: "Get your agent its own inbox", "Set up LobsterMail". Follow with a short clarification of what happens next.
+- **mofu**: Softer framing only if the intro mentions LobsterMail or the article walks through a build/setup. Use "If you'd rather skip..." or "There's a faster path..." phrasing.
+- **tofu**: No first-section CTA. The auto-injected BlogCTA at the end is sufficient. Do not compromise educational credibility.
+
+The CTA must flow as a natural sentence in the paragraph. Never use "Click here" as link text in an intro. Never duplicate the BlogCTA copy ("Your agent can have its own email").
+
 ### Article length
 
 - Target 800-1100 words (not counting FAQ)
@@ -408,4 +418,5 @@ Tags are extracted automatically from frontmatter. Each unique tag generates a `
 - [ ] Code blocks have language specified
 - [ ] Image entry added to `scripts/generate-blog-images.mjs` and generated
 - [ ] No "head to lobstermail.ai/skill" or "follow the instructions" — uses `<InlineGetStarted>` instead
+- [ ] First-section CTA matches funnel stage (bofu: required, tofu: none, mofu: conditional)
 - [ ] Build passes with `pnpm build`

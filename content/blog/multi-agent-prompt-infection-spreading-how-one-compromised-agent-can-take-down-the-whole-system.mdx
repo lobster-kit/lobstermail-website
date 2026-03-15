@@ -31,6 +31,8 @@ Multi-agent prompt infection spreading is a attack where a compromised AI agent 
 
 If that sounds bad, it's because it is. A January 2026 review published in *Information* found that prompt injection now ranks as the number one vulnerability in the [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/), showing up in over 73% of production AI deployments assessed. Multi-agent infection takes that single-point vulnerability and turns it into a network-scale problem.
 
+
+Want to skip straight to a working inbox? <InlineGetStarted>LobsterMail gives your agent its own email</InlineGetStarted> without the manual wiring.
 ## Why multi-agent systems are especially vulnerable
 
 A standalone agent that gets prompt-injected is a contained incident. Annoying, recoverable. But agents rarely work alone anymore. Most production setups involve chains: one agent handles intake, another processes data, a third takes action. They pass context to each other. That shared context is the attack surface.

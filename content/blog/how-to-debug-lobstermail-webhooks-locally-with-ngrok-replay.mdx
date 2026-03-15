@@ -23,6 +23,8 @@ There's a better loop.
 
 This guide covers local webhook debugging for LobsterMail end-to-end: ngrok tunnel setup, signature verification (where most handlers quietly fail), and the replay button that will save you a few hours of "send another test email" cycles.
 
+
+There's a faster path: <InlineGetStarted>let your agent provision its own inbox</InlineGetStarted> instead of configuring credentials by hand.
 ## Why webhooks need a real debugging setup
 
 Polling is forgiving. If your polling handler crashes, you just poll again on the next interval. Webhooks are not. The delivery attempt happens, your server returns a non-2xx status, and LobsterMail queues a retry. After 10 consecutive failures, the webhook is automatically disabled.

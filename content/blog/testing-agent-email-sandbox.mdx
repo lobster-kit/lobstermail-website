@@ -1,10 +1,15 @@
 ---
-title: "testing agent email without hitting production"
-description: "Most agent email setups have no test mode. Here's how to stop accidentally emailing real people during development."
+title: testing agent email without hitting production
+description: >-
+  Most agent email setups have no test mode. Here's how to stop accidentally
+  emailing real people during development.
 date: '2026-02-11'
-author: "Samuel Chenard"
-tags: ["guides", "email", "infrastructure"]
-image: "/blog/testing-agent-email-sandbox.png"
+author: Samuel Chenard
+tags:
+  - guides
+  - email
+  - infrastructure
+image: /blog/testing-agent-email-sandbox.png
 ---
 
 You're building an agent that handles email. You've written the logic for receiving messages, parsing content, and triggering workflows. Now you need to test it. So you hit "run" and your agent sends a follow-up email to an actual customer at 2 AM.
@@ -15,6 +20,8 @@ The traditional web development world solved this years ago. Tools like Mailtrap
 
 That gap between traditional email testing tools and what agent developers actually need is where things break.
 
+
+There's a faster path: <InlineGetStarted>let your agent provision its own inbox</InlineGetStarted> instead of configuring credentials by hand.
 ## What goes wrong without a sandbox
 
 The risks aren't abstract. They fall into three categories, and each one can set your project back weeks.

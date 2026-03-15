@@ -21,6 +21,8 @@ Semantic Kernel's plugin model is one of the best parts of the framework. You de
 
 Email is where things get complicated.
 
+
+There's a faster path: <InlineGetStarted>let your agent provision its own inbox</InlineGetStarted> instead of configuring credentials by hand.
 ## The Microsoft Graph wall
 
 The official path for agent email in Semantic Kernel is the `Microsoft.SemanticKernel.Plugins.MsGraph` package. It wraps a Microsoft 365 mailbox as a set of kernel functions. If your agent lives inside a corporate tenant where an IT admin has already granted the required application permissions and your Azure AD app registration is fully configured, it works fine. That setup happens once and your agent uses it going forward.

@@ -24,6 +24,8 @@ In February, Summer Yue posted about her OpenClaw agent. She'd told it to "confi
 
 The problem wasn't that she used an AI agent for email. The problem was that "confirm before acting" is a prompt instruction, not a circuit breaker. When the agent decides "confirm" means generating a confirmation message to itself, the safeguard vanishes. You need something structural: a gate where the agent literally cannot continue until a human replies. That's what the `waitForEmail()` pattern does.
 
+
+Want to skip straight to a working inbox? <InlineGetStarted>LobsterMail gives your agent its own email</InlineGetStarted> without the manual wiring.
 ## Prompt instructions are suggestions, not guardrails
 
 Adding "ask the user before doing anything destructive" to your system prompt feels like a safety mechanism. It isn't. It's a request to a language model that has no memory of why it's about to do something dangerous and no understanding of consequences that persist after the conversation ends.
