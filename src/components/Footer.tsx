@@ -67,6 +67,11 @@ const DIRECTORIES = [
   { label: "Twelve Tools", href: "https://twelve.tools" },
   { label: "Most Popular AI Tools", href: "https://mostpopularaitools.com" },
   { label: "SaaSBison", href: "https://saasbison.com" },
+  {
+    label: "Startup Fame",
+    href: "https://startupfa.me/s/lobstermail-1?utm_source=lobstermail.ai",
+    badge: "https://startupfa.me/badges/featured-badge-small.webp",
+  },
 ] as const;
 
 export function Footer() {
