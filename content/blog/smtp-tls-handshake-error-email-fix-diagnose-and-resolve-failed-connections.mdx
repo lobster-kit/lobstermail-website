@@ -1,0 +1,200 @@
+---
+title: 'SMTP TLS handshake error email fix: diagnose and resolve failed connections'
+description: >-
+  Getting a TLS handshake error when sending email over SMTP? Here's how to
+  diagnose the failure, fix the root cause, and stop it from breaking your
+  agent's outbound pipeline.
+date: '2026-03-15'
+author: Ian Bussières
+tags:
+  - troubleshooting
+  - email
+  - infrastructure
+  - guides
+  - security
+image: >-
+  /blog/smtp-tls-handshake-error-email-fix-diagnose-and-resolve-failed-connections.png
+imageAlt: >-
+  Pixel art lobster mascot illustration for email infrastructure — SMTP TLS
+  handshake error email fix
+publish_at: '2026-03-09T07:00:00Z'
+agent: agent-3-content
+channel: blog
+type: blog-post
+status: approved
+approved_at: '2026-03-15T11:05:09.630Z'
+---
+Your agent sends an email. Instead of a `250 OK`, you get something like `403 4.7.0 TLS handshake failed`. The message never leaves your server. No bounce, no deferral, no retry queue. The connection itself died before the email could even be transmitted.
+
+A TLS handshake error means your sending server and the recipient's mail server tried to negotiate an encrypted connection and couldn't agree on how to do it. This isn't a content problem or a reputation issue. It's a connection-level failure, and it will block every single message to that destination until you fix the underlying cause.
+
+For agents running automated email workflows, this is worse than a bounce. A bounce at least tells you the message was received and rejected. A TLS handshake failure means the conversation never started. Your agent is talking to a wall.
+
+I've seen teams burn hours on this because the error messages are vague and the causes range from expired certificates to misconfigured ports to protocol version mismatches. Here's how to actually fix it.
+
+## What a TLS handshake failure actually means
+
+When your SMTP client connects to a mail server, it initiates a TLS handshake before sending any email data. During this handshake, both sides exchange certificates, agree on an encryption protocol version (TLS 1.2, TLS 1.3), and select a cipher suite. If any step in that negotiation fails, the connection is dropped.
+
+The handshake can fail for a half-dozen reasons, but they all produce similar-looking errors: `TLS handshake failed`, `SSL routines:ssl3_get_server_certificate`, `downstream TLS handshake failed`, or the classic `403 4.7.0`. The error code tells you something went wrong with encryption. It doesn't tell you *which* part.
+
+That's why diagnosis matters more than guessing.
+
+## How to fix an SMTP TLS handshake error
+
+1. Check whether your SSL/TLS certificate has expired or is self-signed.
+2. Verify you're connecting on the correct port (587 for STARTTLS, 465 for implicit TLS).
+3. Test the connection with OpenSSL to see the exact failure point.
+4. Confirm both sides support the same TLS protocol version (TLS 1.2 minimum).
+5. Compare cipher suites between your server and the recipient's server.
+6. Validate the full certificate chain, including intermediate certificates.
+7. Check if a firewall or proxy is intercepting and breaking the TLS connection.
+
+Each of these deserves a closer look.
+
+## Expired or invalid certificates
+
+The most common cause. Your server's SSL certificate expired last Tuesday, and nobody noticed because automated renewal failed silently. Or the recipient's server is presenting a self-signed certificate that your client doesn't trust.
+
+Test it directly:
+
+```bash
+openssl s_client -connect mail.example.com:587 -starttls smtp
+Look at the output for `verify return code`. A value of `0 (ok)` means the certificate chain is valid. Anything else tells you exactly what's wrong: `certificate has expired` (code 10), `self signed certificate` (code 18), or `unable to get local issuer certificate` (code 20, meaning you're missing an intermediate cert).
+
+If it's your certificate, renew it. If it's the recipient's, there's not much you can do except configure your client to be more permissive (which has security trade-offs) or contact their postmaster.
+
+## Wrong port or encryption method
+
+SMTP supports two different approaches to TLS, and mixing them up will cause a handshake failure every time.
+
+| Port | Method | How it works |
+|------|--------|-------------|
+| 587 | STARTTLS | Connects in plaintext, then upgrades to TLS |
+| 465 | Implicit TLS | TLS from the first byte, no plaintext phase |
+| 25 | Opportunistic | Server-to-server, TLS optional |
+
+If you're connecting to port 465 with STARTTLS, the server expects encrypted data immediately but receives a plaintext `EHLO` command. Handshake fails. If you're connecting to port 587 without issuing `STARTTLS`, your client tries to negotiate TLS on a connection that hasn't been upgraded yet. Same result.
+
+For programmatic sending, make sure your SMTP library's configuration matches the port. Most libraries have separate flags for `STARTTLS` vs `SSL/TLS`. Getting this wrong is embarrassingly easy and produces confusing errors.
+
+## TLS protocol version mismatches
+
+TLS 1.0 and 1.1 are deprecated. Many mail servers actively refuse connections using these older protocols. If your sending infrastructure still defaults to TLS 1.0 (some older libraries do), the recipient's server will reject the handshake.
+
+Test which versions the remote server supports:
+
+```
+```bash
+openssl s_client -connect mail.example.com:587 -starttls smtp -tls1_2
+If that succeeds but your normal connection fails, your client is probably attempting TLS 1.0 or 1.1. Update your SMTP library or explicitly set the minimum protocol version to TLS 1.2.
+
+Going the other direction: if you've forced TLS 1.3 only, some older mail servers won't support it yet. TLS 1.2 is the safe baseline that works with nearly everything in 2026.
+
+## Cipher suite mismatches
+
+Even when both sides agree on TLS 1.2, they still need to agree on a cipher suite (the specific encryption algorithm). If your server only offers ciphers that the recipient doesn't support, the handshake fails.
+
+This is less common with modern configurations, but it happens with hardened servers that restrict cipher suites aggressively. You can see which ciphers a server accepts:
+
+```
+```bash
+nmap --script ssl-enum-ciphers -p 587 mail.example.com
+```
+
+Compare the output against your server's configured ciphers. If there's no overlap, you need to enable at least one cipher that both sides support. `TLS_AES_256_GCM_SHA384` and `TLS_CHACHA20_POLY20_SHA256` are good modern choices.
+
+## Firewalls and TLS-intercepting proxies
+
+This one is sneaky. A corporate firewall or security proxy sits between your server and the internet, intercepts outbound SMTP connections, and re-encrypts them with its own certificate. The recipient's server sees a certificate it doesn't trust, and the handshake fails.
+
+If your sending infrastructure runs behind a corporate network or a cloud provider's NAT gateway, check whether outbound connections on ports 465 and 587 pass through cleanly. A `tcpdump` or Wireshark capture on the outbound interface will show you if something is modifying the TLS negotiation.
+
+Cloud environments sometimes add complexity here. If you're running email sending from a container or serverless function, the network path to the recipient's mail server might traverse load balancers or proxies that interfere with TLS.
+
+## Broken certificate chains
+
+Your certificate might be valid, but if you're not serving the full chain (root CA plus intermediate certificates), some mail servers will reject the connection. This is particularly common with Let's Encrypt certificates where the intermediate cert isn't bundled correctly.
+
+Test it:
+
+```bash
+openssl s_client -connect your-smtp-server.com:465 -showcerts
+```
+
+You should see multiple certificates in the output, forming a chain from your server cert back to a trusted root. If you only see one certificate, your chain is incomplete. Bundle the intermediate cert with your server cert in your SMTP server configuration.
+
+## Why this hits automated agents harder
+
+When a human encounters a TLS handshake error in their email client, they see a vague "connection failed" message and Google it. An agent running an automated workflow doesn't Google anything. It either retries the same broken connection in a loop, or it fails silently and moves on without sending the email.
+
+For agents, TLS handshake errors need to be caught, classified, and handled differently from content-level rejections like 550 bounces. A TLS failure is a transport problem, not a message problem. Retrying with the same configuration will always produce the same result.
+
+If your agent's email infrastructure requires you to manage SMTP connections, TLS certificates, and cipher configurations manually, every one of these failure modes is your problem. You'll be debugging OpenSSL output at 2 AM when a certificate auto-renewal breaks.
+
+This is one of the reasons we built [LobsterMail](/) to handle TLS negotiation at the infrastructure level. Your agent calls `inbox.send()` and we handle the connection, the certificate chain, the protocol negotiation, and the cipher selection. If a recipient's server has a broken TLS config, our retry logic handles the fallback. Your agent never sees a handshake error because it never touches SMTP directly.
+
+If you've been through the pain of debugging TLS errors on [your own sending domain](/blog/custom-domains-agent-email), you know how much time this eats. And if you're running an agent that handles sensitive data, the [security implications of getting TLS wrong](/blog/openclaw-agent-email-security) go beyond failed messages.
+
+## Monitoring for TLS failures before they break things
+
+Don't wait for your agent's workflow to stall. Set up proactive monitoring:
+
+Run a daily check against your most common recipient domains:
+
+```bash
+openssl s_client -connect gmail-smtp-in.l.google.com:25 -starttls smtp 2>&1 | grep "Verify return code"
+```
+
+If you're managing your own SMTP infrastructure, log every TLS handshake failure with the remote server's hostname and the specific error. A sudden spike in handshake failures to a single domain usually means their certificate expired. A spike across all domains means something changed on your end.
+
+For agents on LobsterMail's free tier, TLS monitoring is built into the sending infrastructure. You don't need to set up external checks because the platform handles connection-level failures automatically and surfaces delivery status through the SDK.
+
+If you're still managing SMTP connections manually, start with the OpenSSL diagnostic commands above. They'll tell you exactly where the handshake is breaking, and from there, the fix is usually straightforward: renew a cert, fix a port, update a protocol version.
+
+The hard part isn't the fix. It's knowing which of the six possible causes you're actually dealing with.
+
+<FAQ>
+  <FAQItem question="What does 'TLS handshake failed' mean in the context of SMTP email sending?">
+    It means your mail server and the recipient's server couldn't negotiate an encrypted connection. The failure happens before any email data is transmitted, so the message never leaves your server. Common causes include expired certificates, port misconfiguration, and protocol version mismatches.
+  </FAQItem>
+  <FAQItem question="How do I use OpenSSL to diagnose an SMTP TLS handshake error?">
+    Run `openssl s_client -connect mail.example.com:587 -starttls smtp` and check the `Verify return code` in the output. Code `0` means the certificate is valid. Any other code identifies the specific problem, like an expired certificate (code 10) or missing intermediate cert (code 20).
+  </FAQItem>
+  <FAQItem question="Does an expired SSL certificate always cause a TLS handshake failure?">
+    Not always. Some SMTP clients are configured to accept expired certificates (opportunistic TLS). But most modern mail servers in strict mode will reject the handshake if the certificate has expired. It's the single most common cause of TLS handshake errors.
+  </FAQItem>
+  <FAQItem question="What SMTP ports support TLS encryption, and which should I use?">
+    Port 587 uses STARTTLS (starts plaintext, upgrades to TLS). Port 465 uses implicit TLS (encrypted from the start). Port 25 is server-to-server with opportunistic TLS. For client-to-server sending, use 587 with STARTTLS or 465 with implicit TLS.
+  </FAQItem>
+  <FAQItem question="What is the difference between STARTTLS and implicit SSL/TLS for SMTP?">
+    STARTTLS connects in plaintext first, then upgrades to encryption after the client sends a `STARTTLS` command (port 587). Implicit TLS starts the connection encrypted from the very first byte (port 465). Mixing them up causes handshake failures.
+  </FAQItem>
+  <FAQItem question="Can a TLS protocol version mismatch cause handshake errors?">
+    Yes. If your client only supports TLS 1.0 or 1.1 and the server requires TLS 1.2 or higher, the handshake will fail. TLS 1.2 is the safe minimum in 2026. You can test with `openssl s_client -tls1_2` to verify compatibility.
+  </FAQItem>
+  <FAQItem question="What does error code 403 4.7.0 mean in email delivery logs?">
+    The `403 4.7.0` code specifically means the TLS handshake failed during SMTP communication. The `4.7.0` sub-code indicates a security or policy failure at the transport level, not a problem with the message content or recipient address.
+  </FAQItem>
+  <FAQItem question="Should I disable TLS as a workaround for handshake failures?">
+    No. Disabling TLS sends your email in plaintext, which exposes message content to interception. It may also cause recipient servers to reject your messages outright, since many providers now require TLS. Fix the root cause instead.
+  </FAQItem>
+  <FAQItem question="How do cipher suite mismatches cause SMTP TLS handshake failures?">
+    During the handshake, both servers propose cipher suites they support. If there's zero overlap, they can't agree on an encryption method and the connection drops. This usually happens when one side has an overly restrictive cipher configuration.
+  </FAQItem>
+  <FAQItem question="How do API-based email services handle TLS handshake errors compared to traditional SMTP?">
+    API-based services like LobsterMail handle TLS negotiation on their infrastructure. Your agent sends email through an SDK call, and the service manages certificates, protocol versions, cipher selection, and retry logic. You never deal with handshake errors directly.
+  </FAQItem>
+  <FAQItem question="How can I verify that my SMTP server's certificate chain is valid and trusted?">
+    Run `openssl s_client -connect your-server.com:465 -showcerts` and check that multiple certificates appear in the output, forming a chain to a trusted root CA. If only one certificate appears, you're missing intermediate certs and need to bundle them.
+  </FAQItem>
+  <FAQItem question="Why does my SMTP TLS handshake fail only with certain recipient domains?">
+    Different mail servers have different TLS configurations. One domain might require TLS 1.3, another might have an expired certificate, and a third might use a restrictive cipher suite. Test each failing domain individually with OpenSSL to identify the specific mismatch.
+  </FAQItem>
+  <FAQItem question="How can I monitor for SMTP TLS handshake errors before they affect deliverability?">
+    Schedule daily OpenSSL checks against your most common recipient domains and log the verify return codes. A sudden increase in handshake failures to one domain means their certificate likely changed. Failures across all domains point to a problem on your sending side.
+  </FAQItem>
+  <FAQItem question="Does LobsterMail handle TLS automatically for agent email?">
+    Yes. LobsterMail manages TLS negotiation, certificate validation, and cipher selection at the infrastructure level. Your agent calls `inbox.send()` and the platform handles the transport layer, including fallback logic for servers with unusual TLS configurations.
+  </FAQItem>
+</FAQ>
