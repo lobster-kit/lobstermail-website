@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-17T07:15:05.823Z",
+  "generated_at": "2026-03-17T13:15:03.870Z",
   "kpis": {
     "mrr_usd": 57,
     "paid_accounts": 5,
@@ -10,7 +10,7 @@
     "seo_impressions_7d": 9831,
     "seo_avg_position": 0,
     "total_emails_sent": 52,
-    "total_emails_received": 258,
+    "total_emails_received": 260,
     "total_inboxes": 121,
     "daily_visitors": 367,
     "daily_visitors_human": 73,
@@ -22,19 +22,19 @@
   "deltas": {
     "total_inboxes": 79,
     "total_emails_sent": 36,
-    "total_emails_received": 158,
+    "total_emails_received": 160,
     "free_accounts": 70,
     "github_stars": 0,
     "x_followers": 0,
     "clawhub_skill_installs": 0,
-    "openclaw_github_stars": 19961,
+    "openclaw_github_stars": 20894,
     "openclaw_npm_daily": null,
-    "openclaw_twitter_followers": 21932
+    "openclaw_twitter_followers": 22612
   },
   "market": {
-    "openclaw_github_stars": 317968,
+    "openclaw_github_stars": 318901,
     "openclaw_npm_daily": 0,
-    "openclaw_twitter_followers": 461640
+    "openclaw_twitter_followers": 462320
   },
   "sparklines": {
     "mrr_usd": [
@@ -404,9 +404,9 @@
     }
   },
   "agents": {
-    "agent_2_last_run": "2026-03-17T06:02:43.623Z",
+    "agent_2_last_run": "2026-03-17T12:02:09.456Z",
     "agent_3_last_run": "2026-03-17T07:10:12.050Z",
-    "agent_6_last_run": "2026-03-17T04:00:06.425Z"
+    "agent_6_last_run": "2026-03-17T10:00:09.760Z"
   },
   "latest_date": "2026-03-17"
 }
