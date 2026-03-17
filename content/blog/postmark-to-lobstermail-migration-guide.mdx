@@ -1,0 +1,237 @@
+---
+title: postmark to lobstermail migration guide
+description: >-
+  Step-by-step guide to migrating from Postmark to LobsterMail. Covers domain
+  verification, API changes, webhook mapping, and zero-downtime cutover.
+date: '2026-03-17'
+author: Ian Bussières
+tags:
+  - guides
+  - email
+  - infrastructure
+  - getting-started
+image: /blog/postmark-to-lobstermail-migration-guide.png
+imageAlt: >-
+  Pixel art lobster moving between email platforms — postmark to lobstermail
+  migration guide
+---
+
+If you're running Postmark for transactional email and you've been eyeing LobsterMail, the migration is more straightforward than you'd expect. I've walked through this process with teams sending anywhere from a few hundred to tens of thousands of emails per month, and the whole thing usually takes an afternoon of active work plus a few days of parallel running.
+
+The big difference you'll notice: LobsterMail is built for agents to self-provision inboxes and send email without human configuration. If you're building AI-driven send pipelines, this changes how your architecture works at a fundamental level. But even if you're migrating a traditional app, the process is clean.
+
+Ready to make the switch? <InlineGetStarted>Get your LobsterMail account set up here</InlineGetStarted> and follow along below.
+
+## How to migrate from Postmark to LobsterMail
+
+1. Create your LobsterMail account (the SDK can do this automatically with `LobsterMail.create()`)
+2. Verify your sending domain with SPF and DKIM records
+3. Recreate or adapt your email templates
+4. Update API calls or SMTP credentials in your codebase
+5. Configure webhook endpoints for bounces, complaints, and delivery events
+6. Migrate your suppression lists and unsubscribe records
+7. Run parallel sending through both providers for 3-7 days
+8. Cut over DNS and decommission Postmark
+
+That's the short version. Let's walk through each step.
+
+## Setting up your LobsterMail account
+
+If you've been using Postmark, you're used to creating Servers and Message Streams manually. LobsterMail works differently. Your agent (or your app) can provision its own inboxes programmatically:
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create();
+const inbox = await lm.createSmartInbox({ name: 'Notifications' });
+console.log(inbox.address); // notifications@lobstermail.ai
+No dashboard clicking. No manual setup. The SDK handles account creation and token storage on first run. If you want to understand why this pattern matters for AI-driven systems, we wrote about it in [agent self-signup: why the agent should create its own inbox](/blog/agent-self-signup-explained).
+
+For teams migrating a traditional app, you can also grab your API token from the dashboard and set it as an environment variable. Both paths work.
+
+## Domain verification and DNS changes
+
+Postmark uses Sender Signatures and Verified Domains with DKIM and Return-Path records. LobsterMail also requires domain verification, but the record format is slightly different.
+
+You'll need to add two DNS records:
+
+1. A DKIM TXT record at `lobstermail._domainkey.yourdomain.com`
+2. An SPF include: `include:spf.lobstermail.ai` in your existing SPF record
+
+If you're currently sending through Postmark, your SPF record probably includes `include:spf.mtasv.net`. During the parallel running phase, keep both. After cutover, remove the Postmark include.
+
+One thing people worry about: does changing email providers affect my sender reputation? The short answer is yes, partially. Your domain reputation travels with you (that's the whole point of DKIM), but your IP reputation doesn't. LobsterMail uses shared sending infrastructure with pre-warmed IPs, so most senders won't notice a dip. If you're sending high volume (over 50,000/month), talk to us about dedicated IP options and a warm-up schedule.
+
+For more on protecting your reputation during and after migration, our guide on [email deliverability for ai agents](/blog/email-deliverability-ai-agents) covers the mechanics of SPF, DKIM, and warm-up in detail.
+
+## Updating your API integration
+
+This is where most of the actual work happens. Postmark's API uses endpoints like `POST /email` with a `ServerToken` header. LobsterMail uses a different SDK-first approach, but you can also hit the REST API directly if you prefer.
+
+Here's a typical Postmark send call and its LobsterMail equivalent:
+
+**Postmark:**
+
+```
+```typescript
+await fetch('https://api.postmarkapp.com/email', {
+  method: 'POST',
+  headers: {
+    'X-Postmark-Server-Token': 'your-token',
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    From: 'hello@yourdomain.com',
+    To: 'recipient@example.com',
+    Subject: 'Your receipt',
+    HtmlBody: '<p>Thanks for your purchase.</p>',
+  }),
+});
+**LobsterMail:**
+
+```
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create();
+const inbox = await lm.getInbox('hello@yourdomain.com');
+
+await inbox.send({
+  to: 'recipient@example.com',
+  subject: 'Your receipt',
+  html: '<p>Thanks for your purchase.</p>',
+});
+```
+
+The field names are slightly different (`HtmlBody` becomes `html`, `From` is implicit from the inbox), but the mapping is direct. If you have a wrapper function around your Postmark calls, you can swap the implementation without changing your app's interface.
+
+For SMTP users: LobsterMail provides SMTP credentials in the dashboard under your inbox settings. The format is `lm_sk_live_*` as the username with the same value as the password, against `smtp.lobstermail.ai` on port 587 with STARTTLS. Postmark uses a similar pattern with their Server Token as both username and password, so the swap is a config file change.
+
+## Webhook migration
+
+Postmark offers webhooks for bounces, spam complaints, deliveries, opens, and clicks. LobsterMail supports bounce, complaint, and delivery webhooks today. Open and click tracking is on the roadmap.
+
+The payload structures differ. Here's a quick mapping of the key fields:
+
+| Event | Postmark field | LobsterMail field |
+|---|---|---|
+| Bounce type | `Type` (e.g., "HardBounce") | `bounce_type` (e.g., "hard") |
+| Bounce recipient | `Email` | `recipient` |
+| Complaint recipient | `Email` | `recipient` |
+| Delivery recipient | `Recipient` | `recipient` |
+| Message ID | `MessageID` | `message_id` |
+| Timestamp | `DeliveredAt` / `BouncedAt` | `timestamp` (ISO 8601) |
+
+If you're processing Postmark webhook payloads in your app, you'll need to update your parsing logic. I'd recommend creating a thin adapter layer that normalizes both formats during the parallel running phase, then remove the Postmark adapter after cutover.
+
+## Migrating suppression lists
+
+This one catches people off guard. Postmark maintains a suppression list of hard bounces and spam complaints. If you migrate without bringing that list over, you'll send to addresses that already bounced or complained, which torches your reputation fast.
+
+Export your suppressions from Postmark's dashboard (Activity > Bounces, filter by type). Then import them into LobsterMail through the API:
+
+```typescript
+const lm = await LobsterMail.create();
+await lm.addSuppressions([
+  'bounced-user@example.com',
+  'complained-user@example.com',
+]);
+```
+
+Don't skip this step. Seriously.
+
+## Templates
+
+Postmark's template system uses a custom Mustachio syntax with variables like `{{variable}}`. LobsterMail doesn't have a built-in template engine because most teams already have their own (Handlebars, React Email, MJML, or just string interpolation). You render the HTML on your side and pass the final output to `inbox.send()`.
+
+If you're heavily invested in Postmark templates, the migration path is: export your templates from the Postmark dashboard, convert them to your preferred templating solution, and render before sending. This is actually freeing in practice. You're no longer locked into a provider-specific template format.
+
+## The parallel running phase
+
+Don't do a hard cutover. Run both providers simultaneously for at least 3-5 days. Here's how:
+
+Send a percentage of your traffic through LobsterMail (start at 10-20%) while keeping the rest on Postmark. Monitor delivery rates, bounce rates, and complaint rates on both sides. If LobsterMail's numbers look healthy after a few days, ramp up to 50%, then 100%.
+
+How long does an email provider migration take in total? For most teams, it's 1-2 hours of code changes, a day of DNS propagation, and 3-7 days of parallel running. The active work is minimal. The waiting is the hard part.
+
+## What to look for when choosing a Postmark alternative
+
+Postmark is a solid product for human-configured transactional email. The reasons to leave usually come down to one of three things: pricing at scale, architectural fit for agent-driven systems, or the need for programmatic inbox provisioning.
+
+LobsterMail's Free tier gives you 1,000 emails/month at $0 with no credit card. The Builder tier at $9/month gets you up to 10 inboxes and 5,000 emails/month. For agent-driven architectures where inboxes are created and destroyed programmatically, this model makes more sense than Postmark's per-server pricing.
+
+Testing email delivery after migration is simple: send to a test address on Gmail, Outlook, and Yahoo. Check that messages land in the primary inbox, not spam. Verify DKIM signatures pass by viewing message headers (look for `dkim=pass` in the Authentication-Results header). LobsterMail also provides delivery status in the API response, so you can monitor programmatically.
+
+## After cutover
+
+Once you're fully on LobsterMail, clean up:
+
+1. Remove Postmark's SPF include from your DNS
+2. Remove Postmark's DKIM records (the `pm._domainkey` CNAME)
+3. Remove the Postmark SDK from your dependencies
+4. Archive your Postmark webhook adapter code
+5. Cancel your Postmark account
+
+If you haven't started the migration yet, <InlineGetStarted>get your LobsterMail account here</InlineGetStarted> and you can be running parallel in under an hour.
+
+<FAQ>
+  <FAQItem question="What is LobsterMail and how does it differ from Postmark?">
+    LobsterMail is agent-first email infrastructure where agents can self-provision inboxes, send, and receive email without human configuration. Postmark is designed for human-configured transactional email with manual server and stream setup. The core difference is architectural: LobsterMail treats the AI agent as the primary user.
+  </FAQItem>
+
+  <FAQItem question="Will my existing Postmark API keys work with LobsterMail?">
+    No. LobsterMail uses its own token format (`lm_sk_live_*` for production, `lm_sk_test_*` for testing). You'll need to update your API credentials in your codebase. The SDK can generate tokens automatically on first run with `LobsterMail.create()`.
+  </FAQItem>
+
+  <FAQItem question="How do I export my Postmark templates and import them into LobsterMail?">
+    Export templates from Postmark's dashboard as HTML. LobsterMail doesn't have a proprietary template engine, so convert your Postmark Mustachio templates to your preferred solution (Handlebars, React Email, etc.) and render HTML before calling `inbox.send()`.
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail support Message Streams like Postmark?">
+    LobsterMail uses separate inboxes rather than message streams. You can create distinct inboxes for transactional and marketing email, each with their own address and sending history. Inboxes can be provisioned programmatically, which is more flexible for agent-driven workflows.
+  </FAQItem>
+
+  <FAQItem question="What DNS records do I need to update when migrating?">
+    Add a DKIM TXT record at `lobstermail._domainkey.yourdomain.com` and add `include:spf.lobstermail.ai` to your SPF record. Keep Postmark's records during parallel running, then remove them after full cutover.
+  </FAQItem>
+
+  <FAQItem question="Can I migrate without any email downtime?">
+    Yes. Run both providers in parallel by splitting traffic (start at 10-20% through LobsterMail). Since both providers can coexist in your SPF record, there's no gap in delivery. Ramp up LobsterMail traffic over 3-7 days before cutting Postmark off completely.
+  </FAQItem>
+
+  <FAQItem question="How does LobsterMail handle bounce and complaint webhooks compared to Postmark?">
+    LobsterMail supports bounce, complaint, and delivery webhooks with a simpler payload format. Field names differ (e.g., Postmark's `Type: "HardBounce"` maps to LobsterMail's `bounce_type: "hard"`). See the webhook mapping table in this article for a full comparison.
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail offer a test mode like Postmark's?">
+    Yes. LobsterMail provides test tokens (`lm_sk_test_*`) that let you send and receive without affecting production inboxes or deliverability metrics. Switch between test and live by swapping the token in your environment variables.
+  </FAQItem>
+
+  <FAQItem question="How do I migrate suppression lists from Postmark?">
+    Export your hard bounces and spam complaints from Postmark's Activity dashboard, then import them via `lm.addSuppressions()` in the SDK. Skipping this step risks sending to previously-bounced addresses, which damages your domain reputation.
+  </FAQItem>
+
+  <FAQItem question="Is LobsterMail suitable for high-volume transactional email?">
+    The Free tier supports 1,000 emails/month. The Builder tier at $9/month handles 5,000 emails/month with up to 10 inboxes. For higher volumes, contact the team about custom plans with dedicated sending IPs and higher limits.
+  </FAQItem>
+
+  <FAQItem question="How does LobsterMail's agent-first architecture benefit AI-driven send pipelines?">
+    Agents can call `LobsterMail.create()` and `createSmartInbox()` to provision their own email addresses without any human setup. This means your AI pipeline can spin up purpose-specific inboxes on demand, send from them, and monitor responses, all programmatically.
+  </FAQItem>
+
+  <FAQItem question="What SMTP credentials does LobsterMail use?">
+    Use your API token (`lm_sk_live_*`) as both username and password. Connect to `smtp.lobstermail.ai` on port 587 with STARTTLS. This is similar to Postmark's pattern of using the Server Token for SMTP auth.
+  </FAQItem>
+
+  <FAQItem question="How long should I run Postmark and LobsterMail in parallel?">
+    At least 3-5 days, ideally a week. Start by routing 10-20% of traffic through LobsterMail, monitor delivery and bounce rates, then ramp up. If metrics look healthy at 50%, you're safe to go to 100% and decommission Postmark.
+  </FAQItem>
+
+  <FAQItem question="Does changing from Postmark to LobsterMail affect my sender reputation?">
+    Your domain reputation (built through DKIM) carries over. IP reputation doesn't transfer, but LobsterMail uses pre-warmed shared IPs. Most senders see no deliverability impact. High-volume senders (50,000+ monthly) should ask about dedicated IPs with a warm-up schedule.
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail provide migration support for teams switching from Postmark?">
+    Yes. This guide covers the full process, and the LobsterMail team can help with custom migration plans for high-volume senders. Reach out through the dashboard or community channels for hands-on support.
+  </FAQItem>
+</FAQ>

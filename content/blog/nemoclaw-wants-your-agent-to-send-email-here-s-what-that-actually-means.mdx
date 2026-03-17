@@ -1,0 +1,152 @@
+---
+title: nemoclaw wants your agent to send email — here's what that actually means
+description: >-
+  NVIDIA's NemoClaw framework lets enterprise AI agents take actions. But
+  sending email requires real infrastructure. Here's what NemoClaw does and
+  doesn't handle.
+date: '2026-03-16'
+author: Samuel Chenard
+tags:
+  - email
+  - openclaw
+  - infrastructure
+  - use-cases
+  - automation
+image: >-
+  /blog/nemoclaw-wants-your-agent-to-send-email-here-s-what-that-actually-means.png
+imageAlt: Pixel art lobster sending an email message — nemoclaw send email agent
+---
+
+NVIDIA dropped NemoClaw at GTC 2026 yesterday. If you missed it: it's an open-source framework that lets enterprise AI agents take real actions (run queries, trigger workflows, check systems) while staying inside a policy sandbox. Jensen Huang called it "agents with guardrails." The developer crowd called it exciting. And within about four hours, the first question appeared in the NemoClaw Discord: "How do I get my agent to send email?"
+
+That question is more interesting than it sounds. NemoClaw solves the *orchestration* problem. It defines what an agent can touch, which models it can call, and under what conditions it operates. What it doesn't solve is the plumbing underneath those actions. And email turns out to be one of the messiest pieces of plumbing in software.
+
+So let's talk about what happens when a NemoClaw agent tries to send email, why it's harder than it looks, and what the options actually are in 2026.
+
+## What NemoClaw actually does
+
+NemoClaw is a policy engine for AI agents. You write runbooks (structured YAML files) that describe what an agent is allowed to do, and NemoClaw enforces those boundaries at runtime. Think of it as a permissions layer between the agent's intentions and the outside world.
+
+The [official site](https://nemoclaw.sh/) describes it well: "Let agents run, but do not let them roam freely." In practice, this means a NemoClaw agent can be authorized to, say, query a database and send a Slack message, but blocked from modifying production infrastructure or accessing customer PII.
+
+This is genuinely useful. One of the biggest blockers to deploying agents in enterprise environments has been the trust problem. If an agent can do *anything*, nobody wants to give it access to *anything*. NemoClaw narrows the scope. Good.
+
+But here's the thing. NemoClaw is an orchestration layer. It tells the agent *whether* it can send an email. It doesn't give the agent an email address, a mail server, DNS records, or deliverability reputation. That's a different problem entirely.
+
+## The gap between "allowed to send" and "able to send"
+
+When a human sends email, the infrastructure is invisible. Gmail handles authentication, reputation, SPF records, DKIM signing, bounce processing, and rate limiting. You type a message, hit send, and it arrives. Years of engineering make that possible.
+
+When an agent sends email, none of that exists by default. The agent needs:
+
+1. **An email address.** Not a shared one. Agents that share inboxes create threading chaos and can't maintain separate conversations.
+2. **A sending server** with proper authentication (SPF, DKIM, DMARC). Without these, messages land in spam or get rejected outright.
+3. **Reputation management.** New domains and IPs start with zero reputation. Send too many messages too fast and you'll trigger spam filters within hours.
+4. **Bounce and complaint handling.** If bounced emails aren't processed, your sender score drops. If complaints aren't tracked, you risk blocklisting.
+
+NemoClaw's runbooks can authorize an agent to call a "send email" function. But that function needs to connect to actual email infrastructure. And setting up that infrastructure is where most agent-email projects stall.
+
+## Why agents keep failing at email
+
+I've seen this pattern repeat across multiple agent frameworks, not just NemoClaw. A team builds an agent, adds email as an action, connects it to an SMTP relay or a Gmail API integration, and within a week they're troubleshooting deliverability issues they didn't know existed.
+
+The common failure modes:
+
+**Shared credentials.** Multiple agents using the same Gmail account or API key. This creates rate limit collisions, confused threading, and a single point of failure. One agent's misbehavior gets the whole account throttled.
+
+**Missing DNS records.** The agent can send, but receiving servers reject the messages because SPF doesn't pass or DKIM signatures are missing. The agent gets a `550 denied by policy` error (we wrote a [full breakdown of that error](/blog/550-denied-by-policy-what-it-means-and-how-to-fix-it)) and has no idea what to do next.
+
+**No warmup.** A freshly provisioned domain that sends 200 emails on day one gets flagged. Email reputation is built gradually. Agents don't know this unless someone teaches them, and even then, they need infrastructure that enforces sending limits.
+
+**No inbox, just outbox.** The agent can send but can't receive replies. This makes conversations impossible and looks suspicious to spam filters. Legitimate senders receive mail.
+
+These aren't NemoClaw-specific problems. They're email problems. But NemoClaw's architecture makes them more visible because agents operating under policy controls expect their authorized actions to *work*. When a runbook says "this agent can send email" and the email bounces, that's a confusing failure state.
+
+## What agent-first email looks like
+
+The fix isn't to bolt email infrastructure onto every agent framework individually. It's to give the agent access to email that's already configured correctly.
+
+This is the idea behind agent-first email: instead of the developer setting up a mail server, configuring DNS, and managing reputation, the agent provisions its own inbox through an API call. The inbox comes with authentication, deliverability, and reply handling already working.
+
+LobsterMail takes this approach. An agent creates an inbox with a single API call, gets a real email address, and can send and receive immediately. The DNS, authentication, and reputation management happen behind the scenes. For a NemoClaw deployment, you'd define "create inbox" and "send email" as authorized actions in your runbook, and the agent handles the rest through the LobsterMail API.
+
+The free tier gives you one inbox and 1,000 emails per month with no credit card required. That's enough to test whether email-as-an-action actually works for your use case before committing to anything.
+
+## How NemoClaw and email infrastructure fit together
+
+To be concrete about the architecture: NemoClaw sits at the orchestration layer. It decides *if* the agent acts. Email infrastructure sits at the capability layer. It determines *how* the action executes.
+
+A NemoClaw runbook might look something like this:
+
+```yaml
+actions:
+  - name: send_email
+    policy: allow
+    conditions:
+      - recipient_domain NOT IN blocked_domains
+      - daily_send_count < 100
+That policy controls the agent's behavior. But the `send_email` action itself needs to call something real. It could call a raw SMTP server (and you manage everything yourself), a transactional email API like Postmark or Resend (designed for app notifications, not agent conversations), or an agent-email service that handles inbox provisioning and two-way communication.
+
+The right choice depends on what your agent is doing. If it's sending one-way alerts, a transactional API works fine. If it's having conversations, following up on threads, or managing multiple contacts, it needs a real inbox with receive capability and threading support.
+
+## The bigger picture: agents are getting email whether we plan for it or not
+
+NemoClaw's launch signals something worth paying attention to. Enterprise companies are moving from "agents that answer questions" to "agents that take actions." Email is one of the most common actions in business. Every sales agent, support agent, scheduling agent, and operations agent will eventually need to send and receive email.
+
+The question isn't *whether* agents will get email. It's whether that email infrastructure will be intentional or duct-taped together from personal Gmail accounts and shared API keys.
+
+NemoClaw gives agents a policy framework. Now those agents need capabilities that match the policies. Email is near the top of that list, and the teams that figure out the infrastructure piece early will have agents that actually work in production instead of demo environments.
+
+If you're experimenting with NemoClaw and want to give your agent email without setting up mail servers, [LobsterMail](/) is worth a look. The free tier is genuinely free, and you can test the full send-and-receive flow in about two minutes.
+
+<FAQ>
+  <FAQItem question="Does NemoClaw have built-in email sending?">
+    No. NemoClaw is a policy and orchestration framework for AI agents. It controls what actions an agent can take but doesn't provide email infrastructure. You need a separate email service for actual sending and receiving.
+  </FAQItem>
+
+  <FAQItem question="Can a NemoClaw agent use LobsterMail to send email?">
+    Yes. You'd define "send email" as an authorized action in your NemoClaw runbook, and the agent calls the LobsterMail API to create an inbox and send messages. The two layers complement each other.
+  </FAQItem>
+
+  <FAQItem question="Is NemoClaw open source?">
+    Yes. NVIDIA released NemoClaw as an open-source project at GTC 2026. The source code and documentation are available at [nemoclaw.sh](https://nemoclaw.sh/).
+  </FAQItem>
+
+  <FAQItem question="What's the difference between NemoClaw and an email API?">
+    NemoClaw is a policy engine that governs agent behavior (what it's allowed to do). An email API provides the actual capability to send and receive messages. They operate at different layers of the stack and are typically used together.
+  </FAQItem>
+
+  <FAQItem question="Why can't my agent just use Gmail to send email?">
+    Gmail requires human OAuth consent, enforces per-user rate limits, and wasn't designed for programmatic agent use. Agents that share a Gmail account hit rate limits, create threading conflicts, and risk account suspension.
+  </FAQItem>
+
+  <FAQItem question="What is agent-first email?">
+    Agent-first email is infrastructure designed for AI agents to provision and use email without human setup. The agent creates its own inbox via API, and authentication, DNS, and deliverability are handled automatically.
+  </FAQItem>
+
+  <FAQItem question="Do I need to configure DNS records for my agent's email?">
+    With agent-first email services like LobsterMail, DNS is preconfigured. If you're running your own mail server, you'll need to set up SPF, DKIM, and DMARC records manually, or your messages will likely land in spam.
+  </FAQItem>
+
+  <FAQItem question="How much does it cost to give an agent email?">
+    LobsterMail's free tier includes one inbox and 1,000 emails per month at $0 with no credit card. The Builder plan at $9/month adds up to 10 inboxes and higher sending limits.
+  </FAQItem>
+
+  <FAQItem question="Can a NemoClaw agent receive email replies?">
+    NemoClaw itself doesn't handle email reception. But if the agent's email action connects to a service with receive capability (like LobsterMail), the agent can receive replies, process them, and respond within the same thread.
+  </FAQItem>
+
+  <FAQItem question="What happens if my agent sends too many emails too fast?">
+    New email addresses have no sender reputation. Sending a high volume immediately triggers spam filters and can get your domain blocklisted. Proper email infrastructure enforces gradual warmup and daily sending limits to protect your reputation.
+  </FAQItem>
+
+  <FAQItem question="Is NemoClaw only for enterprise use?">
+    NVIDIA positions NemoClaw for enterprise deployments, but it's open source. Individual developers and small teams can use it. The policy framework is useful at any scale where you want to control what an agent can do.
+  </FAQItem>
+
+  <FAQItem question="Can my agent maintain email conversation threads?">
+    Yes, if the underlying email service supports threading. LobsterMail tracks `In-Reply-To` and `References` headers automatically, so agents can participate in multi-message conversations without losing context.
+  </FAQItem>
+</FAQ>
+
+```

@@ -1,0 +1,178 @@
+---
+title: how to migrate gmail api to agent email infrastructure
+description: >-
+  A step-by-step guide to migrating from the Gmail API to agent-first email
+  infrastructure, with practical advice on auth, inboxes, and deliverability.
+date: '2026-03-16'
+author: Ian Bussières
+tags:
+  - email
+  - infrastructure
+  - guides
+  - openclaw
+  - getting-started
+image: /blog/how-to-migrate-gmail-api-to-agent-email-infrastructure.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — migrate gmail
+  api to agent email infrastructure
+---
+
+The Gmail API was built for humans who check email in a browser. If you're running autonomous agents that need to send, receive, and act on email without human intervention, you've probably already felt the friction. OAuth tokens expire mid-workflow. Each agent needs its own Google Workspace seat. Pub/Sub webhooks require a GCP project with billing enabled just to get real-time delivery.
+
+At some point, patching around Gmail stops being pragmatic and starts being expensive. This article walks through exactly how to migrate gmail api to agent email infrastructure, step by step, without losing messages or burning your sender reputation in the process.
+
+If you've already decided to move, <InlineGetStarted>get your agent its own inbox here</InlineGetStarted> and paste the instructions into your agent. It takes about two minutes. The rest of this article covers the full migration path for teams running production workloads on the Gmail API today.
+
+## How to migrate Gmail API to agent email infrastructure
+
+Here's the short version. If you're already familiar with your Gmail API setup, this is the migration checklist:
+
+1. Audit your current Gmail API scopes, OAuth tokens, and daily quota usage
+2. Provision isolated agent mailboxes in your target infrastructure
+3. Redirect inbound routing with MX records or webhook forwarding
+4. Replace per-user OAuth credential logic with agent-native API tokens
+5. Migrate send logic and verify deliverability from the new addresses
+6. Run both systems in parallel for 48-72 hours to catch edge cases
+7. Deprecate Gmail API credentials and revoke OAuth grants
+
+Each of these steps has nuance. Let me break them down.
+
+## Step 1: audit what you're actually using
+
+Before you rip anything out, you need to know what your agents are doing with the Gmail API today. Most teams discover they're using a fraction of the API surface. The typical agent workflow is: create a label, poll for new messages, read the body, maybe send a reply.
+
+Pull your current OAuth scopes. If you see `gmail.readonly`, `gmail.send`, and `gmail.modify`, that's the standard trio. Check your [Google Cloud Console quota dashboard](https://console.cloud.google.com/apis/api/gmail.googleapis.com/quotas) and note your peak daily usage. The Gmail API enforces per-user rate limits of 250 quota units per second, and agents that poll aggressively hit these faster than you'd expect.
+
+Write down how many distinct Gmail accounts your agents use. Each one represents a separate OAuth flow, a separate token refresh cycle, and a separate point of failure. If you've read about [why your agent's Gmail token keeps breaking](/blog/agent-gmail-token-breaking), you know this is where most production incidents originate.
+
+## Step 2: provision agent mailboxes
+
+This is where agent-first infrastructure diverges from Gmail most sharply. Instead of creating a Google Workspace user ($7.20/month per seat), assigning a license, configuring OAuth consent, and storing refresh tokens, your agent provisions its own inbox programmatically:
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create();
+const inbox = await lm.createSmartInbox({ name: 'support-bot' });
+console.log(inbox.address); // support-bot@lobstermail.ai
+That's it. No human touched a Google Admin panel. No OAuth dance. The SDK handles signup, token storage, and address collision automatically. If `support-bot` is taken, it tries `support-bot1`, `s-bot`, and other variations until it finds an available address.
+
+For teams running multiple agents, this means you can spin up isolated inboxes per agent without managing a fleet of Google Workspace seats. We covered the math on this in [the real cost of running agent email on Google Workspace](/blog/agent-email-google-workspace-cost).
+
+## Step 3: redirect inbound email
+
+If your agents receive email at existing Gmail addresses, you have two options for the transition period.
+
+**Option A: Gmail forwarding rules.** In each Gmail account, set up a forwarding rule that sends a copy of inbound mail to the new agent address. This preserves the original Gmail inbox as a fallback while your agent starts reading from the new one. Gmail forwarding preserves headers, so your agent still sees the original sender and subject.
+
+**Option B: MX record migration.** If you're using a custom domain with Google Workspace, you can point MX records to your new infrastructure. LobsterMail supports [custom domains](/docs/custom-domains) on the Builder tier, so your agents keep their existing addresses while the backend changes entirely. This is cleaner but requires DNS access and a brief propagation window (usually under an hour with low TTL values).
+
+During the parallel period, have your agent read from both sources. Log any discrepancies. Most teams find that after 48 hours of clean parallel operation, they're comfortable cutting over.
+
+## Step 4: replace OAuth with agent-native auth
+
+The Gmail API uses OAuth 2.0, which means your agent holds a refresh token, exchanges it for an access token every hour, and hopes Google doesn't revoke it because of a policy change, a suspicious login, or a consent screen update. This model works when a human is around to re-authenticate. Autonomous agents don't have that luxury.
+
+Agent-native infrastructure uses long-lived API tokens (format: `lm_sk_live_*`) that don't expire on a timer. The token is created once during auto-signup and stored at `~/.lobstermail/token`. No refresh flow, no browser redirect, no consent screen.
+
+In your codebase, this means replacing every `google.auth.OAuth2` client initialization and token refresh handler with a single `LobsterMail.create()` call. For most agents, this removes 40-80 lines of auth boilerplate. If you've been fighting [the OAuth problem](/blog/oauth-gmail-agents-painful), this is the part that feels like finally putting down a heavy bag.
+
+## Step 5: migrate send logic and test deliverability
+
+Sending from a new address means building sender reputation from scratch. Don't migrate all your send volume on day one.
+
+Start with low-volume, high-engagement messages (verification emails, direct replies to inbound threads). These generate opens and replies, which signal to receiving mail servers that your new address is legitimate. Gradually increase volume over 5-7 days.
+
+LobsterMail handles SPF, DKIM, and DMARC automatically for `@lobstermail.ai` addresses. If you're using a custom domain, the setup wizard walks you through the three DNS records you need. The point is that you don't have to configure Postfix or manage certificate rotation yourself.
+
+Test deliverability to Gmail, Outlook, and Yahoo specifically. These three providers cover roughly 85% of consumer inboxes, and each has different filtering heuristics. Send a test message to an account you control on each provider and verify it lands in the primary tab, not spam.
+
+```
+```typescript
+await inbox.send({
+  to: 'test@gmail.com',
+  subject: 'Deliverability test from new infrastructure',
+  text: 'If you see this in your primary inbox, the migration is working.',
+});
+## Step 6: handle threading and conversation state
+
+Gmail uses its own threading model based on `Message-ID`, `In-Reply-To`, and `References` headers, combined with subject-line matching. Agents that maintain conversation state through Gmail labels or thread IDs need a different approach after migration.
+
+Agent email infrastructure returns thread metadata with each received message. When your agent replies, it includes the correct `In-Reply-To` header automatically, so the recipient's mail client groups the conversation correctly. You don't need to manually manage Gmail label IDs or thread ID strings.
+
+If your agent was storing Gmail thread IDs as keys in a database, you'll want to create a mapping table during migration. When an email arrives at the new inbox that references an existing conversation, look up the Gmail thread ID from the `References` header chain and link it to your internal state.
+
+## Step 7: deprecate and clean up
+
+Once parallel operation confirms everything works:
+
+1. Remove Gmail forwarding rules (or repoint MX records if you used Option B)
+2. Revoke OAuth tokens in Google Cloud Console
+3. Delete the Gmail API credentials from your agent's secret store
+4. Remove the `googleapis` dependency from your project
+
+Don't skip the revocation step. Orphaned OAuth tokens with `gmail.send` scope are a security risk, especially if your agent's credential store is ever compromised.
+
+## What about IMAP?
+
+Some teams use IMAP instead of the Gmail API, usually through libraries like `imaplib` or `node-imap`. The migration path is simpler because IMAP has no OAuth token management (it uses app passwords on Gmail). Replace your IMAP polling loop with `inbox.receive()` and your SMTP send calls with `inbox.send()`. The concepts map almost one-to-one, but you lose the complexity of maintaining an IMAP connection state machine.
+
+## The Gmail API isn't going anywhere
+
+To be clear: the Gmail API is a well-built product for its intended use case. If you're building a human-facing email client, a CRM integration, or a tool where a user explicitly grants access to their own inbox, it's the right choice.
+
+The mismatch happens when agents operate autonomously at scale. Per-user OAuth, human-centric rate limits, and the absence of programmatic mailbox provisioning all push against what agents need. Migrating to agent-first infrastructure isn't about Gmail being bad. It's about using tools designed for the job you're actually doing.
+
+If you're ready to start, <InlineGetStarted>get your agent its own inbox</InlineGetStarted> and skip the OAuth dance entirely.
+
+---
+
+<FAQ>
+  <FAQItem question="What does 'agent email infrastructure' mean and how is it different from the Gmail API?">
+    Agent email infrastructure is purpose-built for autonomous AI agents to provision inboxes, send, and receive email without human intervention. The Gmail API requires per-user OAuth consent and was designed for apps acting on behalf of a human user, not for agents operating independently.
+  </FAQItem>
+  <FAQItem question="How do I migrate from the Gmail API to a different email service?">
+    Audit your current scopes and quota, provision new mailboxes, redirect inbound routing, replace OAuth logic with your new auth model, migrate send logic gradually to protect deliverability, and run both systems in parallel before cutting over. The full process takes most teams 3-5 days.
+  </FAQItem>
+  <FAQItem question="What are the Gmail API quota limits that most often break agentic workflows?">
+    The most common bottleneck is the 250 quota units per second per user limit. Polling for new messages costs 5 units per request, and agents that check every few seconds burn through this quickly. Daily sending limits of 2,000 messages per user also cap throughput for outbound agents.
+  </FAQItem>
+  <FAQItem question="What happens to existing Gmail API OAuth tokens during a migration?">
+    Your existing tokens continue working until you revoke them. Run both systems in parallel during migration, then revoke tokens in Google Cloud Console once the new infrastructure is confirmed working. Don't leave orphaned tokens with `gmail.send` scope active.
+  </FAQItem>
+  <FAQItem question="Can I keep using Gmail API for human users while routing agent traffic through dedicated infrastructure?">
+    Yes. This is a common pattern. Human employees keep their Gmail accounts and the Gmail API integration. Agent traffic moves to agent-first infrastructure with separate inboxes and auth. The two systems are completely independent.
+  </FAQItem>
+  <FAQItem question="How do I provision isolated inboxes for each AI agent without creating Google Workspace accounts?">
+    With LobsterMail, your agent calls `createSmartInbox()` and gets a dedicated address in seconds. No admin panel, no Workspace seat, no license assignment. Each inbox is isolated with its own address and message store.
+  </FAQItem>
+  <FAQItem question="What authentication model does agent-first email infrastructure use instead of per-user OAuth?">
+    LobsterMail uses long-lived API tokens (format: `lm_sk_live_*`) that don't require periodic refresh. The SDK auto-provisions the token on first use and stores it locally. No browser redirects or consent screens involved.
+  </FAQItem>
+  <FAQItem question="Does migrating away from Gmail API affect email deliverability for agent-sent messages?">
+    Temporarily, yes. New sending addresses need to build reputation. Warm up gradually over 5-7 days starting with low-volume, high-engagement messages. LobsterMail configures SPF, DKIM, and DMARC automatically, which helps establish trust faster.
+  </FAQItem>
+  <FAQItem question="How does agent email infrastructure handle reply threading differently than Gmail API labels?">
+    Instead of Gmail's proprietary thread IDs and label system, agent infrastructure uses standard `In-Reply-To` and `References` headers. Replies are threaded correctly in the recipient's mail client without your agent needing to manage Gmail-specific identifiers.
+  </FAQItem>
+  <FAQItem question="Is IMAP still relevant when migrating from Gmail to agent infrastructure?">
+    IMAP works but adds unnecessary complexity for agents. It requires maintaining persistent connections, handling state synchronization, and dealing with connection drops. Agent-first infrastructure exposes a simpler REST-based polling model through `inbox.receive()` that eliminates the IMAP state machine entirely.
+  </FAQItem>
+  <FAQItem question="How do AI agents access and send email programmatically?">
+    With agent-first infrastructure like LobsterMail, agents call `LobsterMail.create()` to get authenticated, `createSmartInbox()` to get an address, `inbox.receive()` to read messages, and `inbox.send()` to reply. No SMTP configuration or OAuth setup required.
+  </FAQItem>
+  <FAQItem question="Can agent email infrastructure support multi-tenant architectures where each customer's agent has its own inbox?">
+    Yes. Each agent provisions its own isolated inbox programmatically. There's no shared credential or inbox. This maps naturally to multi-tenant systems where customer A's agent and customer B's agent each have separate addresses and message stores.
+  </FAQItem>
+  <FAQItem question="How long does a typical Gmail API to agent email infrastructure migration take?">
+    Most teams complete the migration in 3-5 days. Day one is auditing and provisioning. Days two and three are parallel operation. Days four and five are cutover and cleanup. The code changes themselves are usually small since agent email SDKs replace boilerplate, not business logic.
+  </FAQItem>
+  <FAQItem question="How do I test my agent email pipeline after migrating from Gmail API?">
+    Send test messages to accounts you control on Gmail, Outlook, and Yahoo. Verify they land in the primary inbox. Then trigger your agent's full workflow (receive, parse, reply) and confirm end-to-end behavior matches what you had on the Gmail API. Log both old and new pipelines during parallel operation to catch discrepancies.
+  </FAQItem>
+  <FAQItem question="What is Model Context Protocol (MCP) for Gmail?">
+    MCP is a standard that lets AI agents use tools through a unified interface. LobsterMail offers an [MCP server](/docs/mcp-server) that gives your agent email capabilities (send, receive, create inbox) as MCP tools, so you don't need to write any email integration code yourself.
+  </FAQItem>
+</FAQ>
+
+```

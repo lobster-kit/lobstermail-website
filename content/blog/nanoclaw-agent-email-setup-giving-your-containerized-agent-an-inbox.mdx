@@ -1,0 +1,161 @@
+---
+title: 'nanoclaw agent email setup: giving your containerized agent an inbox'
+description: >-
+  How to set up email for NanoClaw agents. Covers Gmail OAuth, dedicated agent
+  email, per-container isolation, and the tradeoffs between each approach.
+date: '2026-03-16'
+author: Ian Bussières
+tags:
+  - email
+  - guides
+  - infrastructure
+  - openclaw
+  - security
+image: /blog/nanoclaw-agent-email-setup-giving-your-containerized-agent-an-inbox.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — nanoclaw agent
+  email setup
+---
+
+NanoClaw runs each agent in its own Docker container. That's the whole pitch: take the OpenClaw agent framework, wrap it in container isolation, and avoid the security mess that comes with giving an AI agent access to your entire filesystem. It's a sensible architecture. But the moment your containerized agent needs to send or receive email, you hit a wall that container isolation alone doesn't solve.
+
+The email question is the same one every agent builder faces eventually. Your agent needs to sign up for a service, receive a verification code, send a report, or monitor an inbox. NanoClaw gives you a few paths to get there. Some are straightforward. Some will cost you a weekend and a chunk of your sender reputation if you're not careful.
+
+I've been tracking how people set up email across NanoClaw, OpenClaw, and standalone agent builds. Here's what actually works, what breaks, and what to watch out for.
+
+## How to set up email in NanoClaw (step-by-step)
+
+1. Choose an email skill: Gmail (via the Gog skill) or a dedicated agent email provider
+2. Install the skill into your NanoClaw agent's skills directory
+3. Provide credentials: OAuth client ID and secret for Gmail, or an API token for agent-first providers
+4. Configure read, send, and search permissions in the skill's config file
+5. Mount credential files into the Docker container using volume mappings
+6. Test with a simple read operation before enabling send
+7. Verify that outbound messages land in the recipient's primary inbox, not spam
+
+That's the skeleton. The details vary depending on which path you pick, and the tradeoffs are significant.
+
+## The Gmail path: familiar but fragile
+
+Most NanoClaw users start with Gmail because they already have a Google account. The Gog skill on ClawHub bundles Gmail, Calendar, and Drive access into one package. You create OAuth credentials in the Google Cloud Console, drop them into your NanoClaw config, and your agent can read and send through your Gmail account.
+
+It works. For about a week.
+
+The problems show up gradually. First, the OAuth scopes. The Gog skill typically requests `gmail.modify` and `gmail.send`, which gives your agent read and write access to your *entire* mailbox. Every conversation with your dentist, every password reset email, every message from your kid's school. If your NanoClaw container gets compromised (and containers do get compromised), that's everything exposed.
+
+Second, rate limits. Gmail enforces per-user sending limits of roughly 500 messages per day for consumer accounts and 2,000 for Workspace accounts. Your agent doesn't know about these limits unless you tell it. I've seen agents hit the wall mid-workflow, get a `429` back from Google, and then retry aggressively until the account gets temporarily suspended.
+
+Third, sender reputation. When an AI agent sends automated emails through your personal Gmail SMTP, Google notices the pattern shift. Your account goes from sending 10 personal emails a day to blasting 200 structured messages. That's a signal. Google may start routing your outbound mail through additional spam checks, or worse, flag your account for unusual activity. Your personal email deliverability suffers because your agent was too enthusiastic.
+
+The Gmail path is fine for testing. For anything beyond that, you're borrowing capacity from an account that wasn't designed for agent workloads.
+
+## Container isolation doesn't isolate email
+
+Here's the part that catches people off guard. NanoClaw's container isolation is great for filesystem and process separation. Each agent runs in its own Docker container, so a misbehaving agent can't read another agent's files or crash its processes. That's a real security win over stock OpenClaw.
+
+But email credentials stored inside a container are only as safe as the container itself. If an agent gets prompt-injected through a malicious email (and [email-based prompt injection is a real attack vector](/blog/what-is-prompt-injection-in-email)), it could potentially exfiltrate the OAuth tokens mounted into its container. Those tokens grant access to your full Gmail account, not just the agent's messages.
+
+Container isolation gives you process boundaries. It doesn't give you email boundaries. For that, you need each agent to have its own inbox, with its own credentials, completely separate from your personal email.
+
+## Per-agent inboxes: the isolation that actually matters
+
+The cleaner approach is giving each NanoClaw agent its own dedicated email address. Not a forwarding alias on your Gmail. Not a shared inbox with filters. A separate address that the agent owns and controls, where compromising one agent's credentials doesn't expose anything beyond that agent's mail.
+
+This is where agent-first email providers come in. Instead of configuring OAuth, your agent provisions its own inbox programmatically at startup. No human has to visit a settings page or approve consent screens. The agent gets an address like `my-agent@lobstermail.ai`, and it can only see mail sent to that address.
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create();
+const inbox = await lm.createSmartInbox({ name: 'My NanoClaw Agent' });
+
+console.log(inbox.address); // my-nanoclaw-agent@lobstermail.ai
+
+const emails = await inbox.receive();
+Each container gets its own token, its own inbox, its own send limits. If container A gets compromised, container B's email is untouched. That's the kind of isolation NanoClaw's architecture was built for, extended to email.
+
+## What about Outlook, Yahoo, and other providers?
+
+NanoClaw's skills system is extensible, but the community-maintained skills are heavily weighted toward Gmail. I haven't found a well-maintained Outlook or Yahoo skill for NanoClaw as of March 2026. You could write one using IMAP/SMTP (Himalaya, the CLI email client, works with any IMAP provider), but you'd be taking on the same OAuth and credential management problems as the Gmail path, plus the maintenance burden of a custom skill.
+
+If your agent needs to interact with Outlook or Yahoo specifically (reading from a client's Outlook inbox, for example), IMAP through Himalaya is your best option. For giving the agent its own outbound email identity, a dedicated provider is simpler.
+
+## Real-time inbound email: polling vs. webhooks
+
+One gap in most NanoClaw email tutorials is inbound email handling. The Gmail skill supports reading your inbox, but it's poll-based. Your agent checks for new messages on an interval. That means latency between when an email arrives and when your agent sees it, and wasted API calls when the inbox is empty.
+
+Some agent email providers support webhooks, where your agent gets notified the moment a new email lands. If your NanoClaw agent needs to react quickly to inbound messages (verification codes, support requests, time-sensitive notifications), webhook-driven delivery is worth investigating. Poll-based checking works fine for batch processing or scheduled tasks, but it's a poor fit for anything time-critical.
+
+You can set up scheduled email checks in NanoClaw using its built-in job scheduler. Define a cron-style interval in your agent's config, and the agent will wake up, check for new mail, process it, and go back to sleep. For most use cases, checking every 2-5 minutes is sufficient.
+
+## Token cost: how email skills affect your Claude bill
+
+NanoClaw runs on the Claude API, and every skill invocation costs tokens. Email skills are heavier than you might expect. Reading an inbox means pulling message metadata, then fetching full message bodies, then parsing content. A single "check my email and respond" operation can easily run 5,000-10,000 tokens depending on how many messages are in the inbox and how long they are.
+
+Two ways to keep costs down: filter before you fetch (only pull unread messages or messages matching specific criteria), and truncate long email bodies before passing them to Claude. Most email content is boilerplate signatures and quoted reply chains. Strip those out and you'll cut token usage significantly.
+
+## The multi-agent email problem
+
+If you're running multiple NanoClaw agents (one for customer support, one for scheduling, one for research), email isolation becomes a real operational concern. Can two agents share one inbox? Technically yes. Should they? Almost certainly not.
+
+Shared inboxes create race conditions. Agent A reads an email and starts composing a reply. Agent B reads the same email and does the same thing. The recipient gets two conflicting responses. Even with careful locking logic, shared inboxes are a source of bugs that are painful to debug.
+
+The simpler model: one inbox per agent. Each agent has its own address, its own credentials, its own message history. No conflicts, no coordination overhead. If agents need to collaborate on a conversation, they can forward messages to each other explicitly rather than fishing from the same pool.
+
+## Migrating from Gmail to a dedicated provider
+
+If you've already been running your NanoClaw agent on Gmail and want to move to a per-agent inbox, the migration is straightforward. Set up the new inbox, update your agent's skill config to point at the new provider, and start using the new address for outgoing messages. Existing email history stays in Gmail. You can set up a Gmail forwarding rule to send incoming messages to the new address during the transition period.
+
+You won't lose email history because it lives in Gmail. You're just giving your agent a new, isolated identity going forward. Think of it as moving your agent out of your personal apartment and into its own office.
+
+If you want to skip the OAuth headaches and give your NanoClaw agent its own isolated inbox, LobsterMail handles provisioning in about a minute. The free tier includes 1,000 emails per month with no credit card required.
+
+<FAQ>
+  <FAQItem question="Does NanoClaw include email support by default, or do I need to install a skill?">
+    NanoClaw doesn't include email out of the box. You need to install a skill like Gog (for Gmail) or configure a dedicated email provider through the skills system.
+  </FAQItem>
+  <FAQItem question="Which Gmail OAuth scopes does the NanoClaw Gmail skill require?">
+    The Gog skill typically requests `gmail.modify` and `gmail.send` scopes, which grant full read and write access to your Gmail account. There's no way to scope it down to a single label or folder.
+  </FAQItem>
+  <FAQItem question="Can I give each NanoClaw agent its own isolated email address?">
+    Yes. Using an agent-first email provider like LobsterMail, each container can provision its own inbox at startup with a unique address and separate credentials. This matches NanoClaw's container isolation model.
+  </FAQItem>
+  <FAQItem question="How do I store email credentials securely inside a NanoClaw Docker container?">
+    Mount credential files as Docker secrets or read-only volume mounts. Never bake credentials into the container image itself. Use environment variables for API tokens and store OAuth refresh tokens in mounted volumes outside the container's writable layer.
+  </FAQItem>
+  <FAQItem question="Does NanoClaw support inbound email triggers, or only outbound sending?">
+    The Gmail skill supports reading inbound email via polling, but not real-time triggers. For webhook-based inbound delivery, you'd need a provider that pushes notifications to your agent when new mail arrives.
+  </FAQItem>
+  <FAQItem question="How does NanoClaw email setup differ from OpenClaw's email integration?">
+    The email skills (Gog, Himalaya) are the same across both platforms. The difference is that NanoClaw runs each agent in an isolated Docker container, so credential exposure from one agent doesn't automatically compromise others at the filesystem level.
+  </FAQItem>
+  <FAQItem question="Will sending automated emails through Gmail via NanoClaw hurt my sender reputation?">
+    It can. Gmail monitors sending patterns, and a sudden shift from personal email volume to automated agent output may trigger spam checks or account flags. Using a dedicated sending identity avoids polluting your personal reputation.
+  </FAQItem>
+  <FAQItem question="What happens to my Gmail access if my NanoClaw container is compromised?">
+    If OAuth tokens are mounted into the container, a compromised agent could exfiltrate them and gain full access to your Gmail account. This is why per-agent inboxes with isolated credentials are safer for production use.
+  </FAQItem>
+  <FAQItem question="Is there a way to provision agent email addresses programmatically without manual OAuth?">
+    Yes. Agent-first email providers like LobsterMail let you create inboxes via API or SDK with no OAuth flow, no human consent screens, and no browser interaction. The agent handles the entire process itself.
+  </FAQItem>
+  <FAQItem question="Can NanoClaw automatically reply to emails?">
+    Yes, once email skills are configured. Your agent can read incoming messages, compose responses using Claude, and send replies through the same skill. You control the logic in your agent's prompt and skill configuration.
+  </FAQItem>
+  <FAQItem question="Does NanoClaw work with Outlook or only Gmail?">
+    There's no official Outlook skill, but you can use Himalaya (a CLI email client) with any IMAP/SMTP provider including Outlook. Setup requires manual credential configuration and is less polished than the Gmail integration.
+  </FAQItem>
+  <FAQItem question="What is the token cost impact of enabling email skills in NanoClaw?">
+    A single email check-and-reply cycle typically costs 5,000-10,000 tokens depending on inbox size and message length. Filtering to unread messages and stripping quoted reply chains can cut this significantly.
+  </FAQItem>
+  <FAQItem question="Can multiple NanoClaw agents share one inbox, and how do I prevent conflicts?">
+    They can technically share an inbox, but it creates race conditions where multiple agents respond to the same message. The recommended approach is one inbox per agent with explicit forwarding for collaboration.
+  </FAQItem>
+  <FAQItem question="How do I schedule NanoClaw to check and reply to emails at set intervals?">
+    Use NanoClaw's built-in job scheduler to define a cron-style interval. The agent will wake up, check for new messages, process them, and return to idle. Intervals of 2-5 minutes work well for most use cases.
+  </FAQItem>
+  <FAQItem question="How do I migrate from Gmail to a dedicated agent email provider without losing email history?">
+    Set up the new inbox, update your agent's skill config, and start using the new address going forward. Your Gmail history stays in Gmail. Set up a forwarding rule during the transition to catch messages sent to the old address.
+  </FAQItem>
+</FAQ>
+
+```

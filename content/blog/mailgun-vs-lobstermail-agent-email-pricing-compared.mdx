@@ -1,0 +1,195 @@
+---
+title: 'mailgun vs lobstermail: agent email pricing compared'
+description: >-
+  Mailgun and LobsterMail take very different approaches to pricing email for AI
+  agents. Here's a side-by-side breakdown of what each costs in 2026.
+date: '2026-03-17'
+author: Samuel Chenard
+tags:
+  - email
+  - infrastructure
+  - cost
+  - openclaw
+  - use-cases
+image: /blog/mailgun-vs-lobstermail-agent-email-pricing-compared.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — mailgun vs
+  lobstermail agent email pricing
+---
+
+Mailgun is a solid transactional email service. It's been around since 2010, it has a well-documented API, and thousands of SaaS companies use it to send password resets and receipts. But if you're running AI agents that need their own inboxes, Mailgun's pricing model starts working against you in ways that aren't obvious from the plan page.
+
+LobsterMail was built for the opposite use case: agents that provision their own email addresses, send and receive on their own, and don't need a human to configure DNS records or manage API keys. The pricing reflects that difference. <InlineGetStarted>Get your agent its own inbox here</InlineGetStarted> and it handles everything from signup to first send, no configuration required.
+
+Here's how the two compare on price, architecture, and what actually matters when your agents are the ones sending email.
+
+## Mailgun vs LobsterMail agent email pricing
+
+| Feature | Mailgun | LobsterMail |
+|---|---|---|
+| Free tier | 100 emails/day for first month, then pay-as-you-go | 1,000 emails/month, free forever |
+| Base paid plan | $35/mo (Foundation) | $9/mo (Builder) |
+| Per-email cost (overage) | ~$0.80 per 1,000 | Included in tier limits |
+| Agent self-provisioning | No (requires human API key setup) | Yes (SDK auto-signup, no keys needed) |
+| Inbox creation | Manual domain verification required | `lm.createSmartInbox()`, one line |
+| Email validation | Separate add-on, $1.75/100 validations | Built-in injection scoring, no extra cost |
+| Prompt injection protection | None | Automatic risk scoring on every inbound email |
+| Support | Ticket-based on lower tiers, phone on $90+ | Community + docs on Free, priority on Builder |
+
+That table captures the structural difference. Mailgun charges for volume and treats every sender as a human-managed application. LobsterMail charges per workspace and assumes the agent is doing the work.
+
+## What Mailgun actually costs in 2026
+
+Mailgun's free trial gives you 100 emails per day for your first month. After that, you're on a paid plan or paying per-send. The Foundation plan starts at $35/month for 50,000 emails. The Builder plan runs $90/month and adds dedicated IP addresses, phone support, and higher volume allowances.
+
+For a single agent sending maybe 200 emails a month (verification codes, notifications, outbound messages to services it signs up for), $35/month is steep. You're paying for capacity designed for marketing teams blasting newsletters, not for an agent that sends a handful of transactional messages per day.
+
+Overage charges compound the problem. Mailgun's per-email rate above your plan limit varies by tier, but it's roughly $0.80 per thousand. That's fine at scale, but the base plan price is what hurts small agent deployments.
+
+There's also email validation. Mailgun offers it as a separate product, priced at $1.75 per 100 validations on lower tiers. If your agent is validating addresses before sending (which it should), that cost adds up independently of your sending plan.
+
+## What LobsterMail costs
+
+LobsterMail's free tier gives you one inbox and 1,000 emails per month. No credit card. No trial period that expires. No domain verification. Your agent calls `LobsterMail.create()`, gets a token, creates an inbox, and starts sending. I wrote about [how LobsterMail pricing works and why inboxes are free](/blog/lobstermail-pricing-explained) if you want the full breakdown.
+
+The Builder tier is $9/month. You get up to 10 inboxes and 5,000 emails per month with higher daily send limits. For teams [running 50 agent inboxes without losing your mind (or your budget)](/blog/running-50-agent-inboxes), the per-inbox economics are what matter, and $9 for ten inboxes is $0.90 each.
+
+There's no separate charge for email validation. Every inbound email gets an injection risk score automatically. That's not a premium feature; it's baked into the infrastructure because agents reading email without content scoring is a security problem, not an upsell opportunity.
+
+## The real cost difference isn't the sticker price
+
+If you're comparing $35/month to $9/month, LobsterMail is cheaper. But the bigger gap is in setup cost and operational overhead.
+
+With Mailgun, you need a human to:
+
+1. Create an account and generate API keys
+2. Add and verify a sending domain (DNS records: SPF, DKIM, CNAME)
+3. Configure the API key as an environment variable for your agent
+4. Monitor deliverability dashboards and adjust if IPs get flagged
+5. Handle domain warm-up if you're on a dedicated IP
+
+That's not a criticism of Mailgun. It's a good email service for applications where a developer sets things up once and the app sends mail forever. But agents don't work that way. An OpenClaw agent might need to provision an inbox on the fly, use it for a task, and move on. Asking a human to pre-configure Mailgun for every workflow defeats the purpose of having an autonomous agent.
+
+With LobsterMail, the agent does all of this itself:
+
+```typescript
+import { LobsterMail } from '@lobsterkit/lobstermail';
+
+const lm = await LobsterMail.create();
+const inbox = await lm.createSmartInbox({ name: 'My Agent' });
+
+// Ready to send and receive. No DNS, no API key handoff.
+const emails = await inbox.receive();
+That's not a simplified example. That's the actual setup. The SDK handles account creation, token persistence, and inbox provisioning. Your agent goes from zero to working email in four lines.
+
+## When Mailgun makes more sense
+
+I'm not going to pretend LobsterMail is the right choice for everything. Mailgun is better if:
+
+- You're sending marketing emails at high volume (50,000+ per month) and need dedicated IP warm-up tools
+- You need SMTP relay for legacy applications that can't use a REST API
+- You're a SaaS company with a single sending domain that a human configured once and never touches again
+- You need phone support with guaranteed response times
+
+Mailgun's infrastructure is mature and battle-tested for those use cases. It's been handling billions of emails for over a decade.
+
+## When LobsterMail makes more sense
+
+LobsterMail is the better fit when:
+
+- Your AI agents need to self-provision inboxes without human setup
+- You're running multiple agents that each need their own email address
+- You want built-in protection against prompt injection in inbound emails
+- You're spending under 5,000 emails per month and don't want to pay $35 for capacity you'll never use
+- You need an agent to sign up for services, receive verification codes, and manage its own email lifecycle
+
+The agent-first architecture is the core difference. Mailgun assumes a human is in the loop for configuration. LobsterMail assumes the agent is doing everything.
+
+## Per-email cost at scale
+
+At 500 emails per month (a reasonable number for a single agent handling verifications and notifications), here's the math:
+
+- **Mailgun Foundation**: $35/month = $0.07 per email
+- **LobsterMail Free**: $0/month = $0.00 per email
+- **LobsterMail Builder** (10 inboxes): $9/month = $0.018 per email
+
+At 5,000 emails per month:
+
+- **Mailgun Foundation**: $35/month = $0.007 per email
+- **LobsterMail Builder**: $9/month = $0.0018 per email
+
+Mailgun's per-email cost gets competitive at very high volumes (100,000+), where the $35 base amortizes nicely. But most agent workloads don't hit those numbers. They send hundreds or low thousands of messages, and paying a $35 floor for that makes no sense.
+
+## What about SendGrid?
+
+SendGrid's free tier is 100 emails per day. Its Essentials plan starts at $19.95/month for 50,000 emails. Similar structure to Mailgun, similar problem for agent workloads: the pricing assumes high-volume human-configured sending. Neither SendGrid nor Mailgun offers agent self-provisioning, inbox-per-agent architecture, or inbound injection scoring.
+
+## Making the switch
+
+If you're currently on Mailgun and want to move agent email to LobsterMail, there's no migration needed. Your agent creates a new inbox, updates whatever services it's subscribed to with the new address, and starts receiving mail. The old Mailgun setup can keep running for your non-agent email if you need it.
+
+<InlineGetStarted>Set up your first agent inbox here</InlineGetStarted>. Your agent pastes the instructions and has a working email address in under a minute.
+
+<FAQ>
+  <FAQItem question="What is LobsterMail and how is it different from Mailgun for agent-based email?">
+    LobsterMail is email infrastructure designed for autonomous AI agents. Unlike Mailgun, which requires human setup of API keys and DNS records, LobsterMail lets agents self-provision inboxes through an SDK with no human intervention.
+  </FAQItem>
+
+  <FAQItem question="How much does Mailgun cost per month in 2026?">
+    Mailgun's Foundation plan starts at $35/month for 50,000 emails. The Builder plan is $90/month. The free trial is limited to 100 emails/day for the first month only.
+  </FAQItem>
+
+  <FAQItem question="Is Mailgun free to use?">
+    Only for the first month. After the trial period, you need a paid plan starting at $35/month. LobsterMail's free tier (1,000 emails/month) has no expiration and no credit card requirement.
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail offer a free tier for testing agent email?">
+    Yes. The free tier includes one inbox and 1,000 emails per month with no credit card and no time limit. Your agent can start sending and receiving immediately.
+  </FAQItem>
+
+  <FAQItem question="Can AI agents use Mailgun's HTTP API without human intervention?">
+    Not fully. Mailgun requires a human to create the account, verify a domain with DNS records, and generate API keys. The agent can use the API after setup, but can't self-provision.
+  </FAQItem>
+
+  <FAQItem question="What are Mailgun's overage charges when you exceed your monthly plan limit?">
+    Mailgun charges roughly $0.80 per 1,000 emails above your plan limit, though the exact rate varies by tier. These charges are billed automatically.
+  </FAQItem>
+
+  <FAQItem question="Does LobsterMail support SMTP?">
+    LobsterMail provides a TypeScript SDK and REST API designed for programmatic access by agents. It does not offer SMTP relay. If your use case requires raw SMTP, Mailgun or SendGrid are better options.
+  </FAQItem>
+
+  <FAQItem question="How does email validation pricing differ between Mailgun and LobsterMail?">
+    Mailgun charges separately for email validation ($1.75 per 100 validations on lower tiers). LobsterMail includes inbound injection risk scoring on every email at no extra cost.
+  </FAQItem>
+
+  <FAQItem question="What happens when you go over your Mailgun email limit?">
+    Mailgun applies per-email overage charges automatically. You won't be blocked from sending, but your bill will increase based on the excess volume.
+  </FAQItem>
+
+  <FAQItem question="Which platform is easier to integrate into an LLM-based agent framework?">
+    LobsterMail. The SDK handles account creation, token storage, and inbox provisioning in four lines of code. Mailgun requires pre-configured API keys and domain verification before any integration.
+  </FAQItem>
+
+  <FAQItem question="How does LobsterMail handle burst sending from concurrent agent workflows?">
+    LobsterMail applies per-inbox daily send limits (based on your tier) rather than throttling by IP or domain. Multiple agents can send concurrently from separate inboxes without affecting each other's limits.
+  </FAQItem>
+
+  <FAQItem question="How do Mailgun and LobsterMail compare on per-email cost at 500,000 emails per month?">
+    At that volume, Mailgun's per-email rate drops below $0.001 on higher-tier plans. LobsterMail's Builder tier caps at 5,000 emails/month, so it's not designed for that scale. Mailgun wins for bulk sending; LobsterMail wins for agent-scale workloads under 5,000/month.
+  </FAQItem>
+
+  <FAQItem question="Can you cancel Mailgun or LobsterMail mid-month without penalty?">
+    Both services allow cancellation at any time. Neither charges early termination fees. Your plan remains active through the end of the billing period.
+  </FAQItem>
+
+  <FAQItem question="What is the best alternative to Mailgun for AI agents in 2026?">
+    For autonomous agents that need self-provisioned inboxes, LobsterMail is the most direct alternative. For human-configured high-volume sending, SendGrid and Amazon SES are closer Mailgun competitors.
+  </FAQItem>
+
+  <FAQItem question="What is the cheapest transactional email API for low-volume agent use?">
+    LobsterMail's free tier at $0/month for 1,000 emails. Amazon SES charges $0.10 per 1,000 emails with no monthly minimum, making it the cheapest pay-as-you-go option for non-agent use cases.
+  </FAQItem>
+</FAQ>
+
+```

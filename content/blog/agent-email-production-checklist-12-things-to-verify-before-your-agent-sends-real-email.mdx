@@ -1,0 +1,239 @@
+---
+title: >-
+  agent email production checklist: 12 things to verify before your agent sends
+  real email
+description: >-
+  A production checklist for AI agent email covering authentication,
+  deliverability, bounce handling, compliance, and observability. Ship with
+  confidence.
+date: '2026-03-17'
+author: Ian Bussières
+tags:
+  - email
+  - infrastructure
+  - guides
+  - openclaw
+  - troubleshooting
+image: >-
+  /blog/agent-email-production-checklist-12-things-to-verify-before-your-agent-sends-real-email.png
+imageAlt: >-
+  Pixel art lobster working at a computer terminal with email — agent email
+  production checklist
+---
+
+Most agents can send an email within minutes of setup. Getting that email into a real person's inbox, consistently, without tripping spam filters or violating compliance rules? That's a different problem entirely.
+
+I've seen teams push agent email to production after a single successful test send. Two weeks later they're staring at a 38% bounce rate and a domain reputation that'll take months to recover. The gap between "it works in dev" and "it works in production" is where most agent email deployments fail.
+
+This checklist exists to close that gap. It covers authentication, deliverability, compliance, observability, and the kill switch you'll be glad you built. If you're shipping an email-capable agent to real users, run through every item before you flip the switch.
+
+<InlineGetStarted>Get your agent its own inbox first</InlineGetStarted>, then work through the list below.
+
+## Agent email production checklist
+
+1. Verify SPF, DKIM, and DMARC records are published and passing authentication checks.
+2. Confirm bounce and complaint webhooks are wired to a suppression list.
+3. Set outbound rate limits per inbox (start at 20-50 emails/hour for new domains).
+4. Validate email threading headers (`In-Reply-To`, `References`, `Message-ID`) on reply chains.
+5. Test end-to-end in a sandbox environment with real mailbox providers (Gmail, Outlook, Yahoo).
+6. Wire structured logging and tracing for every outbound message.
+7. Implement a kill switch that halts all agent-originated email within seconds.
+8. Confirm CAN-SPAM and GDPR compliance (unsubscribe mechanism, physical address, consent records).
+9. Run content through a spam score checker (aim for SpamAssassin score below 3.0).
+10. Verify the sending domain is dedicated to agent email and isolated from your marketing domain.
+11. Set up post-launch monitoring for bounce rate, spam complaint rate, and delivery latency.
+12. Document a rollback plan that reverts to the last known-good email configuration.
+
+That's the short version. Let's break each one down.
+
+## Authentication: SPF, DKIM, and DMARC
+
+Email authentication isn't optional. Without valid SPF, DKIM, and DMARC records, major providers will reject or quarantine your agent's messages before they reach any inbox.
+
+**SPF** tells receiving servers which IPs are authorized to send from your domain. **DKIM** adds a cryptographic signature to each message header, proving the email wasn't tampered with in transit. **DMARC** ties SPF and DKIM together with a policy that tells receivers what to do when authentication fails (quarantine, reject, or do nothing).
+
+The minimum viable configuration:
+
+```txt
+SPF:   v=spf1 include:lobstermail.ai ~all
+DKIM:  Valid 2048-bit key, rotating every 6-12 months
+DMARC: v=DMARC1; p=quarantine; rua=mailto:dmarc-reports@yourdomain.com
+Start with `p=quarantine` rather than `p=reject` so you can monitor failures without losing legitimate mail. Move to `p=reject` once you've confirmed everything passes. We covered the full DNS setup in our guide on [custom domains for agent email](/blog/custom-domains-agent-email), including the specific records LobsterMail provisions automatically.
+
+If you're using LobsterMail's default `@lobstermail.ai` addresses, authentication is handled for you. But the moment you bring a custom domain, these records become your responsibility.
+
+## Bounce handling and suppression
+
+Your agent will encounter bounces. Hard bounces (invalid addresses, non-existent domains) need immediate suppression. Soft bounces (full mailbox, temporary server issues) get a retry window, then suppression.
+
+Here's what a healthy bounce handling pipeline looks like:
+
+1. Receive the bounce notification via webhook or polling.
+2. Classify it as hard or soft based on the SMTP status code.
+3. Hard bounces: add the address to a suppression list immediately. Never send to it again.
+4. Soft bounces: retry up to 3 times over 72 hours. If still failing, suppress.
+5. Log every bounce with the full SMTP response for debugging.
+
+Agents without suppression lists will keep hammering dead addresses. Mailbox providers notice this pattern quickly, and it tanks your sender reputation faster than almost anything else. For a deeper look at how reputation scoring works, see our post on [email deliverability for AI agents](/blog/email-deliverability-ai-agents).
+
+## Rate limiting and warm-up
+
+A new domain sending 500 emails on day one is a spam signal. Period. Mailbox providers expect new senders to start slow and build volume gradually over 2-4 weeks.
+
+A reasonable warm-up schedule for a new dedicated domain:
+
+| Day | Emails/day | Notes |
+|-----|-----------|-------|
+| 1-3 | 20 | Send to known-valid, engaged addresses only |
+| 4-7 | 50 | Monitor bounce rate (should be under 2%) |
+| 8-14 | 100-200 | Watch for spam complaints (under 0.1%) |
+| 15-28 | 200-500 | Gradually increase if metrics hold |
+
+Your agent's SDK or sending layer needs hard rate limits baked in. Don't rely on the agent's "judgment" about how many emails to send. Agents optimize for task completion, not deliverability. Set the ceiling in infrastructure, not in the prompt.
+
+LobsterMail's Free tier caps at 1,000 emails/month. The Builder tier ($9/mo) gives you up to 500 emails/day and 5,000/month. Those limits exist partly for this reason: they function as guardrails during the warm-up period.
+
+## Threading and header validation
+
+When your agent replies to an email, the reply needs correct threading headers or it'll show up as a new conversation in the recipient's inbox. This breaks the user experience and looks unprofessional.
+
+Three headers matter:
+
+```
+```txt
+Message-ID: <unique-id@yourdomain.com>
+In-Reply-To: <original-message-id@sender.com>
+References: <original-message-id@sender.com> <previous-reply-id@yourdomain.com>
+`Message-ID` must be unique per message. `In-Reply-To` references the message being replied to. `References` contains the full chain. If your agent generates email via raw SMTP, you need to set these manually. If you're using LobsterMail's `inbox.send()` method with a `replyTo` parameter, threading is handled automatically.
+
+Test this before production. Send a reply chain of 4-5 messages and verify it threads correctly in Gmail, Outlook, and Apple Mail. Each client has slightly different threading logic, and what works in one can break in another.
+
+## End-to-end sandbox testing
+
+Don't test agent email against production mailboxes. Use a [sandbox environment](/blog/testing-agent-email-sandbox) that simulates real delivery without touching real inboxes.
+
+Your sandbox tests should cover:
+
+- **Happy path**: agent sends, recipient receives, threading works.
+- **Bounce handling**: simulate a hard bounce and verify suppression.
+- **Rate limit behavior**: hit the limit and confirm the agent backs off rather than erroring out.
+- **Content variations**: test with attachments, HTML formatting, plain text fallback, and long message bodies.
+- **Injection resistance**: send the agent an email containing prompt injection attempts and verify it doesn't execute them. LobsterMail scores every inbound email for injection risk, but your agent's handling logic matters too.
+
+Run the full suite every time you change the agent's email behavior. Not just once at launch.
+
+## Logging, tracing, and observability
+
+Every email your agent sends or receives should produce a structured log entry. At minimum, capture:
+
+```
+```json
+{
+  "event": "email_sent",
+  "message_id": "<unique-id@yourdomain.com>",
+  "from": "agent@yourdomain.com",
+  "to": "recipient@example.com",
+  "subject": "Re: Your order update",
+  "timestamp": "2026-03-17T14:22:00Z",
+  "status": "accepted",
+  "smtp_response": "250 OK",
+  "agent_id": "agent-checkout-v2",
+  "trace_id": "abc123"
+}
+```
+
+The `trace_id` lets you correlate email events with the agent's broader task execution. When something goes wrong (and it will), you need to reconstruct the sequence: what triggered the email, what the agent decided to write, and what the server responded.
+
+Set up alerts for anomalies. If your agent's bounce rate spikes above 5% in an hour, or spam complaints exceed 0.1%, you want to know immediately, not three days later when your domain is already blocklisted.
+
+## Compliance: CAN-SPAM and GDPR
+
+AI-generated email is still email. The same laws apply.
+
+**CAN-SPAM** (US) requires: accurate "From" headers, a functioning unsubscribe mechanism, a physical mailing address in the message, and no deceptive subject lines. Transactional emails (order confirmations, password resets) are partially exempt, but conversational agent emails typically are not.
+
+**GDPR** (EU) requires: lawful basis for processing the recipient's email address, the ability to delete their data on request, and clear identification of the sender.
+
+Your agent needs to include an unsubscribe link in any email that could be classified as commercial. If you're unsure whether an email is transactional or commercial, treat it as commercial. The penalties for getting this wrong are steep: up to $51,744 per violation under CAN-SPAM and 4% of global revenue under GDPR.
+
+## The kill switch
+
+Build a mechanism that stops all agent-originated email within seconds. Not minutes. Seconds.
+
+This could be a feature flag, an API endpoint that revokes sending permissions, or a circuit breaker that trips automatically when error rates exceed a threshold. The implementation matters less than the speed. When your agent starts sending something wrong at scale, every minute of delay multiplies the damage.
+
+Test the kill switch before launch. Trigger it, verify all sending stops, then verify you can resume cleanly.
+
+## Self-managed SMTP vs. purpose-built platforms
+
+You can absolutely run your own SMTP server, configure Postfix, manage IP reputation, handle bounce processing, and build observability from scratch. Many teams do.
+
+The question is whether that's where your engineering time should go. If your product is email infrastructure, yes. If your product is an AI agent that happens to need email, probably not.
+
+Purpose-built agent email platforms like LobsterMail handle authentication, deliverability, rate limiting, injection scanning, and inbox provisioning out of the box. Your agent calls `LobsterMail.create()` and gets a working inbox in under 30 seconds. Everything on this checklist that touches infrastructure is already done.
+
+That doesn't eliminate the checklist. You still need to handle compliance, test your agent's email logic, build observability into your application layer, and wire up a kill switch. But it cuts the infrastructure section in half.
+
+<InlineGetStarted>Set up your agent's production inbox here</InlineGetStarted> if you want to skip the SMTP configuration and go straight to the application-level items.
+
+<FAQ>
+  <FAQItem question="What is an agent email production checklist and who needs it?">
+    It's a verification list covering authentication, deliverability, compliance, and observability for AI agents that send or receive email. Any team shipping an email-capable agent to real users needs one.
+  </FAQItem>
+
+  <FAQItem question="What deliverability checks should pass before an AI email agent goes live?">
+    At minimum: SPF, DKIM, and DMARC authentication passing, spam score below 3.0 on SpamAssassin, bounce webhooks connected to a suppression list, and a warm-up plan for new domains. See our [deliverability guide](/blog/email-deliverability-ai-agents) for the full breakdown.
+  </FAQItem>
+
+  <FAQItem question="What is the minimum SPF/DKIM/DMARC configuration for production agent email?">
+    SPF should include your sending service's IP range. DKIM needs a 2048-bit key. DMARC should start at `p=quarantine` with a reporting address (`rua`) so you can monitor failures before moving to `p=reject`.
+  </FAQItem>
+
+  <FAQItem question="How should an AI agent handle email bounces and delivery failures?">
+    Hard bounces (5xx codes) should immediately suppress the recipient address. Soft bounces (4xx codes) get 2-3 retries over 72 hours before suppression. Log every bounce with the full SMTP response for debugging.
+  </FAQItem>
+
+  <FAQItem question="What rate limits prevent agent email from triggering spam flags?">
+    New domains should start at 20-50 emails per day and ramp up over 2-4 weeks. Keep bounce rates under 2% and spam complaint rates under 0.1% at every stage. Set rate limits in infrastructure, not in prompts.
+  </FAQItem>
+
+  <FAQItem question="How do you test an AI email agent end-to-end before launch?">
+    Use a [sandbox environment](/blog/testing-agent-email-sandbox) that simulates delivery to real providers. Test happy paths, bounce handling, rate limit behavior, content variations, and prompt injection resistance.
+  </FAQItem>
+
+  <FAQItem question="What logging should be in place before an agent email system goes to production?">
+    Every sent and received email should produce a structured log with message ID, sender, recipient, timestamp, SMTP response, agent ID, and a trace ID that correlates with the agent's task execution context.
+  </FAQItem>
+
+  <FAQItem question="How is an AI agent email production checklist different from a standard email marketing checklist?">
+    Agent checklists add items that marketing checklists skip: prompt injection resistance, autonomous sending rate controls, kill switches for runaway agents, threading header validation, and observability tied to agent task traces rather than campaign IDs.
+  </FAQItem>
+
+  <FAQItem question="What compliance items must be checked before an agent sends emails at scale?">
+    CAN-SPAM requires accurate From headers, a working unsubscribe mechanism, and a physical address. GDPR requires lawful basis for processing recipient data and the ability to honor deletion requests. Treat any ambiguously-classified email as commercial.
+  </FAQItem>
+
+  <FAQItem question="Should agent-sent emails use a dedicated sending domain?">
+    Yes. Isolate agent email on its own subdomain (e.g., `agent.yourdomain.com`) so reputation issues don't affect your primary marketing or transactional email. See our [custom domains guide](/blog/custom-domains-agent-email) for setup steps.
+  </FAQItem>
+
+  <FAQItem question="What is a kill switch for agent email and why does it matter?">
+    A kill switch is a mechanism that halts all agent-originated email within seconds. It can be a feature flag, an API call, or an automatic circuit breaker. When an agent sends something wrong at scale, every minute of delay multiplies the damage.
+  </FAQItem>
+
+  <FAQItem question="How do purpose-built agent email platforms compare to raw SMTP for production use?">
+    Platforms like LobsterMail handle authentication, deliverability, rate limiting, and inbox provisioning automatically. Raw SMTP gives you full control but requires you to build and maintain all of that infrastructure yourself. The tradeoff is engineering time vs. flexibility.
+  </FAQItem>
+
+  <FAQItem question="What is the difference between transactional and conversational agent email?">
+    Transactional emails are triggered by a user action (order confirmation, password reset) and are partially exempt from CAN-SPAM. Conversational emails are agent-initiated communications that typically require full compliance, including unsubscribe mechanisms.
+  </FAQItem>
+
+  <FAQItem question="How do you monitor agent email performance after launch?">
+    Track bounce rate, spam complaint rate, delivery latency, and inbox placement rate. Set alerts for bounce rates above 5% per hour and complaint rates above 0.1%. Review DMARC aggregate reports weekly to catch authentication drift.
+  </FAQItem>
+
+  <FAQItem question="Is LobsterMail free to use for agent email?">
+    The Free tier costs $0 with no credit card required and includes 1,000 emails per month. The Builder tier at $9/mo gives you up to 10 inboxes and 5,000 emails per month.
+  </FAQItem>
+</FAQ>
