@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-17T13:15:03.870Z",
+  "generated_at": "2026-03-17T19:15:02.496Z",
   "kpis": {
     "mrr_usd": 57,
     "paid_accounts": 5,
@@ -9,32 +9,41 @@
     "seo_clicks_7d": 72,
     "seo_impressions_7d": 9831,
     "seo_avg_position": 0,
-    "total_emails_sent": 52,
-    "total_emails_received": 260,
-    "total_inboxes": 121,
+    "total_emails_sent": 68,
+    "total_emails_received": 295,
+    "total_inboxes": 123,
     "daily_visitors": 367,
     "daily_visitors_human": 73,
     "daily_visitors_bot": 259,
+    "daily_visitors_human_7d": 524,
     "github_stars": 0,
     "x_followers": 2,
-    "clawhub_skill_installs": 0
+    "clawhub_skill_installs": 0,
+    "tier_free": 92,
+    "tier_free_verified": 7,
+    "tier_builder": 0,
+    "tier_pro": 1
   },
   "deltas": {
-    "total_inboxes": 79,
-    "total_emails_sent": 36,
-    "total_emails_received": 160,
+    "total_inboxes": 81,
+    "total_emails_sent": 52,
+    "total_emails_received": 195,
     "free_accounts": 70,
     "github_stars": 0,
     "x_followers": 0,
     "clawhub_skill_installs": 0,
-    "openclaw_github_stars": 20894,
+    "openclaw_github_stars": 21655,
     "openclaw_npm_daily": null,
-    "openclaw_twitter_followers": 22612
+    "openclaw_twitter_followers": 23268,
+    "tier_free": 92,
+    "tier_free_verified": 7,
+    "tier_builder": 0,
+    "tier_pro": 1
   },
   "market": {
-    "openclaw_github_stars": 318901,
+    "openclaw_github_stars": 319662,
     "openclaw_npm_daily": 0,
-    "openclaw_twitter_followers": 462320
+    "openclaw_twitter_followers": 462976
   },
   "sparklines": {
     "mrr_usd": [
@@ -327,6 +336,64 @@
         "value": 367
       }
     ],
+    "daily_visitors_human": [
+      {
+        "date": "2026-03-02",
+        "value": 0
+      },
+      {
+        "date": "2026-03-03",
+        "value": 0
+      },
+      {
+        "date": "2026-03-04",
+        "value": 22
+      },
+      {
+        "date": "2026-03-06",
+        "value": 27
+      },
+      {
+        "date": "2026-03-08",
+        "value": 19
+      },
+      {
+        "date": "2026-03-09",
+        "value": 30
+      },
+      {
+        "date": "2026-03-10",
+        "value": 59
+      },
+      {
+        "date": "2026-03-11",
+        "value": 61
+      },
+      {
+        "date": "2026-03-12",
+        "value": 68
+      },
+      {
+        "date": "2026-03-13",
+        "value": 90
+      },
+      {
+        "date": "2026-03-14",
+        "value": 71
+      },
+      {
+        "date": "2026-03-15",
+        "value": 100
+      },
+      {
+        "date": "2026-03-16",
+        "value": 61
+      },
+      {
+        "date": "2026-03-17",
+        "value": 73
+      }
+    ],
     "total_accounts": [
       {
         "date": "2026-03-02",
@@ -384,29 +451,319 @@
         "date": "2026-03-17",
         "value": 102
       }
+    ],
+    "total_emails_received": [
+      {
+        "date": "2026-03-02",
+        "value": 0
+      },
+      {
+        "date": "2026-03-03",
+        "value": 46
+      },
+      {
+        "date": "2026-03-04",
+        "value": 54
+      },
+      {
+        "date": "2026-03-06",
+        "value": 62
+      },
+      {
+        "date": "2026-03-08",
+        "value": 82
+      },
+      {
+        "date": "2026-03-09",
+        "value": 82
+      },
+      {
+        "date": "2026-03-10",
+        "value": 100
+      },
+      {
+        "date": "2026-03-11",
+        "value": 104
+      },
+      {
+        "date": "2026-03-12",
+        "value": 114
+      },
+      {
+        "date": "2026-03-13",
+        "value": 69
+      },
+      {
+        "date": "2026-03-14",
+        "value": 214
+      },
+      {
+        "date": "2026-03-15",
+        "value": 228
+      },
+      {
+        "date": "2026-03-16",
+        "value": 239
+      },
+      {
+        "date": "2026-03-17",
+        "value": 295
+      }
+    ],
+    "tier_free": [
+      {
+        "date": "2026-03-02",
+        "value": 0
+      },
+      {
+        "date": "2026-03-03",
+        "value": 0
+      },
+      {
+        "date": "2026-03-04",
+        "value": 0
+      },
+      {
+        "date": "2026-03-06",
+        "value": 0
+      },
+      {
+        "date": "2026-03-08",
+        "value": 0
+      },
+      {
+        "date": "2026-03-09",
+        "value": 0
+      },
+      {
+        "date": "2026-03-10",
+        "value": 0
+      },
+      {
+        "date": "2026-03-11",
+        "value": 0
+      },
+      {
+        "date": "2026-03-12",
+        "value": 0
+      },
+      {
+        "date": "2026-03-13",
+        "value": 0
+      },
+      {
+        "date": "2026-03-14",
+        "value": 86
+      },
+      {
+        "date": "2026-03-15",
+        "value": 89
+      },
+      {
+        "date": "2026-03-16",
+        "value": 90
+      },
+      {
+        "date": "2026-03-17",
+        "value": 92
+      }
+    ],
+    "tier_free_verified": [
+      {
+        "date": "2026-03-02",
+        "value": 0
+      },
+      {
+        "date": "2026-03-03",
+        "value": 0
+      },
+      {
+        "date": "2026-03-04",
+        "value": 0
+      },
+      {
+        "date": "2026-03-06",
+        "value": 0
+      },
+      {
+        "date": "2026-03-08",
+        "value": 0
+      },
+      {
+        "date": "2026-03-09",
+        "value": 0
+      },
+      {
+        "date": "2026-03-10",
+        "value": 0
+      },
+      {
+        "date": "2026-03-11",
+        "value": 0
+      },
+      {
+        "date": "2026-03-12",
+        "value": 0
+      },
+      {
+        "date": "2026-03-13",
+        "value": 0
+      },
+      {
+        "date": "2026-03-14",
+        "value": 7
+      },
+      {
+        "date": "2026-03-15",
+        "value": 7
+      },
+      {
+        "date": "2026-03-16",
+        "value": 7
+      },
+      {
+        "date": "2026-03-17",
+        "value": 7
+      }
+    ],
+    "tier_builder": [
+      {
+        "date": "2026-03-02",
+        "value": 0
+      },
+      {
+        "date": "2026-03-03",
+        "value": 0
+      },
+      {
+        "date": "2026-03-04",
+        "value": 0
+      },
+      {
+        "date": "2026-03-06",
+        "value": 0
+      },
+      {
+        "date": "2026-03-08",
+        "value": 0
+      },
+      {
+        "date": "2026-03-09",
+        "value": 0
+      },
+      {
+        "date": "2026-03-10",
+        "value": 0
+      },
+      {
+        "date": "2026-03-11",
+        "value": 0
+      },
+      {
+        "date": "2026-03-12",
+        "value": 0
+      },
+      {
+        "date": "2026-03-13",
+        "value": 0
+      },
+      {
+        "date": "2026-03-14",
+        "value": 0
+      },
+      {
+        "date": "2026-03-15",
+        "value": 0
+      },
+      {
+        "date": "2026-03-16",
+        "value": 0
+      },
+      {
+        "date": "2026-03-17",
+        "value": 0
+      }
+    ],
+    "tier_pro": [
+      {
+        "date": "2026-03-02",
+        "value": 0
+      },
+      {
+        "date": "2026-03-03",
+        "value": 0
+      },
+      {
+        "date": "2026-03-04",
+        "value": 0
+      },
+      {
+        "date": "2026-03-06",
+        "value": 0
+      },
+      {
+        "date": "2026-03-08",
+        "value": 0
+      },
+      {
+        "date": "2026-03-09",
+        "value": 0
+      },
+      {
+        "date": "2026-03-10",
+        "value": 0
+      },
+      {
+        "date": "2026-03-11",
+        "value": 0
+      },
+      {
+        "date": "2026-03-12",
+        "value": 0
+      },
+      {
+        "date": "2026-03-13",
+        "value": 0
+      },
+      {
+        "date": "2026-03-14",
+        "value": 1
+      },
+      {
+        "date": "2026-03-15",
+        "value": 1
+      },
+      {
+        "date": "2026-03-16",
+        "value": 1
+      },
+      {
+        "date": "2026-03-17",
+        "value": 1
+      }
     ]
   },
   "pipeline": {
-    "drafts": 28,
-    "approved": 4,
+    "drafts": 66,
+    "approved": 0,
     "published": 340
   },
   "content": {
-    "total_topics": 300,
+    "total_topics": 311,
     "roadmap_progress": {
-      "total": 300,
-      "planned": 143,
-      "targeted": 12,
-      "drafted": 102,
+      "total": 311,
+      "planned": 146,
+      "targeted": 0,
+      "drafted": 24,
       "approved": 0,
-      "published": 43,
+      "published": 141,
       "refreshing": 0
     }
   },
   "agents": {
-    "agent_2_last_run": "2026-03-17T12:02:09.456Z",
-    "agent_3_last_run": "2026-03-17T07:10:12.050Z",
-    "agent_6_last_run": "2026-03-17T10:00:09.760Z"
+    "agent_2_last_run": "2026-03-17T18:02:52.012Z",
+    "agent_3_last_run": "2026-03-17T19:08:08.693Z",
+    "agent_6_last_run": "2026-03-17T16:00:11.806Z"
   },
   "latest_date": "2026-03-17"
 }
