@@ -225,10 +225,11 @@ export default async function DashboardPage() {
           color="#10B981"
         />
         <KpiCard
-          title="Paid Accounts"
-          value={fmt(kpis.paid_accounts)}
-          sparkline={sparklines.paid_accounts}
-          color="#8B5CF6"
+          title="Visitors (7d)"
+          value={fmt(kpis.daily_visitors_human_7d)}
+          subtitle="Human visitors"
+          sparkline={sparklines.daily_visitors_human}
+          color="#FB5705"
         />
         <KpiCard
           title="Total Users"
@@ -237,11 +238,42 @@ export default async function DashboardPage() {
           color="#3B82F6"
         />
         <KpiCard
-          title="Organic Clicks (7d)"
-          value={fmt(kpis.seo_clicks_7d)}
-          sparkline={sparklines.seo_clicks}
+          title="Emails Received"
+          value={fmt(kpis.total_emails_received)}
+          sparkline={sparklines.total_emails_received}
+          color="#14B8A6"
+        />
+      </div>
+
+      {/* Accounts by Tier */}
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <KpiCard
+          title="Free"
+          value={fmt(kpis.tier_free)}
+          subtitle="Tier 0 · Anonymous"
+          sparkline={sparklines.tier_free}
+          color="#14B8A6"
+        />
+        <KpiCard
+          title="Free Verified"
+          value={fmt(kpis.tier_free_verified)}
+          subtitle="Tier 1 · Verified"
+          sparkline={sparklines.tier_free_verified}
+          color="#3B82F6"
+        />
+        <KpiCard
+          title="Builder"
+          value={fmt(kpis.tier_builder)}
+          subtitle="Tier 2 · $9/mo"
+          sparkline={sparklines.tier_builder}
           color="#F59E0B"
-          trimLag
+        />
+        <KpiCard
+          title="Pro"
+          value={fmt(kpis.tier_pro)}
+          subtitle="Tier 3 · $19/mo"
+          sparkline={sparklines.tier_pro}
+          color="#8B5CF6"
         />
       </div>
 

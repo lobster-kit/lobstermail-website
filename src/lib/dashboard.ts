@@ -18,7 +18,12 @@ export interface KpiSnapshot {
     daily_visitors: number;
     daily_visitors_human: number;
     daily_visitors_bot: number;
+    daily_visitors_human_7d: number;
     github_stars: number;
+    tier_free: number;
+    tier_free_verified: number;
+    tier_builder: number;
+    tier_pro: number;
     x_followers: number;
     clawhub_skill_installs: number;
   };
