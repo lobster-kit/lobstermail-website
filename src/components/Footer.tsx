@@ -70,7 +70,7 @@ const DIRECTORIES = [
   {
     label: "Startup Fame",
     href: "https://startupfa.me/s/lobstermail-1?utm_source=lobstermail.ai",
-    badge: "https://startupfa.me/badges/featured-badge-small.webp",
+    badge: "/badges/startupfame-badge.webp",
   },
 ] as const;
 
