@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-17T19:15:02.496Z",
+  "generated_at": "2026-03-18T01:15:06.212Z",
   "kpis": {
     "mrr_usd": 57,
     "paid_accounts": 5,
@@ -744,7 +744,7 @@
     ]
   },
   "pipeline": {
-    "drafts": 66,
+    "drafts": 65,
     "approved": 0,
     "published": 340
   },
