@@ -105,7 +105,7 @@ What happens when five agents share the same email service, and they each have t
 
 The better approach: share circuit breaker state across agents. This doesn't require anything fancy. A shared Redis key, a small SQLite table, or even a file on disk works fine. When one agent detects the service is down, all agents stop calling it immediately.
 
-The tradeoff is coordination overhead. If your agents run on separate machines, sharing state adds a network dependency. For [self-hosted setups](/blog/self-hosted-vs-managed-agent-email), a local shared store (SQLite or an in-memory cache) keeps it simple. For distributed deployments, Redis is the standard choice.
+The tradeoff is coordination overhead. If your agents run on separate machines, sharing state adds a network dependency. For self-hosted setups, a local shared store (SQLite or an in-memory cache) keeps it simple. For distributed deployments, Redis is the standard choice.
 
 Watch out for the thundering herd problem on recovery. When the circuit closes, don't let all five agents send their queued emails simultaneously. Stagger the drain: each agent should add a small random delay before flushing its queue.
 

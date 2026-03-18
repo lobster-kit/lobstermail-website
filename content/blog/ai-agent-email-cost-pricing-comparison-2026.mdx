@@ -49,7 +49,7 @@ Agent-native platforms generally use one of two models: per-inbox or capacity-ba
 
 **Per-inbox pricing** charges you for each address your agent provisions. AgentMail follows this approach. Their free tier gives you a handful of inboxes, and paid plans charge roughly $2–$4 per inbox per month. This is fine if your agent count is stable. It becomes unpredictable if agents create inboxes on the fly for disposable tasks (signing up for services, receiving one-time codes, isolating communication threads).
 
-We wrote about this dynamic in detail when we looked at [how LobsterMail pricing works and why inboxes are free](/blog/lobstermail-pricing-explained). The short version: per-inbox pricing penalizes the exact behavior that makes agents useful. Agents are good at creating, using, and discarding resources programmatically. Charging per resource discourages that.
+We wrote about this dynamic in detail when we looked at [how LobsterMail pricing works and why inboxes are free](/pricing). The short version: per-inbox pricing penalizes the exact behavior that makes agents useful. Agents are good at creating, using, and discarding resources programmatically. Charging per resource discourages that.
 
 **Capacity-based pricing** sets a ceiling on total volume (emails per month, inboxes per account) rather than charging per unit. LobsterMail uses this model. The Free tier includes 1,000 emails/month. The Builder tier at $9/month bumps that to 5,000 emails/month with up to 10 inboxes. Your agents can create and retire inboxes within those limits without triggering surprise line items.
 
@@ -79,7 +79,7 @@ The indirect cost is where it gets painful. You're responsible for:
 - Keeping the server patched and secure
 - Monitoring deliverability across major providers (Gmail, Outlook, Yahoo all have different filtering rules)
 
-For a single agent sending a few emails per day, this might be overkill. For [running 50 agent inboxes without losing your mind (or your budget)](/blog/running-50-agent-inboxes), it's a full-time operations job that has nothing to do with what your agents are actually trying to accomplish.
+For a single agent sending a few emails per day, this might be overkill. For running 50 agent inboxes without losing your mind (or your budget), it's a full-time operations job that has nothing to do with what your agents are actually trying to accomplish.
 
 The real cost of DIY isn't the server bill. It's the engineering time you spend on email infrastructure instead of on the thing your agents are supposed to do.
 
@@ -122,7 +122,7 @@ The best pricing model is the one that doesn't make you think about email pricin
   </FAQItem>
 
   <FAQItem question="Does LobsterMail charge per inbox, per email sent, or per agent?">
-    LobsterMail uses capacity-based pricing. The Free tier includes 1,000 emails/month and 1 inbox. The Builder tier at $9/month includes 5,000 emails/month and up to 10 inboxes. There's no per-send or per-agent fee. See [how LobsterMail pricing works](/blog/lobstermail-pricing-explained) for the full breakdown.
+    LobsterMail uses capacity-based pricing. The Free tier includes 1,000 emails/month and 1 inbox. The Builder tier at $9/month includes 5,000 emails/month and up to 10 inboxes. There's no per-send or per-agent fee. See [how LobsterMail pricing works](/pricing) for the full breakdown.
   </FAQItem>
 
   <FAQItem question="What happens to my costs if my agents scale from 5 to 50 inboxes overnight?">

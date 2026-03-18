@@ -47,7 +47,7 @@ const SOCIALS = [
   },
   {
     label: "X",
-    href: "https://x.com/lobabormail",
+    href: "https://x.com/lobster_mail",
     icon: XLogo,
   },
 ] as const;

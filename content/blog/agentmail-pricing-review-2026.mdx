@@ -50,7 +50,7 @@ LobsterMail's Builder tier is $9/month. You get up to 10 inboxes, 5,000 emails/m
 For the mid-range: if your project needs 4-10 inboxes and moderate email volume, LobsterMail Builder is less than half the price of AgentMail's paid tier.
 
 <Callout type="info">
-  LobsterMail Builder is $9/month with up to 10 inboxes, 5,000 emails/month, and 500 sends/day. [Full pricing breakdown here](/blog/lobstermail-pricing-explained).
+  LobsterMail Builder is $9/month with up to 10 inboxes, 5,000 emails/month, and 500 sends/day. [Full pricing breakdown here](/pricing).
 </Callout>
 
 There's also a provisioning difference worth understanding. LobsterMail is built around agent self-provisioning, your agent calls `LobsterMail.create()` and the SDK handles account signup automatically if no token exists. No human sets anything up before the first inbox is provisioned. AgentMail is API-first, but account creation still happens at the human layer before the agent can operate.
@@ -77,11 +77,11 @@ AgentMail is a well-built product. If their API fits your use case and you're sa
 
 ## When to start (or switch) to LobsterMail
 
-If you're starting a new project that needs 4-10 agent inboxes, the starting point is clear. Begin on LobsterMail free, test the provisioning flow, and [molt up to Builder](/blog/lobstermail-pricing-explained) when you hit volume limits. You'll spend $9/month instead of $20 for the same inbox range.
+If you're starting a new project that needs 4-10 agent inboxes, the starting point is clear. Begin on LobsterMail free, test the provisioning flow, and [molt up to Builder](/pricing) when you hit volume limits. You'll spend $9/month instead of $20 for the same inbox range.
 
 If you're building something where the agent must provision its own inbox without prior human setup, fully autonomous pipelines, self-contained workflows, agents that stand up their own infrastructure, LobsterMail's model fits that architecture from the start. One call handles account creation and [inbox provisioning](/glossary/inbox-provisioning) together. That's not a workflow AgentMail supports.
 
-For larger deployments of 10, 20, or 50 inboxes, read [how fleet management works at scale](/blog/running-50-agent-inboxes) before committing to either provider.
+For larger deployments of 10, 20, or 50 inboxes, read how fleet management works at scale before committing to either provider.
 
 <FAQ>
   <FAQItem question="What does AgentMail cost in 2026?">
@@ -89,7 +89,7 @@ For larger deployments of 10, 20, or 50 inboxes, read [how fleet management work
   </FAQItem>
 
   <FAQItem question="How does LobsterMail pricing compare to AgentMail?">
-    LobsterMail's free tier includes 1,000 emails/month with no credit card required. The Builder tier is $9/month with up to 10 inboxes and 5,000 emails/month, roughly half the cost of AgentMail's paid tier for the same inbox range. See the [full breakdown](/blog/lobstermail-pricing-explained).
+    LobsterMail's free tier includes 1,000 emails/month with no credit card required. The Builder tier is $9/month with up to 10 inboxes and 5,000 emails/month, roughly half the cost of AgentMail's paid tier for the same inbox range. See the [full breakdown](/pricing).
   </FAQItem>
 
   <FAQItem question="Is AgentMail's free tier enough for most projects?">
@@ -121,7 +121,7 @@ For larger deployments of 10, 20, or 50 inboxes, read [how fleet management work
   </FAQItem>
 
   <FAQItem question="What if I need more than 10 inboxes?">
-    LobsterMail's Builder tier covers up to 10 inboxes. If you're running a larger fleet, [this post on managing 50+ agent inboxes](/blog/running-50-agent-inboxes) covers architecture patterns for both LobsterMail and other providers.
+    LobsterMail's Builder tier covers up to 10 inboxes. If you're running a larger fleet, this post on managing 50+ agent inboxes covers architecture patterns for both LobsterMail and other providers.
   </FAQItem>
 
   <FAQItem question="Can I use my own domain with LobsterMail instead of @lobstermail.ai?">

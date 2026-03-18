@@ -129,7 +129,7 @@ The inbox is already a memory store. Your agent just needs to read it.
     Asynchrony is an advantage. Agents don't need to be running simultaneously to share context. An agent can reconstruct everything that happened while it was offline by reading messages that arrived in its inbox. Synchronous memory stores like Redis require the agent to be connected at write time to capture events.
   </FAQItem>
   <FAQItem question="Is LobsterMail free to use as an agent memory layer?">
-    LobsterMail's free tier lets your agent receive emails at no cost, which covers the context reconstruction side. Sending unlocks after verification. The [Builder plan](/blog/lobstermail-pricing-explained) at $9/month adds higher limits for agents that generate heavy email volume.
+    LobsterMail's free tier lets your agent receive emails at no cost, which covers the context reconstruction side. Sending unlocks after verification. The [Builder plan](/pricing) at $9/month adds higher limits for agents that generate heavy email volume.
   </FAQItem>
   <FAQItem question="What is the minimal email data an agent needs to act as a persistent agent across multiple invocations?">
     At minimum: the thread's messages in timestamp order, the `In-Reply-To`/`References` headers for lineage, `From`/`To` for participants, and the subject line for task identification. With just these fields, a stateless agent can reconstruct conversational context and continue where it left off.

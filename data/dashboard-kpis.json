@@ -1,56 +1,52 @@
 {
-  "generated_at": "2026-03-18T01:15:06.212Z",
+  "generated_at": "2026-03-18T13:15:01.493Z",
   "kpis": {
     "mrr_usd": 57,
-    "paid_accounts": 5,
-    "free_accounts": 92,
-    "total_accounts": 102,
-    "npm_installs_7d": 13,
+    "paid_accounts": 7,
+    "free_accounts": 96,
+    "total_accounts": 108,
+    "npm_installs_7d": 12,
     "seo_clicks_7d": 72,
     "seo_impressions_7d": 9831,
     "seo_avg_position": 0,
-    "total_emails_sent": 68,
-    "total_emails_received": 295,
-    "total_inboxes": 123,
-    "daily_visitors": 367,
-    "daily_visitors_human": 73,
-    "daily_visitors_bot": 259,
-    "daily_visitors_human_7d": 524,
+    "total_emails_sent": 78,
+    "total_emails_received": 332,
+    "total_inboxes": 130,
+    "daily_visitors": 373,
+    "daily_visitors_human": 62,
+    "daily_visitors_bot": 271,
+    "daily_visitors_human_7d": 525,
     "github_stars": 0,
     "x_followers": 2,
     "clawhub_skill_installs": 0,
-    "tier_free": 92,
-    "tier_free_verified": 7,
+    "tier_free": 96,
+    "tier_free_verified": 9,
     "tier_builder": 0,
     "tier_pro": 1
   },
   "deltas": {
     "total_inboxes": 81,
-    "total_emails_sent": 52,
-    "total_emails_received": 195,
-    "free_accounts": 70,
+    "total_emails_sent": 48,
+    "total_emails_received": 228,
+    "free_accounts": 68,
     "github_stars": 0,
     "x_followers": 0,
     "clawhub_skill_installs": 0,
-    "openclaw_github_stars": 21655,
+    "openclaw_github_stars": 20163,
     "openclaw_npm_daily": null,
-    "openclaw_twitter_followers": 23268,
-    "tier_free": 92,
-    "tier_free_verified": 7,
+    "openclaw_twitter_followers": 23401,
+    "tier_free": 96,
+    "tier_free_verified": 9,
     "tier_builder": 0,
     "tier_pro": 1
   },
   "market": {
-    "openclaw_github_stars": 319662,
+    "openclaw_github_stars": 322096,
     "openclaw_npm_daily": 0,
-    "openclaw_twitter_followers": 462976
+    "openclaw_twitter_followers": 464534
   },
   "sparklines": {
     "mrr_usd": [
-      {
-        "date": "2026-03-02",
-        "value": 0
-      },
       {
         "date": "2026-03-03",
         "value": 0
@@ -102,13 +98,13 @@
       {
         "date": "2026-03-17",
         "value": 57
+      },
+      {
+        "date": "2026-03-18",
+        "value": 57
       }
     ],
     "paid_accounts": [
-      {
-        "date": "2026-03-02",
-        "value": 0
-      },
       {
         "date": "2026-03-03",
         "value": 0
@@ -160,13 +156,13 @@
       {
         "date": "2026-03-17",
         "value": 5
+      },
+      {
+        "date": "2026-03-18",
+        "value": 7
       }
     ],
     "seo_clicks": [
-      {
-        "date": "2026-03-02",
-        "value": 5
-      },
       {
         "date": "2026-03-03",
         "value": 5
@@ -218,13 +214,13 @@
       {
         "date": "2026-03-17",
         "value": 0
+      },
+      {
+        "date": "2026-03-18",
+        "value": 0
       }
     ],
     "seo_impressions": [
-      {
-        "date": "2026-03-02",
-        "value": 440
-      },
       {
         "date": "2026-03-03",
         "value": 535
@@ -276,13 +272,13 @@
       {
         "date": "2026-03-17",
         "value": 0
+      },
+      {
+        "date": "2026-03-18",
+        "value": 0
       }
     ],
     "daily_visitors": [
-      {
-        "date": "2026-03-02",
-        "value": 0
-      },
       {
         "date": "2026-03-03",
         "value": 0
@@ -334,13 +330,13 @@
       {
         "date": "2026-03-17",
         "value": 367
+      },
+      {
+        "date": "2026-03-18",
+        "value": 373
       }
     ],
     "daily_visitors_human": [
-      {
-        "date": "2026-03-02",
-        "value": 0
-      },
       {
         "date": "2026-03-03",
         "value": 0
@@ -392,13 +388,13 @@
       {
         "date": "2026-03-17",
         "value": 73
+      },
+      {
+        "date": "2026-03-18",
+        "value": 62
       }
     ],
     "total_accounts": [
-      {
-        "date": "2026-03-02",
-        "value": 0
-      },
       {
         "date": "2026-03-03",
         "value": 16
@@ -450,13 +446,13 @@
       {
         "date": "2026-03-17",
         "value": 102
+      },
+      {
+        "date": "2026-03-18",
+        "value": 108
       }
     ],
     "total_emails_received": [
-      {
-        "date": "2026-03-02",
-        "value": 0
-      },
       {
         "date": "2026-03-03",
         "value": 46
@@ -508,13 +504,13 @@
       {
         "date": "2026-03-17",
         "value": 295
+      },
+      {
+        "date": "2026-03-18",
+        "value": 332
       }
     ],
     "tier_free": [
-      {
-        "date": "2026-03-02",
-        "value": 0
-      },
       {
         "date": "2026-03-03",
         "value": 0
@@ -566,14 +562,14 @@
       {
         "date": "2026-03-17",
         "value": 92
+      },
+      {
+        "date": "2026-03-18",
+        "value": 96
       }
     ],
     "tier_free_verified": [
       {
-        "date": "2026-03-02",
-        "value": 0
-      },
-      {
         "date": "2026-03-03",
         "value": 0
       },
@@ -624,14 +620,14 @@
       {
         "date": "2026-03-17",
         "value": 7
+      },
+      {
+        "date": "2026-03-18",
+        "value": 9
       }
     ],
     "tier_builder": [
       {
-        "date": "2026-03-02",
-        "value": 0
-      },
-      {
         "date": "2026-03-03",
         "value": 0
       },
@@ -681,15 +677,15 @@
       },
       {
         "date": "2026-03-17",
+        "value": 0
+      },
+      {
+        "date": "2026-03-18",
         "value": 0
       }
     ],
     "tier_pro": [
       {
-        "date": "2026-03-02",
-        "value": 0
-      },
-      {
         "date": "2026-03-03",
         "value": 0
       },
@@ -740,11 +736,15 @@
       {
         "date": "2026-03-17",
         "value": 1
+      },
+      {
+        "date": "2026-03-18",
+        "value": 1
       }
     ]
   },
   "pipeline": {
-    "drafts": 65,
+    "drafts": 66,
     "approved": 0,
     "published": 340
   },
@@ -763,7 +763,7 @@
   "agents": {
     "agent_2_last_run": "2026-03-17T18:02:52.012Z",
     "agent_3_last_run": "2026-03-17T19:08:08.693Z",
-    "agent_6_last_run": "2026-03-17T16:00:11.806Z"
+    "agent_6_last_run": "2026-03-18T13:01:37.047Z"
   },
-  "latest_date": "2026-03-17"
+  "latest_date": "2026-03-18"
 }
