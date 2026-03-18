@@ -119,7 +119,7 @@ The simplest approach: every table that holds tenant-specific data includes an `
 
 For platforms running at scale, this is also where indexing decisions matter most. A composite index on `(account_id, inbox_id, created_at)` on the `messages` table handles the most common agent query pattern: "give me recent messages for this inbox in this account." Without that index, a table with millions of rows across thousands of tenants gets slow fast.
 
-When comparing [self-hosted agent email versus managed platforms](/blog/self-hosted-vs-managed-agent-email), multi-tenant isolation is one of the hardest things to get right on your own. It's not just a schema question. It's a schema plus permissions plus query discipline question.
+When comparing self-hosted agent email versus managed platforms, multi-tenant isolation is one of the hardest things to get right on your own. It's not just a schema question. It's a schema plus permissions plus query discipline question.
 
 ## SQL vs. NoSQL for agent email
 

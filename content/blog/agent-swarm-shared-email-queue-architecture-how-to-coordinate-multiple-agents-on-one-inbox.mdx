@@ -70,7 +70,7 @@ I'd only recommend this if you're stuck with an existing mailbox you can't migra
 
 This is where agent-first email infrastructure comes in. Instead of bolting a queue onto an email service, the email service *is* the queue. Each message has a status. Agents fetch unclaimed messages, the API locks them during processing, and completion is confirmed with a simple call.
 
-If you're [running 50 agent inboxes without losing your mind (or your budget)](/blog/running-50-agent-inboxes), this approach scales cleanly because the queue semantics are built into the email layer itself. No Redis, no IMAP hacks, no filesystem coordination. LobsterMail's inbox API works this way: agents call `receive()`, get messages with metadata, and the platform handles deduplication. For swarm architectures, you can point multiple agents at the same inbox and each one gets distinct messages.
+If you're running 50 agent inboxes without losing your mind (or your budget), this approach scales cleanly because the queue semantics are built into the email layer itself. No Redis, no IMAP hacks, no filesystem coordination. LobsterMail's inbox API works this way: agents call `receive()`, get messages with metadata, and the platform handles deduplication. For swarm architectures, you can point multiple agents at the same inbox and each one gets distinct messages.
 
 The tradeoff is vendor dependency. You're trusting the email provider to get queue semantics right. But that's the same tradeoff you make with SQS, Kafka, or any managed queue service.
 

@@ -84,7 +84,7 @@ Spam filters don't just look at content. They verify that the sender is who they
 
 For AI agents, these protocols create a bootstrapping problem. A new domain has no SPF, no DKIM, no DMARC, and no sending reputation. Building reputation takes weeks of consistent, low-volume sending. Agents that need to send email on day one are stuck.
 
-This is one reason managed services exist. When your agent sends from `@lobstermail.ai`, the SPF, DKIM, and DMARC records are already configured. The domain has established reputation. Your agent inherits that on the first message. We covered the tradeoffs of running your own infrastructure in [self-hosted agent email vs managed: what actually makes sense](/blog/self-hosted-vs-managed-agent-email).
+This is one reason managed services exist. When your agent sends from `@lobstermail.ai`, the SPF, DKIM, and DMARC records are already configured. The domain has established reputation. Your agent inherits that on the first message. We covered the tradeoffs of running your own infrastructure in self-hosted agent email vs managed: what actually makes sense.
 
 ## What happens when things go wrong
 

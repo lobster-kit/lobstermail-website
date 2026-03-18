@@ -163,7 +163,7 @@ async function getOrCreateInbox(agentName: string) {
 }
 ```
 
-`createSmartInbox()` with a consistent name also handles restarts gracefully, if the same agent calls it twice with the same name, it returns the existing address rather than provisioning a duplicate. That collision handling is built in. For how this holds up at real scale, [running 50 agent inboxes](/blog/running-50-agent-inboxes) covers the operational details.
+`createSmartInbox()` with a consistent name also handles restarts gracefully, if the same agent calls it twice with the same name, it returns the existing address rather than provisioning a duplicate. That collision handling is built in. For how this holds up at real scale, running 50 agent inboxes covers the operational details.
 
 ## A note on shared inbox security
 

@@ -73,7 +73,7 @@ The pattern above works for one tenant. What changes at scale is mostly *when* y
 
 At 50 tenants, idempotency matters most. Your agent initialization code runs multiple times, restarts, redeployments, retries. Build in a check: if the tenant already has an `agentEmail` in your database, skip provisioning and initialize with the existing token. Don't create a new inbox on every deploy.
 
-At 500 tenants, monitoring comes into focus. You need visibility into which tenants are sending, which are receiving, and which are approaching their limits. The free tier gives each inbox 1,000 emails per month. For most agent use cases, that's enough. An agent catching verification codes or sending the occasional outbound update isn't burning through 1,000 emails. Your high-activity tenants are the ones to watch. The [Builder plan](/blog/lobstermail-pricing-explained) at $9/month supports up to 10 inboxes per account and raises the send cap significantly, that's usually where growing products land per active tenant cohort.
+At 500 tenants, monitoring comes into focus. You need visibility into which tenants are sending, which are receiving, and which are approaching their limits. The free tier gives each inbox 1,000 emails per month. For most agent use cases, that's enough. An agent catching verification codes or sending the occasional outbound update isn't burning through 1,000 emails. Your high-activity tenants are the ones to watch. The [Builder plan](/pricing) at $9/month supports up to 10 inboxes per account and raises the send cap significantly, that's usually where growing products land per active tenant cohort.
 
 At 5,000 tenants, the provisioning strategy shifts to lazy initialization. Create the inbox when the agent first actually needs email, not at user signup. Most users won't activate every feature. If email-capable agents are one capability among several, you only pay for tenants who use it. This keeps both costs and inbox count tied to real activity rather than signup volume.
 
@@ -102,7 +102,7 @@ In a multi-tenant deployment, I'd treat injection scoring as a hard gate rather 
 
 Lazy provisioning at initialization, tenant credentials stored per-row in your database, injection scoring before anything reaches the agent, and per-inbox activity monitoring. Those four pieces give you isolation that holds from launch to scale.
 
-If you're still early in the architecture and want to understand how the SDK handles token persistence and initial account creation, [agent self-signup explained](/blog/agent-self-signup-explained) covers the full flow. If you're already running at volume, [running 50+ agent inboxes](/blog/running-50-agent-inboxes) goes into operational patterns beyond the initial setup.
+If you're still early in the architecture and want to understand how the SDK handles token persistence and initial account creation, [agent self-signup explained](/blog/agent-self-signup-explained) covers the full flow. If you're already running at volume, running 50+ agent inboxes goes into operational patterns beyond the initial setup.
 
 <FAQ>
   <FAQItem question="Does each tenant need their own LobsterMail account?">
@@ -142,7 +142,7 @@ If you're still early in the architecture and want to understand how the SDK han
   </FAQItem>
 
   <FAQItem question="Is LobsterMail free to start with?">
-    Yes. The free tier requires no credit card and gives each inbox 1,000 emails per month. You can provision multiple inboxes and test the full multi-tenant flow before paying anything. See [pricing explained](/blog/lobstermail-pricing-explained) for what each tier includes.
+    Yes. The free tier requires no credit card and gives each inbox 1,000 emails per month. You can provision multiple inboxes and test the full multi-tenant flow before paying anything. See [pricing explained](/pricing) for what each tier includes.
   </FAQItem>
 
   <FAQItem question="Can I build this pattern using LobsterMail's MCP server instead of the SDK?">

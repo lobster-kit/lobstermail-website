@@ -178,7 +178,15 @@
     },
     {
       "source": "/blog/self-hosted-vs-managed-agent-email",
-      "destination": "/blog/hosted-vs-self-managed-agentic-data-plane-what-actually-matters-for-your-agents-20260309"
+      "destination": "/blog"
+    },
+    {
+      "source": "/blog/lobstermail-pricing-explained",
+      "destination": "/pricing"
+    },
+    {
+      "source": "/blog/running-50-agent-inboxes",
+      "destination": "/blog"
     },
     {
       "source": "/blog/openclaw-email-options-compared",

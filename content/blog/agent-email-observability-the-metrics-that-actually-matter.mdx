@@ -53,7 +53,7 @@ You want cost broken down by action. A classification step that reads a 500-toke
 
 The practical way to do this: wrap each tool call in a span that records input tokens, output tokens, model used, and action type. If you're using OpenTelemetry, create custom semantic attributes like `email.action.type` and `email.action.tokens.total`. Then aggregate in your dashboard by action type.
 
-When you're [running 50 agent inboxes without losing your mind (or your budget)](/blog/running-50-agent-inboxes), this per-action cost visibility is the difference between knowing which inboxes are profitable and guessing.
+When you're running 50 agent inboxes without losing your mind (or your budget), this per-action cost visibility is the difference between knowing which inboxes are profitable and guessing.
 
 ## Delivery signals meet agent performance
 

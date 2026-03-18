@@ -26,7 +26,7 @@ Your agent is humming along, sending verification emails, firing off notificatio
 
 This is the most common rate limit mistake I see. Not hitting the limit. Hitting it and then making things worse.
 
-Rate limits exist to protect everyone on the platform, including your agent. LobsterMail's free tier gives you 1,000 emails per month. The [Builder tier at $9/month](/blog/lobstermail-pricing-explained) raises that ceiling. But regardless of your tier, the API enforces per-minute and per-second request limits to prevent burst abuse and keep deliverability high for all senders.
+Rate limits exist to protect everyone on the platform, including your agent. LobsterMail's free tier gives you 1,000 emails per month. The [Builder tier at $9/month](/pricing) raises that ceiling. But regardless of your tier, the API enforces per-minute and per-second request limits to prevent burst abuse and keep deliverability high for all senders.
 
 Here's how to handle 429 errors correctly so your agent recovers on its own, every time.
 
@@ -135,7 +135,7 @@ Generate the key *before* the first attempt and reuse it across all retries of t
 
 ## Client-side queuing instead of inline retries
 
-The retry function above works for occasional rate limits. But if your agent is [running 50 inboxes](/blog/running-50-agent-inboxes) or sending in bursts, inline retries won't scale. Each waiting request holds a connection open, and if your agent is doing other work concurrently, those blocked requests pile up.
+The retry function above works for occasional rate limits. But if your agent is running 50 inboxes or sending in bursts, inline retries won't scale. Each waiting request holds a connection open, and if your agent is doing other work concurrently, those blocked requests pile up.
 
 A better pattern for high-volume agents is a client-side send queue. Instead of retrying immediately, push failed requests into a queue and process them at a controlled rate.
 
@@ -194,7 +194,7 @@ A simple counter in your logs is enough to start. You don't need a full observab
 
 ## Picking the right tier for your volume
 
-If you're hitting rate limits regularly, your agent might just need more headroom. LobsterMail's free tier includes 1,000 emails per month, which is plenty for prototyping and light use. The Builder tier at $9/month raises that to 5,000 emails with higher burst limits. Check the [pricing breakdown](/blog/lobstermail-pricing-explained) for the full comparison.
+If you're hitting rate limits regularly, your agent might just need more headroom. LobsterMail's free tier includes 1,000 emails per month, which is plenty for prototyping and light use. The Builder tier at $9/month raises that to 5,000 emails with higher burst limits. Check the [pricing breakdown](/pricing) for the full comparison.
 
 But don't upgrade blindly. Fix your retry logic first. I've seen agents on the free tier send hundreds of emails per month without a single 429, and I've seen agents on paid tiers hit limits constantly because of retry loops. The tier sets your ceiling. Your retry strategy determines whether you actually hit it.
 

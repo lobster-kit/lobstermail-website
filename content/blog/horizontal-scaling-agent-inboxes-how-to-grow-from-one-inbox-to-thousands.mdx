@@ -43,7 +43,7 @@ Here's how the two approaches compare when applied specifically to agent inbox i
 | **Cons** | Requires stateless design, message routing complexity | Hard ceiling on throughput, single point of failure |
 | **Inbox model** | Each instance owns dedicated inboxes or claims messages from a shared queue | One inbox, one agent, one process |
 
-If your agent handles fewer than a hundred emails per day, vertical scaling is probably fine. You don't need to architect for problems you don't have. But once you're [running 50 agent inboxes](/blog/running-50-agent-inboxes) or more, horizontal scaling becomes less of an optimization and more of a requirement.
+If your agent handles fewer than a hundred emails per day, vertical scaling is probably fine. You don't need to architect for problems you don't have. But once you're running 50 agent inboxes or more, horizontal scaling becomes less of an optimization and more of a requirement.
 
 ## Why agent inboxes are different from traditional email servers
 

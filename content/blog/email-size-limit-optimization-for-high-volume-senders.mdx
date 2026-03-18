@@ -46,7 +46,7 @@ Email size affects deliverability in ways that aren't obvious. Spam filters from
 
 Large MIME parts also trigger additional scanning. Some corporate mail servers decompose and scan every attachment, and they enforce their own size limits that are often well below the provider maximum. Microsoft Exchange Online, for instance, defaults to a 35 MB receive limit per mailbox, but many IT admins set it to 10 MB or lower.
 
-If you're running [50 agent inboxes](/blog/running-50-agent-inboxes) sending outbound messages, each oversized email compounds the problem. One bounced message per hundred might seem harmless. But bounce rates above 2% start damaging your sender reputation, and oversized messages that get rejected at the receiving end count as bounces.
+If you're running 50 agent inboxes sending outbound messages, each oversized email compounds the problem. One bounced message per hundred might seem harmless. But bounce rates above 2% start damaging your sender reputation, and oversized messages that get rejected at the receiving end count as bounces.
 
 ## The base64 tax and how to avoid it
 
