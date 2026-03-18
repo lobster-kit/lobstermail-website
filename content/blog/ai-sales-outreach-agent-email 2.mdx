@@ -1,0 +1,146 @@
+---
+title: "build an AI sales outreach agent that doesn't get blacklisted"
+description: "Why AI sales agents get blacklisted, how to warm up domains properly, and how reputation isolation keeps your outreach running."
+date: "2026-02-18"
+author: "Samuel Chenard"
+tags: ["use-cases", "email", "business"]
+image: "/blog/ai-sales-outreach-agent-email.png"
+---
+
+AI sales agents are everywhere. SDR teams are automating prospect research, writing personalized cold emails, and following up on autopilot. The technology works. The email infrastructure usually doesn't.
+
+Most teams discover this the hard way. The agent sends 500 emails on day one from a fresh domain. Within 48 hours the domain is flagged, deliverability craters, and every future message from that address lands in spam or gets rejected at the SMTP level. The sales campaign is dead before it started.
+
+This isn't a hypothetical. It's the default outcome when you point an AI agent at a cold email workflow without understanding how email reputation actually works.
+
+## Why sales agents get blacklisted
+
+Email providers don't care that your messages are personalized or that a human approved the template. They care about signals. And AI sales agents trigger every red flag simultaneously.
+
+**Volume spikes from unknown senders.** A new domain with no sending history that suddenly pushes hundreds of emails trips the same alarms as a compromised account. Gmail, Outlook, and Yahoo all monitor for this pattern. The response is immediate throttling, followed by blocks if the volume continues.
+
+**Identical sending intervals.** Humans send email erratically. They write one at 9:03, another at 9:17, then nothing until after lunch. An agent running a loop sends at perfectly regular intervals. Spam filters detect this mechanical cadence and treat it as automated bulk mail, because that's exactly what it is.
+
+**Recipient complaints.** When even a small percentage of recipients hit "report spam," the damage compounds fast. Google enforces a 0.3% complaint rate threshold for bulk senders. Exceed that and your messages get rejected at the SMTP level. Not filtered to spam. Rejected. For a 500-email campaign, that's just two complaints.
+
+**Shared infrastructure bleed.** If you're sending through a provider where your reputation is pooled with other senders, someone else's bad behavior can sink your deliverability. One spammy neighbor on a shared IP range and your carefully crafted outreach gets caught in the crossfire.
+
+**Missing or misconfigured authentication.** SPF, DKIM, and DMARC aren't optional for cold outreach. They're table stakes. Google and Microsoft now reject messages outright from domains that fail authentication. We covered the full setup in our [email deliverability guide](/blog/email-deliverability-ai-agents).
+
+## How to warm up a domain properly
+
+Domain warmup is the single most skipped step in AI outreach. Teams want to start selling today. Reputation systems need weeks to build trust.
+
+Here's what a real warmup schedule looks like:
+
+**Week 1-2: 10-30 emails per day.** Send only to contacts you have an existing relationship with, or to addresses you know will engage. The goal is positive signals: opens, replies, messages moved from Promotions to Primary. Every positive interaction tells inbox providers this sender is legitimate.
+
+**Week 3-4: 50-100 emails per day.** Expand to warmer prospects. Continue monitoring bounce rates and complaint ratios. If either metric spikes, pull back volume immediately. A single bad day during warmup can set you back weeks.
+
+**Week 5-8: scale to target volume.** Increase by 20-30% per week until you reach your target daily sends. By this point, the domain has enough sending history that inbox providers have baseline behavioral data. Sudden jumps still trigger alerts, so keep the ramp gradual.
+
+Throughout this process, monitor three metrics obsessively: bounce rate (keep it under 2%), spam complaint rate (under 0.3%), and inbox placement rate (you want 90%+ reaching the primary inbox, not Promotions or spam).
+
+<Callout type="warning">
+  Don't use "email warmup services" that generate fake opens and clicks from bot accounts. Google identified this pattern in early 2025 and now penalizes domains that show artificial engagement signals. The warmup has to come from real interactions.
+</Callout>
+
+## Sending patterns that actually work
+
+Once your domain is warmed, the agent still needs to send like a human, not a script.
+
+**Randomize send times.** Add jitter to every send. Instead of firing emails at exactly 60-second intervals, randomize within a 2-5 minute window. Better yet, cluster sends during business hours for the recipient's timezone. A message arriving at 10:23 AM local time gets more engagement than one arriving at 3:00 AM.
+
+**Vary the content.** Identical messages to different recipients are a textbook spam signal. Your agent should personalize beyond `{first_name}`. Reference the recipient's company, role, or something specific about their work. This isn't just good for deliverability; it's what makes AI-powered outreach actually effective.
+
+**Cap daily volume per address.** Never send your full daily allocation from a single address. Spread outreach across multiple sending addresses on your domain. If `alex@yourcompany.com` sends 50 per day and `sarah@yourcompany.com` sends another 50, the per-sender volume stays in a range that looks human. LobsterMail enforces daily and monthly send limits atomically per account, so a runaway loop can't accidentally blast past your budget.
+
+**Handle bounces immediately.** Every bounce you ignore hurts your reputation. If an address doesn't exist, your agent should remove it from the list on the first hard bounce. Continuing to send to dead addresses is one of the fastest ways to get flagged. LobsterMail runs pre-send MX validation to catch invalid domains before the message even leaves, which eliminates an entire class of avoidable bounces.
+
+**Respect unsubscribes.** This isn't just good practice; CAN-SPAM and GDPR require it. Your agent needs to process opt-out requests the same day they arrive and never contact that address again.
+
+## Why reputation isolation matters for outreach
+
+Here's the problem most email infrastructure doesn't solve: when one campaign goes wrong, it takes everything else down with it.
+
+Say your agent runs two campaigns. Campaign A targets warm leads who've visited your pricing page. Campaign B is a colder list targeting a new market segment. Campaign B generates complaints. On most platforms, those complaints damage the sender reputation for Campaign A too, because both campaigns share the same underlying sending configuration.
+
+LobsterMail uses per-account SES configuration sets to isolate reputation at the account level. Each sending account has its own reputation tracking, its own bounce and complaint metrics, and its own relationship with inbox providers. A problem in one campaign doesn't bleed into another.
+
+This means you can test a new list segment without risking your established sender reputation. Run the experimental campaign from a separate account. If it performs well, scale it up. If complaints spike, the damage stays contained.
+
+<Callout type="tip">
+  On LobsterMail's Builder tier ($9/month), you get custom domains so your agent sends from `sales@yourcompany.com` instead of a third-party address. Custom domains are critical for cold outreach because recipients check the from address before they read a single word.
+</Callout>
+
+## The gap in the market
+
+Most email-for-agents platforms explicitly don't serve outreach use cases. They're built for transactional email, support automation, and agent-to-agent communication. Cold email is left to legacy platforms that weren't designed for AI agents and don't understand the patterns they create.
+
+That leaves teams stitching together workarounds: raw SES accounts with no reputation management, consumer email warmup tools that trigger Google's bot detection, and outreach platforms that charge per-seat pricing designed for human SDRs, not agents sending at scale.
+
+LobsterMail was built with the understanding that AI agents do send outreach, and that the infrastructure should make it safe rather than pretending the use case doesn't exist. Adaptive throttling detects when sending rates approach provider limits and automatically backs off before you get flagged. Daily and monthly send caps prevent the accidental volume spikes that destroy new domains. Pre-send MX validation catches bad addresses before they become bounces.
+
+The Builder tier gives your agent 1,000 sends per day with up to 3 custom domains. The Scale tier pushes that to 10,000 sends per day with 25 domains. Both include the reputation isolation that keeps your campaigns independent from each other.
+
+## Getting started without getting burned
+
+If you're building an AI sales agent today, the sequence matters:
+
+1. **Register your sending domain** and set up SPF, DKIM, and DMARC before sending a single message. [Custom domain setup](/blog/custom-domains-agent-email) takes about 10 minutes.
+2. **Warm the domain for 4-8 weeks** with low-volume, high-engagement sends. No shortcuts.
+3. **Use separate sending accounts** for different campaign types so reputation stays isolated.
+4. **Enforce daily caps** in your agent's logic, or use infrastructure that enforces them for you.
+5. **Monitor bounce and complaint rates** from day one. The moment either metric drifts, reduce volume.
+6. **Build unsubscribe handling** into the agent before it sends its first cold email.
+
+The lobsters that survive in this reef are the ones that respect the ecosystem. Inbox providers aren't trying to block legitimate outreach. They're trying to protect their users from the agents that skip all of the above.
+
+<FAQ>
+  <FAQItem question="Why do AI sales agents get blacklisted so quickly?">
+    AI agents trigger multiple spam signals simultaneously: volume spikes from new domains, regular sending intervals, identical content patterns, and high bounce rates from unverified lists. Inbox providers like Gmail and Outlook detect these patterns within hours and respond with throttling or outright blocks.
+  </FAQItem>
+  <FAQItem question="How long does it take to warm up a new sending domain?">
+    A proper warmup takes 4-8 weeks. Start with 10-30 emails per day to engaged contacts, then gradually increase by 20-30% per week. Rushing this process is the most common reason outreach domains get blacklisted.
+  </FAQItem>
+  <FAQItem question="What's the maximum spam complaint rate I can tolerate?">
+    Google enforces a hard threshold of 0.3% for bulk senders. Exceeding this triggers SMTP-level rejection, meaning your messages don't even reach spam folders. For a 500-email campaign, that's just two complaints. Monitor this metric daily.
+  </FAQItem>
+  <FAQItem question="Do email warmup services actually work?">
+    Many warmup services use bot accounts to generate fake opens and clicks. Google identified this pattern in 2025 and now penalizes domains showing artificial engagement. The only reliable warmup comes from sending real emails to real contacts who genuinely engage.
+  </FAQItem>
+  <FAQItem question="What is reputation isolation and why does it matter for outreach?">
+    Reputation isolation means each sending account has its own deliverability metrics tracked independently. Without it, a bad campaign damages the sender reputation for all your other campaigns. LobsterMail uses per-account SES configuration sets to keep reputations separate.
+  </FAQItem>
+  <FAQItem question="Can I send cold outreach from LobsterMail's default @lobstermail.ai domain?">
+    You can, but cold outreach performs significantly better from your own domain. Recipients check the from address before reading the message, and a company-branded address builds trust. Custom domains are available on the Builder tier at $9/month.
+  </FAQItem>
+  <FAQItem question="How many cold emails can I send per day on LobsterMail?">
+    The Builder tier supports 1,000 sends per day. The Scale tier supports 10,000 sends per day. These limits are enforced atomically to prevent accidental volume spikes that could damage your domain reputation.
+  </FAQItem>
+  <FAQItem question="What's pre-send MX validation and why should I care?">
+    Pre-send MX validation checks whether the recipient's domain has valid mail server records before your message is sent. This catches invalid or nonexistent domains early, preventing bounces that would hurt your sender reputation.
+  </FAQItem>
+  <FAQItem question="Should I use multiple sending addresses for outreach?">
+    Yes. Spreading volume across multiple addresses on your domain keeps per-sender volume in a range that looks human. If each address sends 50-100 emails per day rather than one address sending 500, inbox providers are less likely to flag the behavior.
+  </FAQItem>
+  <FAQItem question="How does LobsterMail's adaptive throttling help with outreach?">
+    Adaptive throttling detects when your sending rate approaches provider limits and automatically reduces the send speed. This prevents the sudden rate spikes that trigger blocks, especially during the early weeks of domain warmup when your reputation is still being established.
+  </FAQItem>
+  <FAQItem question="What authentication records do I need for cold outreach?">
+    You need SPF (which servers can send for your domain), DKIM (cryptographic message signing), and DMARC (policy for failed authentication). All three are mandatory for bulk senders on Gmail and Outlook. LobsterMail generates the exact records during custom domain setup.
+  </FAQItem>
+  <FAQItem question="Can I test my outreach agent without risking my domain reputation?">
+    Yes. Use a separate sending account for testing. Because LobsterMail isolates reputation per account, any issues during testing won't affect your production sending reputation. You can also start on the free tier to test receiving and basic functionality.
+  </FAQItem>
+  <FAQItem question="What's the difference between a soft bounce and a hard bounce?">
+    A soft bounce is temporary (full inbox, server down) and the message may deliver on retry. A hard bounce is permanent (address doesn't exist). Hard bounces damage your reputation and the address should be removed immediately. LobsterMail's pre-send MX validation catches many hard bounces before they happen.
+  </FAQItem>
+  <FAQItem question="Do I need to comply with CAN-SPAM and GDPR for AI-sent outreach?">
+    Yes. The law doesn't distinguish between human-sent and AI-sent email. Your agent must include a physical mailing address, honor unsubscribe requests within the legally required timeframe, and have a lawful basis for contacting EU recipients under GDPR.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*

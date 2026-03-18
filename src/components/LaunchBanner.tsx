@@ -1,16 +1,25 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { GetStartedPopup } from "./GetStartedPopup";
 
 export function LaunchBanner() {
-  const [bannerHeight, setBannerHeight] = useState(0);
-  const bannerRef = useCallback((node: HTMLDivElement | null) => {
+  const bannerRef = useRef<HTMLDivElement>(null);
+  const [bannerHeight, setBannerHeight] = useState(36); // sensible default to avoid layout shift
+
+  useEffect(() => {
+    const node = bannerRef.current;
     if (!node) return;
+
+    // Measure immediately
+    setBannerHeight(node.offsetHeight);
+
+    // Keep in sync on resize
     const ro = new ResizeObserver(() => {
       setBannerHeight(node.offsetHeight);
     });
     ro.observe(node);
+    return () => ro.disconnect();
   }, []);
 
   return (
@@ -44,7 +53,7 @@ export function LaunchBanner() {
         />
       </span>
     </div>
-    {bannerHeight > 0 && <div style={{ height: bannerHeight }} aria-hidden />}
+    <div style={{ height: bannerHeight }} aria-hidden />
     </>
   );
 }

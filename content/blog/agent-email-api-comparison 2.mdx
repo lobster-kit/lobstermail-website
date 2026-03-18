@@ -1,0 +1,129 @@
+---
+title: "agent email APIs compared: lobstermail vs sendgrid vs resend"
+description: "SendGrid and Resend are great for sending. But agents need to receive, too. A developer-focused comparison for agent email use cases."
+date: "2026-02-14"
+author: "Samuel Chenard"
+tags: ["email", "infrastructure", "guides"]
+image: "/blog/agent-email-api-comparison.png"
+---
+
+If you're wiring up email for an AI agent, the first instinct is to reach for a familiar API. SendGrid, Resend, Mailgun. You've used them before. They have great docs, solid SDKs, and battle-tested infrastructure for sending transactional email.
+
+But here's the thing: most email APIs were built for a world where a human sets up the account, a human configures the domain, and the application sends outbound messages. Newsletters, password resets, order confirmations. The email flows one direction: out.
+
+Agents need something different. An agent that handles support inquiries needs to receive email. An agent that signs up for services needs its own address to catch verification codes. An agent that coordinates with other agents needs a persistent inbox, not a webhook that fires and forgets.
+
+This isn't a "which is best" post. These are genuinely different tools built for different problems. But if you're building for agent use cases, understanding where each one fits will save you from architectural dead ends.
+
+## What traditional email APIs do well
+
+SendGrid and Resend are excellent at what they were designed for: high-volume outbound email with strong deliverability.
+
+**SendGrid** has been around since 2009. It processes billions of emails per month, offers granular analytics, IP warmup tooling, and a mature webhook system for tracking opens, clicks, and bounces. Their free tier gives you 100 emails per day. The Essentials plan starts at $19.95/month for 50,000 emails. If you need to send a lot of email reliably, SendGrid is proven infrastructure.
+
+**Resend** launched as a modern alternative with a developer experience that's hard to beat. Clean API, React Email integration for building templates in JSX, and a straightforward SDK. Their free tier covers 100 emails per day (3,000/month), and the Pro plan runs $20/month for 50,000 emails. If you care about DX for outbound transactional email, Resend is a strong choice.
+
+**Mailgun** sits somewhere in between, with solid outbound capabilities plus inbound routing. You can configure routes that forward incoming email to webhooks based on pattern matching. Their Flex tier is free for 100 emails/day, and paid plans start at $35/month.
+
+All three handle SPF, DKIM, and DMARC. All three have good SDKs. All three will get your transactional email delivered.
+
+## Where they fall short for agents
+
+The gap shows up the moment your agent needs to do more than send.
+
+**No persistent inboxes.** None of these services give your agent an inbox it can query. SendGrid has Inbound Parse, which forwards incoming email to a webhook endpoint as a POST request. That's useful for processing inbound messages in real time, but there's no stored mailbox. If your webhook is down when the email arrives, it's gone. Resend has no inbound capability at all. Mailgun has inbound routes with similar limitations to SendGrid's approach.
+
+**No agent self-signup.** To use any of these services, a human creates an account, verifies a domain, generates API keys, and stores them in environment variables. The agent can't provision its own email address. If you're building autonomous agents that need to spin up their own communication channels, that manual step sits in the middle of every provisioning flow.
+
+**No inbox querying.** An agent processing a support queue needs to poll for new messages, filter by sender, and fetch full message bodies on demand. Traditional email APIs don't expose this. You'd need to build a storage layer on top of inbound webhooks, handle deduplication, manage retention, and build your own query interface. That's a significant amount of infrastructure for something that should be a primitive.
+
+**No receive-first architecture.** These APIs assume sending is the primary action. Receiving is an afterthought bolted on through webhook parsing. For an agent whose main job is reading and responding to incoming email, the architecture is inverted.
+
+## Where LobsterMail fits
+
+LobsterMail was built for the use case where the agent is the primary user of the email address.
+
+The agent calls `LobsterMail.create()` and gets a working inbox. No human account creation, no API key management, no domain verification step. The agent provisions what it needs and starts receiving email immediately. If you want to understand how this works mechanically, we wrote about [agent self-signup](/blog/agent-self-signup-explained) in detail.
+
+Receiving is the default. On the free tier, your agent gets an inbox at `@lobstermail.ai` and can receive email at no cost. The API supports polling with cursor pagination, `since` filtering, and lazy-loaded message bodies from storage. Webhooks are available for real-time push when polling isn't fast enough.
+
+Sending unlocks on the Builder tier at $9/month. You get up to 1,000 emails per day, 10,000 per month, per-account reputation isolation via dedicated SES config sets, and pre-send validation that checks recipient format, MX records, and suppression lists before anything leaves.
+
+The SDK exposes `email.safeBodyForLLM()`, which wraps incoming message content in boundary markers and strips potential injection attempts before the content reaches your agent's context window. That's specific to the agent use case and something you'd otherwise need to build yourself on top of any traditional API.
+
+## The comparison at a glance
+
+| Capability | LobsterMail | SendGrid | Resend | Mailgun |
+|---|---|---|---|---|
+| Outbound email | Yes ($9/mo) | Yes (free tier + paid) | Yes (free tier + paid) | Yes (free tier + paid) |
+| Persistent inbox | Yes | No | No | No |
+| Inbound receiving | Yes (free) | Webhook only (Inbound Parse) | No | Webhook only (routes) |
+| Inbox querying API | Yes | No | No | No |
+| Agent self-signup | Yes | No | No | No |
+| Prompt injection scanning | Yes | No | No | No |
+| Custom domains | Yes ($9/mo) | Yes | Yes | Yes |
+| Free tier | Receive-only, unlimited | 100 emails/day send | 100 emails/day send | 100 emails/day send |
+| Paid starting price | $9/mo | $19.95/mo | $20/mo | $35/mo |
+
+## When to use what
+
+**Use SendGrid or Resend when** your application needs to send transactional email at scale. Password resets, order confirmations, marketing campaigns, notification emails. The human sets up the account, the application sends through the API, and the recipient is a human reading their inbox. This is what these tools were built for, and they're very good at it.
+
+**Use Mailgun when** you need outbound sending plus basic inbound processing. Mailgun's routes let you match incoming email by recipient pattern and forward to webhooks. It works for use cases where you need to parse replies or process incoming messages, but don't need persistent storage or inbox querying.
+
+**Use LobsterMail when** the agent is the one with the email address. When the agent needs to receive email, query its inbox, and respond on its own terms. When you're building multi-agent systems where each agent needs its own address. When you don't want a human in the loop for provisioning. When receiving is the primary operation, not an afterthought.
+
+These categories aren't mutually exclusive. You might use Resend for your application's transactional email and LobsterMail for your agents' inboxes. Different tools, different jobs.
+
+## A note on combining services
+
+A common pattern we see: developers use a traditional API for their application's outbound email (welcome emails, receipts, notifications sent to humans) and LobsterMail for their agents' inboxes (receiving customer inquiries, processing verification emails, coordinating between agents).
+
+This makes sense. SendGrid excels at sending millions of marketing emails with deliverability analytics. LobsterMail excels at giving each agent on the reef its own inbox where it can receive, read, and respond. There's no reason you can't use both in the same system.
+
+The mistake is trying to force a send-focused API into a receive-focused use case. Building a persistent inbox layer on top of SendGrid's Inbound Parse is possible, but you're rebuilding infrastructure that already exists as a first-class feature elsewhere.
+
+If your agent needs to send and receive, and you want it to manage its own email without human setup, that's the specific problem LobsterMail was designed to solve. If your application needs to send high-volume transactional email to humans, reach for the tool that's spent a decade optimizing for that.
+
+<FAQ>
+  <FAQItem question="Can SendGrid receive email for an AI agent?">
+    SendGrid has Inbound Parse, which forwards incoming email to a webhook endpoint as an HTTP POST. But it doesn't provide a persistent inbox or a querying API. If your webhook is down when the email arrives, the message can be lost. For agents that need to poll their inbox on demand, you'd need to build a storage and retrieval layer on top.
+  </FAQItem>
+  <FAQItem question="Does Resend support inbound email at all?">
+    No. Resend is an outbound-only email API. It's designed for sending transactional and marketing email, not receiving. If your agent needs to receive email, you'll need a different service for the inbound side.
+  </FAQItem>
+  <FAQItem question="Can my agent sign up for SendGrid or Resend on its own?">
+    No. Both services require a human to create an account, verify identity, configure a sending domain, and generate API keys. The agent can use the API after setup, but the provisioning step is manual. LobsterMail's [agent self-signup](/blog/agent-self-signup-explained) lets the agent handle this itself.
+  </FAQItem>
+  <FAQItem question="What does agent self-signup mean in practice?">
+    The agent calls a single SDK method and gets back a working inbox with a real email address. No human creates an account. No API keys are manually generated. No domain verification is required for the default domain. The agent provisions its own communication channel and starts receiving email immediately.
+  </FAQItem>
+  <FAQItem question="Is LobsterMail a replacement for SendGrid?">
+    Not exactly. They solve different problems. SendGrid is optimized for high-volume outbound email — newsletters, transactional messages, marketing campaigns. LobsterMail is built for agents that need their own inbox to receive and send email autonomously. Many teams use both: SendGrid for application email, LobsterMail for agent inboxes.
+  </FAQItem>
+  <FAQItem question="How does Mailgun's inbound routing compare to LobsterMail?">
+    Mailgun lets you define routes that match incoming email by recipient pattern and forward the parsed message to a webhook. It's useful for basic inbound processing, but there's no persistent inbox, no querying API, and no way for an agent to self-provision an address. LobsterMail provides all of these as first-class features.
+  </FAQItem>
+  <FAQItem question="What's the cheapest way to give my agent send and receive capability?">
+    LobsterMail's free tier covers receiving. The Builder plan at $9/month adds sending with up to 1,000 emails per day and 10,000 per month. On SendGrid, the cheapest plan with any sending capability is free (100/day), but you'd still need to build your own inbound infrastructure. On Resend, sending starts free (100/day) with no inbound option at all.
+  </FAQItem>
+  <FAQItem question="Can I use LobsterMail for outbound-only transactional email?">
+    You can, but it's not optimized for that use case. LobsterMail's sending infrastructure is designed for agent communication patterns — moderate volume, reply-based flows, and mixed send/receive. If you're sending hundreds of thousands of marketing emails per month, SendGrid or Resend will give you better tooling for that specific workload.
+  </FAQItem>
+  <FAQItem question="Does LobsterMail handle email authentication like SPF, DKIM, and DMARC?">
+    Yes. On the default `@lobstermail.ai` domain, SPF, DKIM, and DMARC are pre-configured. For custom domains on the Builder tier, LobsterMail generates the exact DNS records during setup. See our guide on [email deliverability for agents](/blog/email-deliverability-ai-agents) for details.
+  </FAQItem>
+  <FAQItem question="What about prompt injection attacks through incoming email?">
+    LobsterMail includes built-in prompt injection scanning across six categories: boundary manipulation, system prompt override, data exfiltration, role hijacking, tool invocation, and encoding obfuscation. The SDK's `safeBodyForLLM()` method wraps content in boundary markers and strips injected payloads before the message reaches your agent's context window. Traditional email APIs don't address this. Read more about [prompt injection and email agents](/blog/prompt-injection-email-agents).
+  </FAQItem>
+  <FAQItem question="Can I use SendGrid for sending and LobsterMail for receiving in the same application?">
+    Yes. This is a common pattern. Use SendGrid or Resend for your application's outbound transactional email (receipts, notifications, marketing) and LobsterMail for your agents' inboxes (receiving inquiries, processing verifications, agent-to-agent communication). The services complement each other.
+  </FAQItem>
+  <FAQItem question="How do the free tiers compare across all four services?">
+    SendGrid's free tier: 100 emails/day, outbound only. Resend's free tier: 100 emails/day (3,000/month), outbound only. Mailgun's free tier: 100 emails/day, outbound plus inbound routes. LobsterMail's free tier: unlimited inbound email, no sending. LobsterMail is the only one that gives your agent a persistent inbox it can query.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*

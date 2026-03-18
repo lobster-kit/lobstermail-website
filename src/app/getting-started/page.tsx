@@ -4,6 +4,11 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { CopySnippetBlock } from "@/components/CopySnippetBlock";
 import { FadeIn } from "@/components/FadeIn";
+import {
+  DownloadSimple,
+  Envelope,
+  PaperPlaneTilt,
+} from "@phosphor-icons/react/dist/ssr";
 
 const url = "https://lobstermail.ai/getting-started";
 
@@ -31,19 +36,19 @@ export const metadata: Metadata = {
 
 const steps = [
   {
-    number: "1",
+    icon: DownloadSimple,
     title: "Install the skill",
     description:
       "Copy the skill URL and add it to your agent. Works with any MCP-compatible agent.",
   },
   {
-    number: "2",
+    icon: Envelope,
     title: "Agent creates an inbox",
     description:
       "Your agent calls the skill to create its own email inbox. No API keys, no human signup.",
   },
   {
-    number: "3",
+    icon: PaperPlaneTilt,
     title: "Send and receive email",
     description:
       "Your agent can now send emails, receive replies, and manage its inbox autonomously.",
@@ -73,7 +78,7 @@ export default function GettingStartedPage() {
     <div className="flex min-h-screen flex-col bg-background font-sans text-foreground">
       <Navbar />
       <main className="pt-32">
-        <div className="mx-auto max-w-4xl px-6 pb-28">
+        <div className="mx-auto max-w-4xl px-6 pb-28 sm:pb-36">
           {/* Hero */}
           <FadeIn>
             <div className="text-center">
@@ -98,14 +103,14 @@ export default function GettingStartedPage() {
 
           {/* Three steps */}
           <FadeIn delay={0.16}>
-            <div className="mt-16 grid gap-6 sm:grid-cols-3">
+            <div className="mt-20 sm:mt-28 grid gap-6 sm:grid-cols-3">
               {steps.map((step) => (
                 <div
-                  key={step.number}
+                  key={step.title}
                   className="rounded-2xl border-2 border-edge bg-background p-6"
                 >
-                  <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-full border-2 border-accent/40 bg-accent/[0.08] text-sm font-bold text-accent">
-                    {step.number}
+                  <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-full border-2 border-accent/40 bg-accent/[0.08] text-accent">
+                    <step.icon size={18} />
                   </div>
                   <h3 className="text-base font-semibold text-foreground">
                     {step.title}
@@ -120,7 +125,7 @@ export default function GettingStartedPage() {
 
           {/* Code example */}
           <FadeIn delay={0.24}>
-            <div className="mt-16">
+            <div className="mt-20 sm:mt-28">
               <h2 className="mb-4 text-xl font-bold tracking-tight sm:text-2xl">
                 What your agent does
               </h2>
@@ -137,7 +142,7 @@ export default function GettingStartedPage() {
 
           {/* Pricing note */}
           <FadeIn delay={0.32}>
-            <div className="mt-16 rounded-2xl border-2 border-edge bg-accent/[0.04] p-8 text-center">
+            <div className="mt-20 sm:mt-28 rounded-2xl border-2 border-edge bg-accent/[0.04] p-8 text-center">
               <h2 className="text-lg font-bold text-foreground">
                 Free to start. $9/mo when you need more.
               </h2>

@@ -25,6 +25,17 @@ export function DocsHeader({ title, description, lastUpdated }: DocsHeaderProps)
             <CaretRight size={12} className="text-secondary/50" />
           </li>
           <li>
+            <Link
+              href="/docs"
+              className="hover:text-foreground transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 rounded"
+            >
+              Guides
+            </Link>
+          </li>
+          <li aria-hidden="true">
+            <CaretRight size={12} className="text-secondary/50" />
+          </li>
+          <li>
             <span className="text-foreground font-medium">{title}</span>
           </li>
         </ol>

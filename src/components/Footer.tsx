@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { FadeIn } from "./FadeIn";
 import { GithubLogo, DiscordLogo, XLogo } from "@phosphor-icons/react/dist/ssr";
+import { ThemeToggle } from "./ThemeToggle";
 
 const NAV_COLUMNS = [
   {
@@ -94,7 +95,7 @@ export function Footer() {
               </span>
             </Link>
 
-            {/* Social icons */}
+            {/* Social icons + theme toggle */}
             <div className="flex items-center gap-3 pt-1">
               {SOCIALS.map((s) => (
                 <a
@@ -108,6 +109,7 @@ export function Footer() {
                   <s.icon size={20} weight="regular" />
                 </a>
               ))}
+              <ThemeToggle />
             </div>
           </div>
 

@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { LaunchBanner } from "@/components/LaunchBanner";
+
 import "./globals.css";
 
 const lora = Lora({

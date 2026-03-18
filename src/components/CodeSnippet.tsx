@@ -9,7 +9,7 @@ function AgentAvatar() {
   return (
     <div className="flex shrink-0 flex-col items-center gap-1">
       <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent/20 text-accent">
-        <Robot size={15} weight="fill" />
+        <Robot size={15} />
       </span>
       <span className="text-[9px] font-semibold uppercase tracking-wider text-accent/60">
         Agent
@@ -22,7 +22,7 @@ function HumanAvatar() {
   return (
     <div className="flex shrink-0 flex-col items-center gap-1">
       <span className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary/20 text-secondary">
-        <User size={15} weight="fill" />
+        <User size={15} />
       </span>
       <span className="text-[9px] font-semibold uppercase tracking-wider text-secondary/60">
         You

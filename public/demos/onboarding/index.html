@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LobsterMail – Easy Onboarding</title>
+  
+  <style>
+    :root {
+      --bg: #0c0a09;
+      --foreground: #fafaf9;
+      --dim: #9a938e;
+      --accent: #fb5705;
+      --accent-glow: rgba(251, 87, 5, 0.12);
+      --edge: rgba(128, 187, 255, 0.15);
+      --edge-strong: rgba(128, 187, 255, 0.25);
+      --terminal: #000000;
+      --shadow: rgba(0, 80, 171, 0.22);
+      --font-serif: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: 'Geist Mono', 'SF Mono', 'Fira Code', ui-monospace, monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+      --user-bg: rgba(251, 87, 5, 0.10);
+      --bot-bg: rgba(255, 255, 255, 0.05);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: var(--font-serif);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .wrap { position: relative; }
+
+    .wrap::before {
+      content: '';
+      position: absolute;
+      inset: -80px;
+      background: radial-gradient(ellipse at center, var(--accent-glow), transparent 70%);
+      opacity: 0.6;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .chat {
+      position: relative;
+      z-index: 1;
+      width: 480px;
+      height: 780px;
+      background: #0e0d0c;
+      border-radius: 28px;
+      border: 2px solid var(--edge-strong);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 0 40px -8px rgba(59,130,246,0.5);
+    }
+
+    /* ── Header ── */
+    .hdr {
+      padding: 18px 24px;
+      background: var(--terminal);
+      border-bottom: 1px solid var(--edge);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-shrink: 0;
+    }
+
+    .hdr-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 8px 3px rgba(22, 33, 62, 0.4), 0 1px 3px rgba(0,0,0,0.3);
+    }
+
+    .hdr-name {
+      font-family: var(--font-sans);
+      font-size: 18.4px;
+      font-weight: 600;
+      color: var(--foreground);
+      letter-spacing: -0.3px;
+    }
+
+    .hdr-meta {
+      font-family: var(--font-sans);
+      font-size: 14.9px;
+      color: #b8b2ad;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 2px;
+    }
+
+    .hdr-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
+    }
+
+    /* ── Feed ── */
+    .feed {
+      flex: 1;
+      padding: 18px 16px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      transition: opacity 0.5s ease;
+    }
+
+    .feed::-webkit-scrollbar { width: 0; }
+
+    .ts {
+      text-align: center;
+      font-family: var(--font-sans);
+      font-size: 12.6px;
+      color: var(--dim);
+      padding: 4px 0 8px;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+
+    .ts.on { opacity: 1; }
+
+    /* ── Messages ── */
+    .msg {
+      max-width: 82%;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .msg.on { opacity: 1; transform: translateY(0); }
+    .msg.user { align-self: flex-end; }
+    .msg.bot  { align-self: flex-start; }
+
+    /* ── User avatar row ── */
+    .msg.user.with-avatar {
+      display: flex;
+      flex-direction: row-reverse;
+      align-items: flex-start;
+      gap: 10px;
+      max-width: 88%;
+    }
+
+    .user-av {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      flex-shrink: 0;
+    }
+
+    .user-av-circle {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), #e04e00);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-sans);
+      font-size: 16.1px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .user-av-label {
+      font-family: var(--font-sans);
+      font-size: 10.3px;
+      font-weight: 600;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    /* ── Bot avatar row ── */
+    .msg.bot.with-avatar {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 10px;
+      max-width: 88%;
+    }
+
+    .bot-av {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      flex-shrink: 0;
+    }
+
+    .bot-av-circle {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 6px rgba(22, 33, 62, 0.5);
+    }
+
+    .bot-av-circle img {
+      width: 20px;
+      height: 20px;
+    }
+
+    .bot-av-label {
+      font-family: var(--font-sans);
+      font-size: 10.3px;
+      font-weight: 600;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .bubble {
+      font-family: var(--font-sans);
+      font-size: 16.7px;
+      line-height: 1.5;
+      color: var(--foreground);
+      padding: 10px 16px;
+      border-radius: 18px;
+    }
+
+    .msg.user .bubble {
+      background: var(--user-bg);
+      border-radius: 18px 6px 18px 18px;
+    }
+
+    .msg.bot .bubble {
+      background: var(--bot-bg);
+      border-radius: 6px 18px 18px 18px;
+    }
+
+    .bubble .meta {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--dim);
+      margin-top: 4px;
+      text-align: right;
+    }
+
+    .msg.bot .bubble .meta { text-align: left; }
+
+    /* Shimmer for processing messages */
+    .shimmer .bubble {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .shimmer .bubble::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.03), transparent);
+      animation: shimmer 1.8s ease-in-out infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    /* ── Inbox card ── */
+    .inbox-card {
+      align-self: flex-start;
+      max-width: 82%;
+      background: var(--terminal);
+      border: 1px solid var(--edge);
+      border-radius: 6px 14px 14px 14px;
+      padding: 14px 18px;
+      border-left: 3px solid #34d399;
+      opacity: 0;
+      transform: translateX(-28px);
+      transition:
+        opacity 0.5s ease,
+        transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .inbox-card.on { opacity: 1; transform: translateX(0); }
+
+    .inbox-card .ic-label {
+      font-family: var(--font-sans);
+      font-size: 11.5px;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 600;
+    }
+
+    .inbox-card .ic-address {
+      font-family: var(--font-mono);
+      font-size: 16.1px;
+      color: #34d399;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    .inbox-card .ic-status {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--dim);
+      margin-top: 4px;
+    }
+
+    /* ── Email card (incoming verification) ── */
+    .email-card {
+      background: var(--terminal);
+      border-radius: 6px 14px 14px 14px;
+      border: 1px solid var(--edge);
+      align-self: flex-start;
+      width: 100%;
+      flex-shrink: 0;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .email-card.on { opacity: 1; transform: translateY(0); }
+
+    .ec-head {
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--edge);
+    }
+
+    .ec-av {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .ec-name {
+      font-family: var(--font-sans);
+      font-size: 16.1px;
+      font-weight: 600;
+      color: var(--foreground);
+    }
+
+    .ec-addr {
+      font-family: var(--font-mono);
+      font-size: 12.1px;
+      color: var(--dim);
+      margin-top: 1px;
+    }
+
+    .ec-subj {
+      padding: 12px 16px 3px;
+      font-family: var(--font-sans);
+      font-size: 16.1px;
+      font-weight: 700;
+      color: var(--foreground);
+      letter-spacing: -0.2px;
+    }
+
+    .ec-body {
+      padding: 4px 16px 14px;
+      font-family: var(--font-sans);
+      font-size: 14.9px;
+      color: var(--dim);
+      line-height: 1.5;
+    }
+
+    /* ── Code card ── */
+    .code-card {
+      align-self: flex-start;
+      max-width: 82%;
+      background: var(--terminal);
+      border: 1px solid var(--edge);
+      border-radius: 6px 14px 14px 14px;
+      padding: 14px 18px;
+      border-left: 3px solid var(--accent);
+      text-align: center;
+      opacity: 0;
+      transform: translateX(-28px);
+      transition:
+        opacity 0.5s ease,
+        transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .code-card.on { opacity: 1; transform: translateX(0); }
+
+    .code-card .cc-label {
+      font-family: var(--font-sans);
+      font-size: 11.5px;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 600;
+    }
+
+    .code-card .cc-code {
+      font-family: var(--font-mono);
+      font-size: 32.2px;
+      font-weight: 700;
+      color: var(--foreground);
+      letter-spacing: 6px;
+      margin-top: 6px;
+    }
+
+    .code-card .cc-status {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: #34d399;
+      margin-top: 6px;
+    }
+
+    /* ── Typing ── */
+    .typing {
+      align-self: flex-start;
+      display: flex;
+      gap: 5px;
+      padding: 0 16px;
+      background: var(--bot-bg);
+      border-radius: 6px 18px 18px 18px;
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+    }
+
+    .typing.on {
+      max-height: 48px;
+      padding: 12px 16px;
+      opacity: 1;
+    }
+
+    .typing span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.25);
+      animation: tdot 1.2s ease-in-out infinite;
+    }
+
+    .typing span:nth-child(2) { animation-delay: 0.15s; }
+    .typing span:nth-child(3) { animation-delay: 0.3s; }
+
+    @keyframes tdot {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.3; }
+      30% { transform: translateY(-4px); opacity: 1; }
+    }
+
+    /* ── Done badge ── */
+    .done {
+      align-self: flex-start;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 20px;
+      background: rgba(34, 197, 94, 0.06);
+      border: 1px solid rgba(34, 197, 94, 0.15);
+      font-family: var(--font-sans);
+      font-size: 14.9px;
+      font-weight: 600;
+      color: #22c55e;
+      opacity: 0;
+      transform: scale(0.9);
+      transition: opacity 0.4s ease, transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .done.on { opacity: 1; transform: scale(1); }
+    .done svg { width: 16px; height: 16px; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="chat">
+    <div class="hdr">
+      <div class="hdr-avatar"><img src="../shared/assets/logo.png" alt="" style="width: 30px; height: 30px;"></div>
+      <div>
+        <div class="hdr-name">Agent</div>
+        <div class="hdr-meta">
+          <span class="hdr-dot"></span>
+          online
+        </div>
+      </div>
+    </div>
+
+    <div class="feed" id="feed">
+
+      <div class="ts" id="ts">Today</div>
+
+      <!-- User asks to set up Stripe -->
+      <div class="msg user with-avatar" id="m1">
+        <div class="user-av">
+          <div class="user-av-circle">Y</div>
+          <div class="user-av-label">You</div>
+        </div>
+        <div class="bubble">Set up a Stripe account for our app. Use whatever email you need.</div>
+      </div>
+
+      <!-- Bot: need an email -->
+      <div class="msg bot with-avatar" id="m2">
+        <div class="bot-av">
+          <div class="bot-av-circle"><img src="../shared/assets/logo.png" alt=""></div>
+          <div class="bot-av-label">Agent</div>
+        </div>
+        <div class="bubble">Stripe requires a verified email. I&rsquo;ll create a LobsterMail inbox first.</div>
+      </div>
+
+      <!-- Typing while provisioning -->
+      <div class="typing" id="t1">
+        <span></span><span></span><span></span>
+      </div>
+
+      <!-- Inbox created card -->
+      <div class="inbox-card" id="inbox">
+        <div class="ic-label">Inbox Created</div>
+        <div class="ic-address">stripe-agent@lobstermail.ai</div>
+        <div class="ic-status">Ready to receive</div>
+      </div>
+
+      <!-- Bot: registering -->
+      <div class="msg bot with-avatar shimmer" id="m3">
+        <div class="bot-av">
+          <div class="bot-av-circle"><img src="../shared/assets/logo.png" alt=""></div>
+          <div class="bot-av-label">Agent</div>
+        </div>
+        <div class="bubble">Registering on Stripe&hellip;</div>
+      </div>
+
+      <!-- Verification email arrives -->
+      <div class="email-card" id="vemail">
+        <div class="ec-head">
+          <div class="ec-av" style="background: #635bff;"><img src="../shared/assets/logo-stripe.png" alt="" style="width: 18px; height: 18px; object-fit: contain"></div>
+          <div>
+            <div class="ec-name">Stripe</div>
+            <div class="ec-addr">noreply@stripe.com</div>
+          </div>
+        </div>
+        <div class="ec-subj">Verify your email address</div>
+        <div class="ec-body">Your verification code is below. It expires in 10 minutes.</div>
+      </div>
+
+      <!-- Typing while extracting -->
+      <div class="typing" id="t2">
+        <span></span><span></span><span></span>
+      </div>
+
+      <!-- OTP extracted -->
+      <div class="code-card" id="code">
+        <div class="cc-label">Verification Code Extracted</div>
+        <div class="cc-code">847291</div>
+        <div class="cc-status">&#x2713; Submitted to Stripe</div>
+      </div>
+
+      <!-- Bot: all done -->
+      <div class="msg bot with-avatar" id="m4">
+        <div class="bot-av">
+          <div class="bot-av-circle"><img src="../shared/assets/logo.png" alt=""></div>
+          <div class="bot-av-label">Agent</div>
+        </div>
+        <div class="bubble">All set. Stripe account is verified and ready to go. The inbox will keep listening for any future emails from Stripe.</div>
+      </div>
+
+      <div class="done" id="done">
+        <svg viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="8" r="8" fill="#22c55e"/>
+          <path d="M5 8.5l2 2 4-4.5" stroke="#000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Stripe onboarded
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  const feed = document.getElementById('feed');
+  const els = {
+    ts:    document.getElementById('ts'),
+    m1:    document.getElementById('m1'),
+    m2:    document.getElementById('m2'),
+    t1:    document.getElementById('t1'),
+    inbox: document.getElementById('inbox'),
+    m3:    document.getElementById('m3'),
+    vemail:document.getElementById('vemail'),
+    t2:    document.getElementById('t2'),
+    code:  document.getElementById('code'),
+    m4:    document.getElementById('m4'),
+    done:  document.getElementById('done'),
+  };
+
+  const all = Object.values(els);
+
+  const timeline = [
+    [400,    'ts'],
+    [900,    'm1'],
+    [2400,   'm2'],
+    [3800,   't1'],
+    [5000,   't1',    'hide'],
+    [5200,   'inbox'],
+    [6600,   'm3'],
+    [8400,   'vemail'],
+    [10000,  't2'],
+    [11400,  't2',    'hide'],
+    [11600,  'code'],
+    [13200,  'm4'],
+    [14800,  'done'],
+  ];
+
+  const HOLD  = 3500;
+  const FADE  = 500;
+  const PAUSE = 1000;
+
+  let timers = [];
+
+  function run() {
+    timers.forEach(clearTimeout);
+    timers = [];
+    all.forEach(el => el.classList.remove('on'));
+    feed.scrollTop = 0;
+    feed.style.opacity = '1';
+
+    timeline.forEach(([ms, key, action]) => {
+      timers.push(setTimeout(() => {
+        if (action === 'hide') {
+          els[key].classList.remove('on');
+        } else {
+          els[key].classList.add('on');
+          if (key === 'done') {
+            feed.scrollTo({ top: feed.scrollHeight, behavior: 'smooth' });
+          } else {
+            var elRect = els[key].getBoundingClientRect();
+            var feedRect = feed.getBoundingClientRect();
+            if (elRect.bottom > feedRect.bottom) {
+              feed.scrollTo({ top: feed.scrollTop + (elRect.bottom - feedRect.bottom), behavior: 'smooth' });
+            } else if (elRect.top < feedRect.top) {
+              feed.scrollTo({ top: feed.scrollTop - (feedRect.top - elRect.top), behavior: 'smooth' });
+            }
+          }
+        }
+      }, ms));
+    });
+
+    const last = timeline[timeline.length - 1][0];
+    timers.push(setTimeout(() => { feed.style.opacity = '0'; }, last + HOLD));
+    timers.push(setTimeout(() => {
+      all.forEach(el => el.classList.remove('on'));
+      feed.scrollTop = 0;
+    }, last + HOLD + FADE));
+    timers.push(setTimeout(() => { feed.style.opacity = '1'; run(); }, last + HOLD + FADE + PAUSE));
+  }
+
+  setTimeout(run, 400);
+</script>
+
+</body>
+</html>

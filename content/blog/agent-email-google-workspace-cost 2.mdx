@@ -1,0 +1,141 @@
+---
+title: "the real cost of running agent email on Google Workspace"
+description: "ClawEmail plus Google Workspace plus GCP billing adds up fast. Here's the actual math for running 5 agents on Gmail vs. a dedicated platform."
+date: "2026-02-06"
+author: "Samuel Chenard"
+tags: ["cost", "email", "openclaw"]
+image: "/blog/agent-email-google-workspace-cost.png"
+---
+
+The default path for giving your OpenClaw agent email goes through Google Workspace. Install the Gog skill or ClawEmail, connect your Google account, and your agent can read and send messages. Simple enough until you look at the bill.
+
+ClawEmail charges $16/month for Google Workspace access. But that's just the subscription fee. You still need a Workspace seat for each agent, a GCP project with billing enabled for Pub/Sub, and hours of setup time that nobody accounts for. Once you're running more than a couple of agents, the costs compound in ways that aren't obvious from any single pricing page.
+
+Let's do the math.
+
+## What Google Workspace actually costs per agent
+
+Google Workspace has three tiers: Business Starter at $7.20/user/month (billed annually) or roughly $7/month, Business Standard at $14/user/month, and Business Plus at $18/user/month. Most people quote the lower annual prices, but if you're paying month-to-month (which most individual builders do), expect the higher end.
+
+Each agent that needs its own Gmail address requires its own Workspace seat. Google doesn't offer "bot accounts" or discounted machine users. An agent sending customer emails from `support-agent@yourcompany.com` costs the same as a human employee sitting in an office.
+
+For 5 agents on the cheapest annual plan, that's $36/month just for Workspace seats. On Business Standard, it's $70/month. And that's before you've sent a single email through your agent.
+
+## The GCP Pub/Sub tax
+
+If you want your agent to receive email in real time instead of polling every 1-5 minutes over IMAP, you need Google Cloud Pub/Sub. This is the setup that the Gog skill and Gmail Pub/Sub skill require for webhook-style delivery.
+
+Pub/Sub pricing starts with a free tier: the first 10GB of message data per month costs nothing. After that, it's $40 per TB. For most agent email use cases, you'll stay within the free tier on message volume alone. But Pub/Sub requires a GCP project with billing enabled, which means entering a credit card, enabling APIs, and managing another cloud console.
+
+The direct dollar cost of Pub/Sub is usually small. The indirect cost is real: configuring topics, subscriptions, push endpoints, and IAM permissions. If your webhook endpoint goes down, messages queue up and eventually expire. If your OAuth token goes stale (and it will), the whole pipeline breaks silently.
+
+Users in OpenClaw Discussion #4220 have documented this pain in detail. One person spent three days and roughly $300 getting the full Gmail integration working. That's not Pub/Sub billing. That's the cost of a developer's time fighting infrastructure that wasn't designed for agents.
+
+## ClawEmail: $16/month plus everything above
+
+ClawEmail is a ClawHub skill that gives your OpenClaw agent access to Google Workspace services including Gmail, Docs, Sheets, and Calendar. The skill itself costs $16/month. It's more comprehensive than Himalaya or Gog because it covers the full Workspace suite, but it's also heavier.
+
+Here's the thing people miss: **ClawEmail's $16/month doesn't replace your Workspace subscription.** It sits on top of it. You still need a Workspace seat for the Google account your agent connects to. You still need the GCP project for real-time email. ClawEmail handles the authentication layer and API abstraction, but the underlying Google infrastructure is still your cost.
+
+So the real monthly cost for one agent with ClawEmail:
+
+- ClawEmail subscription: $16
+- Google Workspace seat (Starter): $7
+- GCP project: $0 (if under free tier)
+- **Total: $23/month for one agent**
+
+For five agents, each with their own Workspace identity:
+
+- ClawEmail: $16 (assuming one subscription covers multiple accounts)
+- Google Workspace seats: $35-90 (depending on tier)
+- GCP: $0-5
+- **Total: $51-111/month**
+
+And that's the optimistic scenario. It assumes ClawEmail's single subscription covers all five agents, that you stay within Pub/Sub free limits, and that nothing breaks.
+
+## The costs nobody puts on the invoice
+
+The dollar amounts above are the predictable costs. The unpredictable ones are worse.
+
+**Setup time.** Configuring Google Workspace for agent use takes 1-3 hours per agent if you know what you're doing. OAuth scoping, GCP project creation, Pub/Sub topic configuration, webhook endpoint setup, DNS verification for custom domains. If you're doing this for the first time, double that estimate. Developer time at even a modest $50/hour means your first agent's setup costs $50-150 before it sends a single email.
+
+**Token refresh failures.** OAuth tokens expire. When they do, your agent stops receiving email with no warning. Users on r/openclaw regularly report HTTP 401 errors that appear days or weeks after a working setup. Debugging takes time. Every hour your agent is down, emails are bouncing or queuing.
+
+**Account bans.** Google detects automation patterns and can suspend accounts without warning. If your agent sends too many emails too quickly, or if Google's heuristics flag the access pattern, your Workspace account gets locked. Users on r/AI_Agents have reported this happening with no recourse. You lose the inbox, the email history, and any ongoing conversations.
+
+**Config loss on restart.** OpenClaw Discussion #4220 documents a recurring issue: "The config keeps getting stripped when I restart." Every time you reboot your agent, there's a chance you're reconfiguring the email integration from scratch.
+
+## The comparison
+
+Here's what the same five agents cost across the major options:
+
+| | Google Workspace + ClawEmail | AgentMail | LobsterMail |
+|---|---|---|---|
+| 5 agent inboxes | $51-111/mo | $20/mo (but capped at 10) | $9/mo (unlimited) |
+| 50 agent inboxes | $350-900+/mo | $200/mo (capped at 150) | $9/mo (unlimited) |
+| Setup time per agent | 1-3 hours | 10-15 min | ~60 seconds |
+| Real-time delivery | Requires GCP Pub/Sub | Yes (webhooks) | Yes (webhooks) |
+| Agent self-signup | No | No | Yes |
+| Risk of account ban | Yes | No | No |
+| Prompt injection scanning | No | No | Yes |
+
+At 5 agents, you're paying 5-12x more for the Google Workspace route than LobsterMail. At 50 agents, the gap becomes absurd. And the Google Workspace path carries ongoing risks (bans, token failures, config loss) that dedicated platforms don't have.
+
+## When Google Workspace still makes sense
+
+If your agent needs Calendar, Drive, and Docs access alongside email, the Workspace investment has broader utility. Gog and ClawEmail give your agent the full Google suite, not just email. If you're already paying for Workspace seats for your team and adding one seat for an agent, the incremental cost is just the seat and the setup time.
+
+But if your agent only needs email, paying for Google Workspace is paying for a lobster dinner when all you wanted was the claw.
+
+## What this means for your budget
+
+The Google Workspace path works for prototyping. One agent, one seat, an evening of setup. For a weekend project, the total cost is manageable and you get the satisfaction of seeing your agent read real Gmail.
+
+The economics break down when you scale. Every new agent needs its own seat, its own OAuth flow, and its own failure modes. At five agents, you're spending $50-110/month and managing five separate Google configurations. At ten agents, you're into serious operational overhead.
+
+LobsterMail's Builder tier costs $9/month for unlimited inboxes. Your agent provisions its own email in seconds. No Workspace seats, no GCP projects, no token refresh debugging. The [pricing explained post](/blog/lobstermail-pricing-explained) breaks down why inboxes are free (they cost us nothing to provision on SES, so we don't charge for them).
+
+If you're currently running agents on Google Workspace and the bill is getting uncomfortable, the [60-second migration guide](/blog/openclaw-agent-email-60-seconds) covers the switch.
+
+<FAQ>
+  <FAQItem question="How much does Google Workspace cost per agent?">
+    Google Workspace Business Starter costs $7.20/user/month (annual billing). Each agent that needs its own Gmail address requires its own seat. There are no discounted bot or machine user accounts. Five agents on Starter costs $36/month just for Workspace seats.
+  </FAQItem>
+  <FAQItem question="Does ClawEmail include Google Workspace?">
+    No. ClawEmail costs $16/month and provides the authentication and API layer for your agent to access Google Workspace services. You still need to pay for the underlying Google Workspace seats separately.
+  </FAQItem>
+  <FAQItem question="What is Google Cloud Pub/Sub and why do I need it for agent email?">
+    Pub/Sub is Google's real-time messaging service. Without it, your agent polls Gmail over IMAP every 1-5 minutes. With Pub/Sub, Gmail pushes new messages to your agent instantly via webhooks. It requires a GCP project with billing enabled, topic/subscription configuration, and a public webhook endpoint.
+  </FAQItem>
+  <FAQItem question="How much does Google Cloud Pub/Sub cost?">
+    The first 10GB of message data per month is free. After that, it's $40 per TB. Most agent email use cases stay within the free tier for message volume. The real cost is setup time and ongoing maintenance of the GCP project, not the per-message billing.
+  </FAQItem>
+  <FAQItem question="Can I use one Google Workspace seat for multiple agents?">
+    Technically yes, but all agents would share the same Gmail address and inbox. This creates identity confusion (recipients can't tell which agent sent a message), and one agent can interfere with another's conversations. For separate addresses, you need separate seats.
+  </FAQItem>
+  <FAQItem question="What happens if Google bans my agent's Workspace account?">
+    You lose the email address, all message history, and any active conversations. Google detects automation patterns and can suspend accounts without warning and without appeal. Users on r/AI_Agents have reported this happening to agent accounts. There is no reliable way to prevent it.
+  </FAQItem>
+  <FAQItem question="How does LobsterMail pricing compare to Google Workspace for agents?">
+    LobsterMail's Builder plan costs $9/month for unlimited inboxes with sending. Running 5 agents on Google Workspace with ClawEmail costs $51-111/month depending on the Workspace tier. LobsterMail also eliminates the GCP setup, OAuth token management, and account ban risk.
+  </FAQItem>
+  <FAQItem question="Is there a free way to give my OpenClaw agent email?">
+    Yes. Himalaya (IMAP/SMTP) is a free skill that connects to any email account, but it uses polling instead of real-time delivery and exposes your personal inbox. LobsterMail's free tier gives your agent its own inbox with receive-only access and no credit card required.
+  </FAQItem>
+  <FAQItem question="How long does it take to set up agent email on Google Workspace?">
+    Expect 1-3 hours per agent if you're experienced with GCP, OAuth, and Pub/Sub. First-time setup can take a full day. This includes creating the GCP project, enabling APIs, configuring OAuth consent screens, setting up Pub/Sub topics and subscriptions, and debugging token refresh issues.
+  </FAQItem>
+  <FAQItem question="What are the hidden costs of running agent email on Gmail?">
+    Beyond Workspace seats and GCP billing: developer time for setup (1-3 hours per agent), ongoing maintenance for OAuth token refresh failures, risk of Google account bans with no recourse, configuration loss on agent restarts, and the security risk of exposing your personal inbox to the agent.
+  </FAQItem>
+  <FAQItem question="Can my agent use a custom domain with Google Workspace?">
+    Yes, but custom domains on Google Workspace require domain verification, MX record configuration, and SPF/DKIM/DMARC setup through both Google Admin and your DNS provider. LobsterMail also supports custom domains on the $9/month Builder tier, with automated DNS verification.
+  </FAQItem>
+  <FAQItem question="What if I only need my agent to receive email, not send it?">
+    LobsterMail's free tier supports receive-only email at no cost. Your agent gets its own address and can process incoming messages without a Workspace seat, GCP project, or any paid subscription. Sending requires the $9/month Builder plan.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*

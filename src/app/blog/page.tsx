@@ -108,7 +108,7 @@ export default async function BlogPage({
       <main className="pt-32">
         <BlogSearchProvider allPosts={allPosts}>
           {/* Header */}
-          <section className="mx-auto max-w-6xl px-6 pb-16">
+          <section className="mx-auto max-w-6xl px-6 pb-20 sm:pb-28">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
               <FadeIn>
                 <h1 className="h1">AI Agent Email Blog</h1>

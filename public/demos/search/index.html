@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LobsterMail – Multi-Inbox Search</title>
+  
+  <style>
+    :root {
+      --bg: #0c0a09;
+      --foreground: #fafaf9;
+      --dim: #9a938e;
+      --accent: #fb5705;
+      --accent-glow: rgba(251, 87, 5, 0.12);
+      --edge: rgba(128, 187, 255, 0.15);
+      --edge-strong: rgba(128, 187, 255, 0.25);
+      --surface-1: rgba(255, 255, 255, 0.04);
+      --terminal: #000000;
+      --shadow: rgba(0, 80, 171, 0.22);
+      --font-serif: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: 'Geist Mono', 'SF Mono', 'Fira Code', ui-monospace, monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: var(--font-serif);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .wrap { position: relative; }
+
+    .wrap::before {
+      content: '';
+      position: absolute;
+      inset: -80px;
+      background: radial-gradient(ellipse at center, var(--accent-glow), transparent 70%);
+      opacity: 0.6;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .chat {
+      position: relative;
+      z-index: 1;
+      width: 480px;
+      height: 780px;
+      background: #0e0d0c;
+      border-radius: 28px;
+      border: 2px solid var(--edge-strong);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 0 40px -8px rgba(59,130,246,0.5);
+    }
+
+    .hdr {
+      padding: 22px 24px;
+      background: var(--terminal);
+      border-bottom: 1px solid var(--edge);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-shrink: 0;
+    }
+
+    .hdr-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 13px;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 25.3px;
+      box-shadow: 0 4px 8px 3px rgba(22, 33, 62, 0.4), 0 1px 3px rgba(0,0,0,0.3);
+    }
+
+    .hdr-name {
+      font-family: var(--font-serif);
+      font-size: 18.4px;
+      font-weight: 600;
+      color: var(--foreground);
+      letter-spacing: -0.3px;
+    }
+
+    .hdr-meta {
+      font-family: var(--font-serif);
+      font-size: 14.9px;
+      color: #b8b2ad;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 3px;
+    }
+
+    .hdr-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
+    }
+
+    .feed {
+      flex: 1;
+      padding: 22px 20px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      transition: opacity 0.5s ease;
+    }
+
+    .feed::-webkit-scrollbar { width: 0; }
+
+    .ts {
+      text-align: center;
+      font-family: var(--font-serif);
+      font-size: 13.8px;
+      font-style: italic;
+      color: var(--dim);
+      padding: 2px 0 4px;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+
+    .ts.on { opacity: 1; }
+
+    .msg {
+      max-width: 88%;
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .msg.on { opacity: 1; transform: translateY(0); }
+    .msg.right { align-self: flex-end; }
+
+    .bubble {
+      font-family: var(--font-serif);
+      font-size: 17.2px;
+      line-height: 1.5;
+      color: var(--foreground);
+      padding: 12px 18px;
+      border-radius: 18px;
+    }
+
+    .right .bubble {
+      background: rgba(251, 87, 5, 0.08);
+      border-radius: 18px 6px 18px 18px;
+    }
+
+    .shimmer .bubble {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .shimmer .bubble::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(251, 87, 5, 0.06), transparent);
+      animation: shimmer 1.8s ease-in-out infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    /* ── Search query bubble ── */
+    .search-query {
+      font-family: var(--font-serif);
+      font-size: 17.2px;
+      line-height: 1.5;
+      color: var(--foreground);
+      padding: 12px 18px;
+      background: rgba(251, 87, 5, 0.08);
+      border-radius: 18px 6px 18px 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .search-query svg {
+      width: 16px;
+      height: 16px;
+      stroke: var(--accent);
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      flex-shrink: 0;
+    }
+
+    .search-query .sq-text {
+      font-family: var(--font-mono);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* ── Result cards ── */
+    .results-wrap {
+      align-self: flex-start;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      max-width: 90%;
+    }
+
+    .result-card {
+      background: var(--terminal);
+      border: 1px solid var(--edge);
+      border-radius: 14px;
+      padding: 14px 18px;
+      opacity: 0;
+      transform: translateX(-28px);
+      transition:
+        opacity 0.5s ease,
+        transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .result-card.on {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .rc-inbox {
+      font-family: var(--font-mono);
+      font-size: 12.6px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .rc-inbox.support { background: rgba(59, 130, 246, 0.12); color: #60a5fa; }
+    .rc-inbox.billing { background: rgba(34, 197, 94, 0.12); color: #34d399; }
+    .rc-inbox.legal   { background: rgba(168, 85, 247, 0.12); color: #c084fc; }
+
+    .rc-subject {
+      font-family: var(--font-serif);
+      font-size: 17.2px;
+      font-weight: 600;
+      color: var(--foreground);
+      margin-bottom: 3px;
+      letter-spacing: -0.2px;
+    }
+
+    .rc-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .rc-logo {
+      width: 22px;
+      height: 22px;
+      border-radius: 5px;
+      background: #fff;
+      object-fit: contain;
+      padding: 2px;
+    }
+
+    .rc-meta {
+      font-family: var(--font-serif);
+      font-size: 14.4px;
+      color: var(--dim);
+    }
+
+    .rc-meta strong {
+      color: #b8b2ad;
+      font-weight: 600;
+    }
+
+    /* ── Typing ── */
+    .typing {
+      align-self: flex-end;
+      display: flex;
+      gap: 5px;
+      padding: 0 18px;
+      background: rgba(251, 87, 5, 0.08);
+      border-radius: 18px 6px 18px 18px;
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+    }
+
+    .typing.on {
+      max-height: 48px;
+      padding: 14px 18px;
+      opacity: 1;
+    }
+
+    .typing span {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: rgba(251, 87, 5, 0.35);
+      animation: tdot 1.2s ease-in-out infinite;
+    }
+
+    .typing span:nth-child(2) { animation-delay: 0.15s; }
+    .typing span:nth-child(3) { animation-delay: 0.3s; }
+
+    @keyframes tdot {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.35; }
+      30% { transform: translateY(-5px); opacity: 1; }
+    }
+
+    .done {
+      align-self: flex-end;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 20px;
+      background: rgba(34, 197, 94, 0.06);
+      border: 1px solid rgba(34, 197, 94, 0.15);
+      font-family: var(--font-serif);
+      font-size: 14.9px;
+      font-weight: 600;
+      color: #22c55e;
+      opacity: 0;
+      transform: scale(0.9);
+      transition: opacity 0.4s ease, transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .done.on { opacity: 1; transform: scale(1); }
+    .done svg { width: 16px; height: 16px; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="chat">
+    <div class="hdr">
+      <div class="hdr-avatar"><img src="../shared/assets/logo.png" alt="" style="width: 30px; height: 30px;"></div>
+      <div>
+        <div class="hdr-name">All Inboxes</div>
+        <div class="hdr-meta">
+          <span class="hdr-dot"></span>
+          Searching via LobsterMail
+        </div>
+      </div>
+    </div>
+
+    <div class="feed" id="feed">
+
+      <div class="ts" id="ts">Cross-inbox search</div>
+
+      <!-- Search query -->
+      <div class="msg right" id="query">
+        <div class="search-query">
+          <svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg>
+          <span>Searching <span class="sq-text">"renewal"</span>&hellip;</span>
+        </div>
+      </div>
+
+      <div class="typing" id="t1">
+        <span></span><span></span><span></span>
+      </div>
+
+      <!-- Results -->
+      <div class="results-wrap">
+        <div class="result-card" id="r1">
+          <div class="rc-head">
+            <img class="rc-logo" src="../shared/assets/logo-cloudflare.png" alt="">
+            <div class="rc-inbox support">support@</div>
+          </div>
+          <div class="rc-subject">Service Renewal Notice</div>
+          <div class="rc-meta">From <strong>Cloudflare</strong> &middot; 2 days ago</div>
+        </div>
+
+        <div class="result-card" id="r2">
+          <div class="rc-head">
+            <img class="rc-logo" src="../shared/assets/logo-vercel.png" alt="">
+            <div class="rc-inbox billing">billing@</div>
+          </div>
+          <div class="rc-subject">Annual Plan Renewal</div>
+          <div class="rc-meta">From <strong>Vercel</strong> &middot; 5 days ago</div>
+        </div>
+
+        <div class="result-card" id="r3">
+          <div class="rc-head">
+            <img class="rc-logo" src="../shared/assets/logo-stripe.png" alt="">
+            <div class="rc-inbox legal">legal@</div>
+          </div>
+          <div class="rc-subject">Renewal Terms Amendment</div>
+          <div class="rc-meta">From <strong>Stripe</strong> &middot; 1 week ago</div>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="msg right" id="summary">
+        <div class="bubble">Found <strong>3 results</strong> across <strong>3 inboxes</strong>.</div>
+      </div>
+
+      <div class="done" id="done">
+        <svg viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="8" r="8" fill="#22c55e"/>
+          <path d="M5 8.5l2 2 4-4.5" stroke="#000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Search complete
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  const feed = document.getElementById('feed');
+  const els = {
+    ts:      document.getElementById('ts'),
+    query:   document.getElementById('query'),
+    t1:      document.getElementById('t1'),
+    r1:      document.getElementById('r1'),
+    r2:      document.getElementById('r2'),
+    r3:      document.getElementById('r3'),
+    summary: document.getElementById('summary'),
+    done:    document.getElementById('done'),
+  };
+
+  const all = Object.values(els);
+
+  const timeline = [
+    [400,  'ts'],
+    [1000, 'query'],
+    [2000, 't1'],
+    [3600, 't1', 'hide'],
+    [3800, 'r1'],
+    [4300, 'r2'],
+    [4800, 'r3'],
+    [6200, 'summary'],
+    [7600, 'done'],
+  ];
+
+  const HOLD = 3500, FADE = 500, PAUSE = 1000;
+  let timers = [];
+
+  function run() {
+    timers.forEach(clearTimeout);
+    timers = [];
+    all.forEach(el => el.classList.remove('on'));
+    feed.scrollTop = 0;
+    feed.style.opacity = '1';
+
+    timeline.forEach(([ms, key, action]) => {
+      timers.push(setTimeout(() => {
+        if (action === 'hide') {
+          els[key].classList.remove('on');
+        } else {
+          els[key].classList.add('on');
+          if (key === 'done') {
+            feed.scrollTo({ top: feed.scrollHeight, behavior: 'smooth' });
+          } else {
+            var elRect = els[key].getBoundingClientRect();
+            var feedRect = feed.getBoundingClientRect();
+            if (elRect.bottom > feedRect.bottom) {
+              feed.scrollTo({ top: feed.scrollTop + (elRect.bottom - feedRect.bottom), behavior: 'smooth' });
+            } else if (elRect.top < feedRect.top) {
+              feed.scrollTo({ top: feed.scrollTop - (feedRect.top - elRect.top), behavior: 'smooth' });
+            }
+          }
+        }
+      }, ms));
+    });
+
+    const last = timeline[timeline.length - 1][0];
+    timers.push(setTimeout(() => { feed.style.opacity = '0'; }, last + HOLD));
+    timers.push(setTimeout(() => {
+      all.forEach(el => el.classList.remove('on'));
+      feed.scrollTop = 0;
+    }, last + HOLD + FADE));
+    timers.push(setTimeout(() => { feed.style.opacity = '1'; run(); }, last + HOLD + FADE + PAUSE));
+  }
+
+  setTimeout(run, 400);
+</script>
+
+</body>
+</html>

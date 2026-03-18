@@ -33,8 +33,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
-# knowledge base (symlink to Google Drive)
+# knowledge base (symlinks to Google Drive)
 /knowledge-base
+/lobsterdb
 
 # vercel
 .vercel
@@ -42,3 +43,25 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# remotion / video assets
+/src/remotion/
+/scripts/
+/public/video/
+/public/ph/
+
+# misc images not part of the site
+public/customer support.png
+public/email for open claw.png
+public/reputation.png
+public/security check.png
+public/self signup data.png
+public/self signup.png
+
+# agent skills / local tooling
+/.agent/
+/.agents/
+/.claude/skills/
+/.claude/launch.json
+/.kiro/
+.gstack/

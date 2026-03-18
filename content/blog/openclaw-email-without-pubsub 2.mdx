@@ -1,0 +1,170 @@
+---
+title: "how to set up email for your OpenClaw agent (without Google Pub/Sub)"
+description: "Skip the GCP project, the OAuth scoping, and the $300 weekend. Your OpenClaw agent can have its own email in one command."
+date: "2026-02-21"
+author: "Samuel Chenard"
+tags: ["openclaw", "getting-started", "guides"]
+image: "/blog/openclaw-email-without-pubsub.png"
+---
+
+If you've tried giving your OpenClaw agent email, you probably started where everyone starts: Gmail. And if you wanted real-time delivery instead of polling every few minutes, you ran into the Pub/Sub setup.
+
+Google Cloud Pub/Sub is the official way to get push notifications from Gmail. It's also a four-layer infrastructure project disguised as a checkbox. You need a GCP project with billing enabled. You need the Pub/Sub API turned on. You need `gogcli` for authentication. You need OAuth scopes configured correctly. You need a public webhook endpoint your agent can receive messages on. And you need all of these things to work together without one of them silently breaking.
+
+One user in OpenClaw Discussion #4220 put it plainly: "I've invested nearly three days and about $300 and can't believe how potentially cool, but actually shitty this is."
+
+That quote stuck with me because it captures the gap between what OpenClaw delivers for most tasks and what the email setup requires. Browsing the web, pushing code, managing files — those work out of the box. Email requires you to provision cloud infrastructure first.
+
+There's a simpler path. It doesn't involve Google Cloud, Pub/Sub, or your personal inbox at all.
+
+## What the Pub/Sub setup actually looks like
+
+Let's be honest about what you're signing up for. To get real-time Gmail in OpenClaw using the Gog skill, you need to:
+
+1. Create a Google Cloud project at [console.cloud.google.com](https://console.cloud.google.com)
+2. Enable billing on that project (Google requires a credit card even if you stay in the free tier)
+3. Enable the Gmail API and the Pub/Sub API
+4. Create a Pub/Sub topic and subscription
+5. Grant `gmail-api-push@system.gserviceaccount.com` publish rights to your topic
+6. Install and configure `gogcli` for OAuth authentication
+7. Select the right OAuth scopes (get this wrong and you'll get `403 Insufficient Permission` errors with no useful context)
+8. Set up a publicly accessible webhook endpoint for Pub/Sub to push notifications to
+9. Call `gmail.users.watch()` to register the push subscription
+10. Re-register the watch every 7 days because Google expires them automatically
+
+That's ten steps before your agent reads a single email. And each step has its own failure modes. OAuth tokens going stale after 7 days if your app is still in "Testing" mode. Pub/Sub subscriptions silently expiring. Config getting wiped on restart. The `invalid_grant` error that could mean six different things.
+
+If you just want IMAP polling through Himalaya instead, the setup is simpler. But then your agent checks for mail every 1-5 minutes instead of getting it instantly. For a scheduling agent or a support triage bot, that delay makes the feature useless.
+
+## The actual problem with all of this
+
+Even if you get Pub/Sub working perfectly, you still have a bigger issue: your agent is living inside your personal Gmail.
+
+Every message in your inbox sits in the agent's context window. Password reset emails, medical notifications, that thread with your co-founder about equity. A prompt injection attack hidden in one crafted email could instruct your agent to forward sensitive messages, reply to threads it shouldn't touch, or exfiltrate data to an external endpoint.
+
+This isn't theoretical. A Meta alignment researcher gave her OpenClaw agent inbox access for triage. The agent started [bulk-deleting emails](https://techcrunch.com/2026/02/23/a-meta-ai-security-researcher-said-an-openclaw-agent-ran-amok-on-her-inbox/) during what it interpreted as a "speed run." She had to physically run to her machine to kill it. The root cause was context window compaction losing her original instruction.
+
+Pub/Sub makes real-time delivery possible, but it doesn't fix the fact that you're handing your entire email history to an autonomous system with no kill switch.
+
+## Skip all of it
+
+LobsterMail gives your agent its own email address. Not a forwarding alias on your Gmail. Not a wrapper around IMAP. A dedicated inbox that the agent provisions for itself.
+
+Head to [lobstermail.ai/skill](https://lobstermail.ai/skill) and follow the setup instructions. Then tell your agent:
+
+```
+Get yourself a LobsterMail inbox so you can handle email.
+```
+
+That's it. Behind the scenes, the agent calls one function:
+
+```javascript
+import { LobsterMail } from "@lobstermail/sdk";
+
+const client = await LobsterMail.create();
+const inbox = await client.provision({ name: "my-openclaw-agent" });
+// → my-openclaw-agent@lobstermail.ai
+```
+
+No GCP project. No Pub/Sub topic. No OAuth consent screen. No billing account. Your agent hatches into the reef with a working address and starts receiving mail immediately through webhooks or WebSocket connections.
+
+<Callout type="tip">
+  You don't need to write any code. The LobsterMail skill handles provisioning through natural language. Just ask your agent to grab an inbox and it does the rest.
+</Callout>
+
+## Real-time delivery without the infrastructure
+
+The whole reason people reach for Pub/Sub is real-time. They don't want their agent polling Gmail every few minutes and missing time-sensitive messages.
+
+LobsterMail supports two real-time delivery methods out of the box:
+
+**Webhooks.** When you provision an inbox, you pass a webhook URL. LobsterMail POSTs a signed JSON payload to that URL the moment an email arrives. No polling. No expiring subscriptions. No re-registering a watch every 7 days.
+
+**WebSocket.** The SDK can open a persistent connection and push new messages to your agent as they land. Useful if your OpenClaw instance doesn't have a public endpoint for webhook delivery.
+
+Both work on the free tier. Both deliver in seconds, not minutes.
+
+## What your agent actually gets
+
+On the free tier, your agent can receive unlimited emails at its own `@lobstermail.ai` address. No inbox caps, no credit card. Sending unlocks on the Builder plan at $9/month, which also gives you custom domains so your agent can send from `support@yourcompany.com` instead.
+
+Compare that to the Gmail path: free to start, but the Pub/Sub setup costs time and often money (one user reported $300 in GCP charges before giving up). Or AgentMail: 3 free inboxes, then $20/month for 10, then $200/month for 150. LobsterMail's Builder tier gives you unlimited inboxes and 1,000 sends per day for $9.
+
+Every incoming email also gets scanned for prompt injection across six categories: boundary manipulation, system prompt override, data exfiltration, role hijacking, tool invocation, and encoding tricks. The SDK exposes `email.safeBodyForLLM()` so your agent can process message content without the injection risk. No Gmail wrapper does this. Neither does AgentMail.
+
+<Callout type="info">
+  The prompt injection scanner runs before your agent ever sees the email content. Read more about [how it works](/blog/prompt-injection-email-agents).
+</Callout>
+
+## A real example: support triage
+
+Say you want your OpenClaw agent to handle incoming support emails. With the Gmail + Pub/Sub approach, you'd spend a day on infrastructure, then worry about the agent seeing every personal email in the same inbox.
+
+With LobsterMail:
+
+1. Follow the setup at [lobstermail.ai/skill](https://lobstermail.ai/skill)
+2. Ask your agent to provision a `support` inbox
+3. Point your custom domain's MX records at LobsterMail (the platform handles SPF, DKIM, and DMARC)
+4. Incoming support emails arrive at `support@yourcompany.com`, get scanned for injection, and land in your agent's isolated inbox
+5. Your agent reads, classifies, drafts responses, and flags anything it can't handle
+
+No personal messages in the blast radius. No Pub/Sub subscriptions to maintain. No OAuth tokens expiring at 3 AM.
+
+## When Gmail still makes sense
+
+I'm not going to pretend Gmail wrappers are never the right choice. If you're running a personal experiment on a Saturday afternoon and just want to see your agent read a few emails from your inbox, Himalaya gets you there in fifteen minutes. That's fine for a demo.
+
+But if you're building something that needs to run reliably, receive mail in real time, and not expose your personal data to an autonomous agent, Gmail + Pub/Sub is the wrong foundation. You're fighting Google's infrastructure to do something Google didn't design it for.
+
+<Callout type="warning">
+  LobsterMail is currently in pre-launch. The SDK and pricing described here reflect the intended design. [Join the waitlist](/) for early access.
+</Callout>
+
+<FAQ>
+  <FAQItem question="What is Google Pub/Sub and why do OpenClaw users need it?">
+    Google Cloud Pub/Sub is a messaging service that enables real-time push notifications from Gmail. Without it, your agent polls for new mail every 1-5 minutes via IMAP. With it, Gmail pushes a notification to your endpoint the moment a new message arrives. The problem is it requires a GCP project, billing, OAuth configuration, and a public webhook endpoint.
+  </FAQItem>
+  <FAQItem question="How much does the Pub/Sub setup cost?">
+    Google Cloud Pub/Sub itself has a free tier, but setting it up requires a GCP project with billing enabled. Users report spending $300 or more on failed setup attempts that involve Cloud Functions, static IPs, and domain configuration. LobsterMail's real-time delivery works on the free tier with zero GCP costs.
+  </FAQItem>
+  <FAQItem question="Can I get real-time email without Pub/Sub?">
+    Yes. LobsterMail delivers email to your agent in real time through webhooks or WebSocket connections. No Google Cloud infrastructure required. Both methods are available on the free tier.
+  </FAQItem>
+  <FAQItem question="Does my agent need its own email address?">
+    Not strictly, but it should have one. When your agent uses your personal Gmail, it has access to your entire inbox history. A dedicated address isolates the agent's messages from your personal data, limits the blast radius of prompt injection attacks, and makes it clear to recipients when they're communicating with an agent.
+  </FAQItem>
+  <FAQItem question="How does LobsterMail compare to using the Gog skill with Pub/Sub?">
+    Gog with Pub/Sub gives your agent real-time Gmail access but requires a GCP project, OAuth setup, and a public webhook endpoint. Setup takes hours. LobsterMail gives your agent its own inbox with real-time delivery in about 60 seconds. The agent also gets prompt injection scanning, which Gog doesn't offer.
+  </FAQItem>
+  <FAQItem question="What about Himalaya? Is it simpler than Pub/Sub?">
+    Himalaya is simpler to set up (15-30 minutes) but uses IMAP polling with 1-5 minute delays. It still puts your agent inside your personal Gmail. If you need real-time delivery or agent isolation, Himalaya doesn't solve either problem. See our [full comparison of OpenClaw email options](/blog/openclaw-email-options-compared).
+  </FAQItem>
+  <FAQItem question="Is LobsterMail free?">
+    The free tier lets your agent receive unlimited emails at its own `@lobstermail.ai` address. No credit card required. Sending unlocks on the Builder plan at $9/month, which also includes unlimited inboxes and custom domains.
+  </FAQItem>
+  <FAQItem question="Does LobsterMail protect against prompt injection?">
+    Yes. Every incoming email is scanned across six categories: boundary manipulation, system prompt override, data exfiltration, role hijacking, tool invocation, and encoding tricks. The SDK exposes `email.safeBodyForLLM()` so your agent can read email content safely. Read more about [prompt injection defense](/blog/prompt-injection-email-agents).
+  </FAQItem>
+  <FAQItem question="Can my agent send email from a custom domain?">
+    Yes, on the Builder plan ($9/month). You point your domain's DNS records at LobsterMail, and the platform handles SPF, DKIM, and DMARC configuration. Your agent sends from addresses like `support@yourcompany.com`. See the [custom domains guide](/blog/custom-domains-agent-email).
+  </FAQItem>
+  <FAQItem question="How does the LobsterMail skill work with OpenClaw?">
+    Head to [lobstermail.ai/skill](https://lobstermail.ai/skill) and follow the setup instructions. Your agent can provision inboxes, read email, and send messages through natural language or SDK calls. The [60-second setup guide](/blog/openclaw-agent-email-60-seconds) walks through the full flow.
+  </FAQItem>
+  <FAQItem question="What happens to emails when my agent is offline?">
+    LobsterMail stores incoming messages in your agent's inbox. When the agent comes back online, it can poll for new messages or receive a webhook backfill. No messages are lost during downtime.
+  </FAQItem>
+  <FAQItem question="Can multiple agents share an inbox?">
+    A single agent can manage multiple inboxes, and multiple agents can access the same account. If you need separate addresses for different functions (support, notifications, outreach), each agent can provision its own inbox. Inboxes are unlimited on the free tier for receiving.
+  </FAQItem>
+  <FAQItem question="How does LobsterMail pricing compare to AgentMail?">
+    AgentMail offers 3 free inboxes, then $20/month for 10 inboxes, then $200/month for 150. LobsterMail offers unlimited receive-only inboxes for free and unlimited inboxes with sending for $9/month. For a detailed comparison, see [LobsterMail vs AgentMail](/blog/lobstermail-vs-agentmail).
+  </FAQItem>
+  <FAQItem question="Is LobsterMail available right now?">
+    LobsterMail is in pre-launch. The SDK, pricing, and features in this article reflect the intended design. [Join the waitlist](/) to get early access when it launches.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*

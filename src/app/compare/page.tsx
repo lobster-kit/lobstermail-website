@@ -84,7 +84,7 @@ export default function ComparePage() {
       />
       <Navbar />
       <main className="pt-32">
-        <section className="mx-auto max-w-6xl px-6 pb-16">
+        <section className="mx-auto max-w-6xl px-6 pb-20 sm:pb-28">
           <FadeIn>
             <h1 className="h1">Agent Email Comparisons</h1>
             <p className="p-text mt-4">
@@ -94,7 +94,7 @@ export default function ComparePage() {
           </FadeIn>
         </section>
 
-        <section className="mx-auto max-w-6xl px-6 pb-28">
+        <section className="mx-auto max-w-6xl px-6 pb-28 sm:pb-36">
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {posts.map((post, i) => (
               <FadeIn key={post.slug} delay={i * 0.06} className="h-full">

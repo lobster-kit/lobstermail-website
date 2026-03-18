@@ -10,7 +10,7 @@ export default function robots(): MetadataRoute.Robots {
       },
       {
         userAgent: ["GPTBot", "ChatGPT-User", "anthropic-ai"],
-        allow: ["/blog/", "/docs/", "/glossary/"],
+        allow: ["/blog/", "/docs/", "/glossary/", "/use-cases/"],
         disallow: "/",
       },
       {

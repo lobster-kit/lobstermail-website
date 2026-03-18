@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { getGuides } from "@/lib/docs";
 import { getAllPosts, getAllTags, getPostsByTag } from "@/lib/blog";
 import { getAllTerms } from "@/lib/glossary";
+import { useCases } from "@/lib/use-cases";
 
 const BASE_URL = "https://lobstermail.ai";
 
@@ -87,11 +88,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
+  const useCasePages: MetadataRoute.Sitemap = [
+    {
+      url: `${BASE_URL}/use-cases`,
+      lastModified: new Date("2026-03-18"),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    ...useCases.map((uc) => ({
+      url: `${BASE_URL}/use-cases/${uc.slug}`,
+      lastModified: new Date("2026-03-18"),
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
+  ];
+
   return [
     ...staticPages,
     ...docsPages,
     ...blogPages,
     ...tagPages,
     ...glossaryPages,
+    ...useCasePages,
   ];
 }

@@ -112,6 +112,13 @@ export function DocsSidebar({ guides }: { guides: GuideMeta[] }) {
           {pageTitle && (
             <>
               <CaretRight size={12} className="text-secondary/50 shrink-0" />
+              <Link
+                href="/docs"
+                className="text-secondary hover:text-foreground transition-colors shrink-0"
+              >
+                Guides
+              </Link>
+              <CaretRight size={12} className="text-secondary/50 shrink-0" />
               <span className="text-foreground font-medium truncate">{pageTitle}</span>
             </>
           )}

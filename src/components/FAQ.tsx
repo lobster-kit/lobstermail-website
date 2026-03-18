@@ -9,37 +9,23 @@ import {
   Button,
 } from "react-aria-components";
 import { FadeIn } from "./FadeIn";
+import type { FAQItem } from "@/lib/faq-data";
 import { faqItems } from "@/lib/faq-data";
 
-function FAQSchema() {
-  const schema = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: faqItems.map((item) => ({
-      "@type": "Question",
-      name: item.question,
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: item.answer,
-      },
-    })),
-  };
-
-  return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
-    />
-  );
+interface FAQProps {
+  items?: FAQItem[];
+  heading?: string;
 }
 
-export function FAQ() {
+export function FAQ({ items, heading = "Frequently asked questions" }: FAQProps) {
+  const data = items ?? faqItems;
+
   return (
     <section className="px-6 py-28 sm:py-36">
       <div className="mx-auto max-w-3xl">
         <FadeIn>
           <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
-            Frequently asked questions
+            {heading}
           </h2>
         </FadeIn>
 
@@ -48,7 +34,7 @@ export function FAQ() {
             allowsMultipleExpanded
             className="mt-14 flex flex-col rounded-2xl border-3 border-edge-strong bg-background px-6 py-5 sm:px-8"
           >
-            {faqItems.map((item) => (
+            {data.map((item) => (
               <Disclosure
                 key={item.id}
                 id={item.id}

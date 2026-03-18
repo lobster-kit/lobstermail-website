@@ -1,0 +1,186 @@
+---
+title: "give your openclaw agent an email in 60 seconds"
+description: "Install the SDK, call one function, and your OpenClaw agent has a working email address. Here's the full walkthrough."
+date: "2026-02-07"
+author: "Samuel Chenard"
+tags: ["getting-started", "openclaw", "guides"]
+image: "/blog/openclaw-agent-email-60-seconds.png"
+---
+
+Your OpenClaw agent can browse the web, run shell commands, and call APIs. But sending or receiving email still means wiring up OAuth scopes, IMAP connections, and app passwords against your personal Gmail. That's more setup than it needs to be.
+
+LobsterMail lets your agent pinch its own inbox — a real email address it controls, isolated from your personal mail. And with the LobsterMail skill for OpenClaw, the whole setup takes about 60 seconds.
+
+Let's walk through it.
+
+## what you'll need
+
+- A running OpenClaw instance (local or hosted)
+- Node 22 or later (required by OpenClaw's runtime)
+- An OpenClaw workspace with at least one configured AI provider
+
+If you haven't set up OpenClaw yet, the official installer handles everything:
+
+```bash
+curl -fsSL https://openclaw.ai/install.sh | bash
+```
+
+Then run through the onboarding wizard:
+
+```bash
+openclaw onboard --install-daemon
+```
+
+Once your lobster is alive and responding to messages, you're ready to give it email.
+
+## step 1: set up lobstermail
+
+Head to [lobstermail.ai/skill](https://lobstermail.ai/skill) and follow the setup instructions. This pulls in the LobsterMail SDK and registers the skill with your OpenClaw gateway. Your agent can now provision and manage email inboxes on its own.
+
+<Callout type="tip">
+  The LobsterMail skill respects your `openclaw.json` node manager setting. If you use pnpm or bun for skill installs, it'll work with those too.
+</Callout>
+
+## step 2: let your agent hatch an inbox
+
+Here's where it gets fun. You don't create the inbox. Your agent does.
+
+Just tell it in natural language:
+
+```
+Hey, get yourself a LobsterMail inbox so you can handle email.
+```
+
+Behind the scenes, the agent calls the provisioning function from the LobsterMail SDK. If you're building a custom integration or want to understand what's happening under the hood, here's the equivalent code:
+
+```javascript
+import { LobsterMail } from "@lobstermail/sdk";
+
+const client = await LobsterMail.create();
+
+const inbox = await client.provision({
+  name: "my-openclaw-agent",
+  webhookUrl: "https://your-openclaw-instance.local/webhook/lobstermail",
+});
+
+console.log(inbox.address);
+// → my-openclaw-agent@lobstermail.ai
+```
+
+One function call. That's it. No signup form, no email verification, no password to store. The agent hatches into the reef with a working address and is ready to receive mail immediately.
+
+<Callout type="info">
+  This is what [agent self-signup](/blog/agent-self-signup-explained) looks like in practice. The agent provisions its own shell without any human in the loop.
+</Callout>
+
+## step 3: receive the first email
+
+Send a test email to your agent's new address from any email client. If you set up the webhook URL during provisioning, your OpenClaw instance receives the message instantly. The agent sees something like this in its context:
+
+```json
+{
+  "event": "email.received",
+  "from": "you@gmail.com",
+  "to": "my-openclaw-agent@lobstermail.ai",
+  "subject": "Testing your new inbox",
+  "body": "Hey agent, can you read this?",
+  "receivedAt": "2026-02-24T10:30:00Z"
+}
+```
+
+Your agent can now read it, respond to it, or route it however you've configured. No polling loop required (though LobsterMail supports that too if webhooks aren't your thing).
+
+## step 4: send a reply
+
+On the free tier, your agent can receive emails immediately. To unlock sending, verify via an X post or credit card — it's free, and gives you 10 sends per day. For higher volume, the Builder plan is $9/month.
+
+Once sending is enabled, replying looks like this:
+
+```javascript
+await client.send({
+  from: "my-openclaw-agent@lobstermail.ai",
+  to: "you@gmail.com",
+  subject: "Re: Testing your new inbox",
+  body: "Got it! My shell is live and I'm ready to work.",
+});
+```
+
+Or in natural language, just tell your agent: "Reply to that email and confirm you received it." The skill handles the rest.
+
+## what to build next
+
+Now that your agent has its own email, the possibilities open up. A few ideas:
+
+**Customer support triage.** Point your support address at the agent. It reads incoming messages, classifies urgency, drafts responses, and flags anything it can't handle. You can even use a [custom domain](/blog/custom-domains-agent-email) so customers email `support@yourcompany.com` and your agent handles it.
+
+**Newsletter monitoring.** Subscribe your agent to industry newsletters and RSS-to-email feeds. It reads, summarizes, and sends you a digest. All through its own inbox on the reef.
+
+**Multi-agent coordination.** If you're running multiple OpenClaw instances, each agent gets its own address. They can pass tasks, share results, and collaborate through structured email threads. Check out [what agents do with email](/blog/what-agents-do-with-email) for more patterns.
+
+**Automated follow-ups.** Your agent sends a proposal, then checks its inbox for replies. If nothing comes back in 48 hours, it sends a follow-up. No cron jobs, no manual checking.
+
+<Callout type="warning">
+  LobsterMail is currently in pre-launch. The code examples above are illustrative of the flow — the SDK API is designed to be this simple when it ships. [Join the waitlist](/) to get early access.
+</Callout>
+
+## Why not just connect gmail?
+
+We get this question a lot. The short answer: security and separation.
+
+When your OpenClaw agent connects to your Gmail, it has access to every message in your inbox. Bank statements, medical records, private conversations — all sitting in the agent's context window. A [prompt injection attack](https://www.microsoft.com/en-us/security/blog/2026/01/23/runtime-risk-realtime-defense-securing-ai-agents/) embedded in a malicious email could hijack your agent's behavior with access to all of that data.
+
+With LobsterMail, the agent's shell is isolated. If something goes wrong, the blast radius is limited to the agent's inbox. Your personal email stays untouched. For more on this, read [what is agent email and why does it matter](/blog/what-is-agent-email).
+
+## 60 seconds, recap
+
+1. Follow the setup at [lobstermail.ai/skill](https://lobstermail.ai/skill)
+2. Tell your agent to grab an inbox (or call `client.provision()`)
+3. Send it a test email
+4. Watch it arrive
+
+That's the whole thing. Your OpenClaw agent now has its own communication channel, separate from your personal email, ready to interact with the outside world.
+
+The OpenClaw community — 140,000+ GitHub stars and over 5,700 community skills on ClawHub — is building the infrastructure for agents that actually do things. Email is one of the most universal protocols on the internet. Giving your agent its own address is one of the highest-leverage things you can do.
+
+<FAQ>
+  <FAQItem question="How long does it actually take to set up?">
+    If your OpenClaw instance is already running, installing the skill and provisioning an inbox takes under 60 seconds. The skill install is a single command, and inbox provisioning is one function call.
+  </FAQItem>
+  <FAQItem question="Do I need to write code, or can I just tell my agent in natural language?">
+    Either works. The LobsterMail skill understands natural language instructions like "get yourself an email inbox." If you prefer programmatic control, the SDK is a single `provision()` call.
+  </FAQItem>
+  <FAQItem question="What email address does my agent get?">
+    On the free tier, your agent gets an address like `your-agent-name@lobstermail.ai`. On paid plans, you can bring your own [custom domain](/blog/custom-domains-agent-email) for addresses like `agent@yourcompany.com`.
+  </FAQItem>
+  <FAQItem question="Is the free tier actually free?">
+    Yes. The free tier has no credit card required. Your agent can receive emails at no cost. Sending unlocks after verification (X post or credit card), still free with 10 sends/day. The Builder plan at $9/month adds higher volume and custom domains.
+  </FAQItem>
+  <FAQItem question="Does my agent need to stay online to receive emails?">
+    No. LobsterMail stores incoming messages in your agent's shell. When the agent comes back online, it can poll for new messages or receive them via webhook backfill.
+  </FAQItem>
+  <FAQItem question="Can I use this with OpenClaw's Docker deployment?">
+    Yes. The LobsterMail skill works the same whether your OpenClaw instance runs locally, in Docker, or on a remote server. Just make sure the webhook URL is reachable if you want real-time delivery.
+  </FAQItem>
+  <FAQItem question="How does the webhook integration work?">
+    When you provision an inbox, you provide a webhook URL. LobsterMail POSTs a JSON payload to that URL every time an email arrives. Your OpenClaw gateway receives it and adds the message to your agent's context.
+  </FAQItem>
+  <FAQItem question="Can my agent manage multiple inboxes?">
+    Yes. A single agent can provision and monitor multiple inboxes — useful if you want separate addresses for different functions (support, notifications, outreach). The free tier lets you start immediately, and the Builder plan at $9/month includes unlimited inboxes.
+  </FAQItem>
+  <FAQItem question="Is this compatible with other AI agent frameworks besides OpenClaw?">
+    LobsterMail's SDK is a standard npm package. While this guide focuses on OpenClaw, any JavaScript or TypeScript agent framework can use the SDK directly. The provisioning flow is the same.
+  </FAQItem>
+  <FAQItem question="What happens if someone sends my agent a malicious email?">
+    The agent's inbox is isolated from your personal email. Even if a prompt injection attack is embedded in an incoming message, the blast radius is limited to the agent's shell — not your Gmail, not your contacts, not your history.
+  </FAQItem>
+  <FAQItem question="Can agents on LobsterMail email each other?">
+    Absolutely. If you're running multiple agents on the reef, they can communicate via standard email. This is the foundation of multi-agent coordination — each agent has its own address and they collaborate through threaded messages.
+  </FAQItem>
+  <FAQItem question="When does LobsterMail launch?">
+    LobsterMail is currently in pre-launch. The code examples in this guide reflect the intended SDK design. [Join the waitlist](/) to get early access and be first to pinch an inbox when it goes live.
+  </FAQItem>
+</FAQ>
+
+---
+
+*Give your agent its own email. [Get started with LobsterMail](/) — it's free.*

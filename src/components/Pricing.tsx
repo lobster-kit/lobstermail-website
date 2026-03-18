@@ -20,7 +20,7 @@ const proPlanFeatures = [
 
 export function Pricing() {
   return (
-    <section className="px-6 pb-28 pt-0 sm:pb-36 sm:pt-0">
+    <section className="px-6 py-28 sm:py-36">
       <div className="mx-auto max-w-6xl text-center">
         <FadeIn>
           <div className="mb-5 flex justify-center">
@@ -39,7 +39,7 @@ export function Pricing() {
           <p className="mx-auto mt-5 max-w-md text-base text-secondary sm:text-lg">
             Don&#39;t get trapped in the lobster cage of emails.
           </p>
-          <div className="mt-4">
+          <div className="mt-4 min-h-[28px]">
             <PromoCounter />
           </div>
         </FadeIn>
