@@ -187,7 +187,7 @@ export function Navbar() {
                     </div>
                     <div className="flex flex-1 flex-col gap-1 px-6 py-6">
                       {/* Use Cases section */}
-                      <p className="px-4 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-secondary">
+                      <p className="px-4 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-foreground">
                         Use Cases
                       </p>
                       {useCases.map((uc) => (
