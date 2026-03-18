@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-03-18T13:15:01.493Z",
+  "generated_at": "2026-03-18T19:15:03.564Z",
   "kpis": {
     "mrr_usd": 57,
     "paid_accounts": 7,
-    "free_accounts": 96,
-    "total_accounts": 108,
+    "free_accounts": 97,
+    "total_accounts": 109,
     "npm_installs_7d": 12,
     "seo_clicks_7d": 72,
     "seo_impressions_7d": 9831,
     "seo_avg_position": 0,
     "total_emails_sent": 78,
-    "total_emails_received": 332,
-    "total_inboxes": 130,
+    "total_emails_received": 348,
+    "total_inboxes": 131,
     "daily_visitors": 373,
     "daily_visitors_human": 62,
     "daily_visitors_bot": 271,
@@ -19,31 +19,31 @@
     "github_stars": 0,
     "x_followers": 2,
     "clawhub_skill_installs": 0,
-    "tier_free": 96,
+    "tier_free": 97,
     "tier_free_verified": 9,
     "tier_builder": 0,
     "tier_pro": 1
   },
   "deltas": {
-    "total_inboxes": 81,
+    "total_inboxes": 82,
     "total_emails_sent": 48,
-    "total_emails_received": 228,
-    "free_accounts": 68,
+    "total_emails_received": 244,
+    "free_accounts": 69,
     "github_stars": 0,
     "x_followers": 0,
     "clawhub_skill_installs": 0,
-    "openclaw_github_stars": 20163,
+    "openclaw_github_stars": 20468,
     "openclaw_npm_daily": null,
-    "openclaw_twitter_followers": 23401,
-    "tier_free": 96,
+    "openclaw_twitter_followers": 23638,
+    "tier_free": 97,
     "tier_free_verified": 9,
     "tier_builder": 0,
     "tier_pro": 1
   },
   "market": {
-    "openclaw_github_stars": 322096,
+    "openclaw_github_stars": 322401,
     "openclaw_npm_daily": 0,
-    "openclaw_twitter_followers": 464534
+    "openclaw_twitter_followers": 464771
   },
   "sparklines": {
     "mrr_usd": [
@@ -449,7 +449,7 @@
       },
       {
         "date": "2026-03-18",
-        "value": 108
+        "value": 109
       }
     ],
     "total_emails_received": [
@@ -507,7 +507,7 @@
       },
       {
         "date": "2026-03-18",
-        "value": 332
+        "value": 348
       }
     ],
     "tier_free": [
@@ -565,7 +565,7 @@
       },
       {
         "date": "2026-03-18",
-        "value": 96
+        "value": 97
       }
     ],
     "tier_free_verified": [
@@ -761,9 +761,9 @@
     }
   },
   "agents": {
-    "agent_2_last_run": "2026-03-17T18:02:52.012Z",
+    "agent_2_last_run": "2026-03-18T18:06:56.829Z",
     "agent_3_last_run": "2026-03-17T19:08:08.693Z",
-    "agent_6_last_run": "2026-03-18T13:01:37.047Z"
+    "agent_6_last_run": "2026-03-18T16:07:14.739Z"
   },
   "latest_date": "2026-03-18"
 }
