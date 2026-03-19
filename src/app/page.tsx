@@ -6,6 +6,7 @@ import { Pricing } from "@/components/Pricing";
 import { FAQ } from "@/components/FAQ";
 import { FinalCTA } from "@/components/FinalCTA";
 import { Footer } from "@/components/Footer";
+import { UseCasesSection } from "@/components/UseCasesSection";
 import { faqItems } from "@/lib/faq-data";
 
 export const metadata: Metadata = {
@@ -56,6 +57,7 @@ export default function Home() {
       <main id="top">
         <Hero />
         <ProblemSolution />
+        <UseCasesSection />
 
         <Pricing />
         <FAQ />
