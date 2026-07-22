@@ -3,7 +3,7 @@ import { Lora, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { LaunchBanner } from "@/components/LaunchBanner";
+import { SunsetBanner } from "@/components/SunsetBanner";
 
 import "./globals.css";
 
@@ -149,7 +149,7 @@ export default function RootLayout({
       <body
         className={`${lora.variable} ${geistMono.variable} flex min-h-screen flex-col antialiased`}
       >
-        <LaunchBanner />
+        <SunsetBanner />
         <ThemeProvider>{children}</ThemeProvider>
         <Analytics />
         <SpeedInsights />
